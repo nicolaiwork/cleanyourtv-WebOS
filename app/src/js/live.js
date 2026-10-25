@@ -44,7 +44,9 @@ var LIVE = (function () {
     FP = { open: false, i: 0 },
     M = { open: false, i: 0, items: [] },
     o = { on: false };
+  var TR = { subs: [], sub: -1, tries: 0, t: 0 }; /* the playing stream's subtitle tracks (from the TV's player) and the one shown */
   var tuneAt = 0; /* when the channel was chosen, for the timing in perfMark */
+  var MENU_KEY = 1062; /* the 123 button of the 2025 Magic Remote (MR25GA), which has no colour keys */
   var START_MS = 15000,
     STALL_MS = 8000;
   function lesc(s) {
@@ -125,6 +127,139 @@ var LIVE = (function () {
     }
   }
 
+  /* ---------- audio language and subtitles (player menu); the choice is remembered by language for every channel ---------- */
+  /* Audio goes through the element's audioTracks (the TV switches its decoder). Subtitles, DVB teletext or bitmap, are not in
+     textTracks: the TV's player lists them in com.webos.media/getPipelineState and draws them itself after selectTrack. */
+  function pref(k) {
+    try {
+      return localStorage.getItem('live.' + k) || '';
+    } catch (e) {
+      return '';
+    }
+  }
+  function setPref(k, v) {
+    try {
+      localStorage.setItem('live.' + k, v);
+    } catch (e) {}
+  }
+  function audioList() {
+    var a = video && video.audioTracks,
+      out = [];
+    if (a) for (var i = 0; i < a.length; i++) out.push(a[i]);
+    return out;
+  }
+  function audioNow(list) {
+    for (var i = 0; i < list.length; i++) if (list[i].enabled) return i;
+    return 0;
+  }
+  function setAudio(i) {
+    var list = audioList();
+    if (!list[i]) return;
+    list[i].enabled = true;
+    for (var j = 0; j < list.length; j++) if (j !== i) list[j].enabled = false;
+  }
+  function setSub(i) {
+    var id = video && video.mediaId;
+    TR.sub = i;
+    if (!id) return;
+    if (i < 0) {
+      LT.luna('luna://com.webos.media/setSubtitleEnable', { mediaId: id, enable: false });
+      return;
+    }
+    LT.luna('luna://com.webos.media/selectTrack', { mediaId: id, type: 'text', index: TR.subs[i].index }, function () {
+      LT.luna('luna://com.webos.media/setSubtitleEnable', { mediaId: id, enable: true });
+    });
+  }
+  /* once a channel plays: the remembered audio language, then ask the TV's player for the subtitle tracks (they can take a moment) */
+  function tracksStart() {
+    var list = audioList(),
+      a = LT.pick(
+        list.map(function (x) {
+          return x.language;
+        }),
+        pref('audio')
+      );
+    if (a >= 0 && !list[a].enabled) setAudio(a);
+    askSubs(gen);
+  }
+  function askSubs(g) {
+    var id = video && video.mediaId;
+    if (!id) return;
+    LT.luna('luna://com.webos.media/getPipelineState', { mediaId: id }, function (r) {
+      if (g !== gen || !r) return;
+      if (!LT.known(r) && TR.tries++ < 5) {
+        TR.t = setTimeout(function () {
+          askSubs(g);
+        }, 1000);
+        return;
+      }
+      TR.subs = LT.subs(r);
+      var s = LT.pick(
+        TR.subs.map(function (x) {
+          return x.lang;
+        }),
+        pref('subs')
+      );
+      if (s >= 0) setSub(s);
+      if (M.open) drawMenu();
+    });
+  }
+  function tracksReset() {
+    clearTimeout(TR.t);
+    TR = { subs: [], sub: -1, tries: 0, t: 0 };
+  }
+  /* menu rows for the audio languages and subtitles, shown only when the stream has a choice */
+  function trackItems() {
+    var it = [],
+      list = audioList();
+    if (list.length > 1) {
+      var names = LT.labels(
+        list.map(function (x) {
+          return x.language;
+        }),
+        t('Audio')
+      );
+      var stepA = function (d) {
+        var i = (audioNow(list) + d + list.length) % list.length;
+        setAudio(i);
+        setPref('audio', LT.lang(list[i].language));
+        drawMenu();
+      };
+      it.push({
+        label: t('Audio'),
+        sub: names[audioNow(list)],
+        step: stepA,
+        fn: function () {
+          stepA(1);
+        },
+      });
+    }
+    if (TR.subs.length) {
+      var subNames = LT.labels(
+        TR.subs.map(function (x) {
+          return x.lang;
+        }),
+        t('Subtitles')
+      );
+      var stepS = function (d) {
+        var n = TR.subs.length + 1,
+          i = ((TR.sub + 1 + d + n) % n) - 1; /* -1 is Off */
+        setSub(i);
+        setPref('subs', i < 0 ? '' : LT.lang(TR.subs[i].lang));
+        drawMenu();
+      };
+      it.push({
+        label: t('Subtitles'),
+        sub: TR.sub < 0 ? t('Off') : subNames[TR.sub],
+        step: stepS,
+        fn: function () {
+          stepS(1);
+        },
+      });
+    }
+    return it;
+  }
+
   /* ---------- the player: one <video>, several streams per channel, tuning screen, recovery ---------- */
   /* One <video> element for the whole session: creating and destroying it on every channel change makes the TV rebuild its video plane. */
   var lastTime = -1;
@@ -142,6 +277,7 @@ var LIVE = (function () {
       if (!started) {
         started = true;
         perfMark('live playing ' + (Date.now() - tuneAt) + ' variant ' + vi + (variants[vi] && variants[vi].type ? ' typed' : ' src'));
+        tracksStart();
         clearTimeout(playedT);
         var c = byNum[cur];
         playedT = setTimeout(function () {
@@ -175,6 +311,7 @@ var LIVE = (function () {
     return v;
   }
   function release() {
+    tracksReset();
     clearTimeout(spinT);
     clearTimeout(beginT);
     clearTimeout(stallT);
@@ -293,6 +430,7 @@ var LIVE = (function () {
     var c = byNum[num];
     if (!c) return;
     gen++;
+    tracksReset();
     cur = num;
     try {
       localStorage.setItem('live.last', String(num));
@@ -723,7 +861,7 @@ var LIVE = (function () {
     drawFilter();
   }
 
-  /* the player menu (Yellow while watching) */
+  /* the player menu (Yellow while watching, or 123 on remotes without colour keys) */
   function menuItems() {
     var c = byNum[cur],
       it = [
@@ -748,6 +886,7 @@ var LIVE = (function () {
           },
         });
       });
+    it = it.concat(trackItems());
     it.push({
       label: t('Statistics'),
       sub: t(stats ? 'On' : 'Off'),
@@ -795,7 +934,10 @@ var LIVE = (function () {
     } else if (k === 13) {
       M.items[M.i].fn();
       return;
-    } else if (k === 405 || k === 461 || k === 27 || k === 8) {
+    } else if (k === 37 || k === 39) {
+      if (M.items[M.i].step) M.items[M.i].step(k === 37 ? -1 : 1);
+      return;
+    } else if (k === 405 || k === MENU_KEY || k === 461 || k === 27 || k === 8) {
       M.open = false;
       layer('lv-menu', false);
       return;
@@ -825,8 +967,38 @@ var LIVE = (function () {
       (si + 1) +
       '/' +
       streams.length +
-      (reloads ? '  (' + t('reloaded') + ')' : '')
+      (reloads ? '  (' + t('reloaded') + ')' : '') +
+      trackStats()
     );
+  }
+  /* the languages the stream offers, the one in use in brackets */
+  function trackStats() {
+    var list = audioList(),
+      a = audioNow(list),
+      s = '';
+    if (list.length)
+      s +=
+        '\n' +
+        t('Audio') +
+        ' ' +
+        list
+          .map(function (x, i) {
+            var l = LT.lang(x.language) || '?';
+            return i === a ? '[' + l + ']' : l;
+          })
+          .join(' ');
+    if (TR.subs.length)
+      s +=
+        '\n' +
+        t('Subtitles') +
+        ' ' +
+        TR.subs
+          .map(function (x, i) {
+            var l = LT.lang(x.lang) || '?';
+            return i === TR.sub ? '[' + l + ']' : l;
+          })
+          .join(' ');
+    return s;
   }
   function setStats(on) {
     stats = on;
@@ -1125,7 +1297,7 @@ var LIVE = (function () {
       if (failed) play(cur);
       else openList();
     } else if (k === 404) toggleFav(byNum[cur]);
-    else if (k === 405) openMenu();
+    else if (k === 405 || k === MENU_KEY) openMenu();
     else if (k === 406) setStats(!stats);
     else if (k === 38 || k === 33 || k === 427) step(1);
     else if (k === 40 || k === 34 || k === 428) step(-1);
