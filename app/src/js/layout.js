@@ -63,6 +63,7 @@ function rebuild() {
 function load() {
   api('/api/apps')
     .then(function (x) {
+      VOD.check(); /* fork */
       if (x.version && oldSvc(x.version) && !warned) {
         warned = true;
         toast('The service (' + x.version + ') is older than this launcher needs: update it in the CleanYourTV manager');

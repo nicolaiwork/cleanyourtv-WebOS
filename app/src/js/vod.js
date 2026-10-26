@@ -143,40 +143,48 @@ var VOD = (function () {
     var box = $('vd-rows');
     box.textContent = '';
     rows.forEach(function (rw) {
-      rw.fi = 0;
-      rw.els = {};
-      rw.el = document.createElement('div');
-      rw.el.className = 'vrow';
-      rw.el.innerHTML = '<h2>' + esc(rw.title) + '</h2><div class="vstrip"></div><div class="vlabel"></div>';
-      rw.strip = rw.el.childNodes[1];
-      rw.label = rw.el.childNodes[2];
-      box.appendChild(rw.el);
+      box.appendChild(rowEl(rw));
     });
     ri = 0;
     if (!rows.length) msg('<b>Nothing here yet</b>Tick some categories on the curator page.');
     else msg('');
     drawRows();
   }
+  function rowEl(rw) {
+    rw.fi = 0;
+    rw.els = {};
+    rw.el = document.createElement('div');
+    rw.el.className = 'vrow';
+    rw.el.innerHTML = '<h2>' + esc(rw.title) + '</h2><div class="vstrip"></div><div class="vlabel"></div>';
+    rw.strip = rw.el.childNodes[1];
+    rw.label = rw.el.childNodes[2];
+    return rw.el;
+  }
+  /* the cards of a row that is off screen: gone, so the always-loaded launcher doesn't keep their pictures */
+  function clearRow(rw) {
+    for (var k in rw.els) rw.strip.removeChild(rw.els[k]);
+    rw.els = {};
+    rw.el.classList.remove('f');
+  }
   function fill(rw) {
     if (rw.loading || rw.done) return;
     rw.loading = true;
-    var g = gen,
-      p =
-        rw.src === 'recent'
-          ? vget('/vod/' + rw.kind + '/recent.json')
-          : vget('/vod/' + rw.kind + '/' + rw.cid + '.json', { offset: rw.items.length, limit: PAGE });
+    var p =
+      rw.src === 'recent'
+        ? vget('/vod/' + rw.kind + '/recent.json')
+        : vget('/vod/' + rw.kind + '/' + rw.cid + '.json', { offset: rw.items.length, limit: PAGE });
     p.then(
       function (list) {
-        if (g !== gen) return;
         rw.loading = false;
+        if (rows.indexOf(rw) < 0) return; /* the tab was rebuilt meanwhile; opening a title doesn't drop the answer */
         rw.items = rw.items.concat(list);
         if (rw.src === 'recent' || list.length < PAGE || (rw.total > 0 && rw.items.length >= rw.total)) rw.done = true;
         if (!rw.items.length) rw.strip.innerHTML = '<div class="vempty">Nothing here.</div>';
         drawRow(rw);
       },
       function (e) {
-        if (g !== gen) return;
         rw.loading = false;
+        if (rows.indexOf(rw) < 0) return;
         rw.done = true;
         rw.strip.innerHTML = '<div class="vempty">' + esc('Could not load this row: ' + e.message) + '</div>';
       }
@@ -223,7 +231,7 @@ var VOD = (function () {
         for (var i = r0 * COLS; i < Math.min(S.els.length, (r0 + 3) * COLS); i++) show(S.els[i]);
         return;
       }
-      for (var r = Math.max(0, ri - 1); r < Math.min(rows.length, ri + 3); r++) {
+      for (var r = ri; r < Math.min(rows.length, ri + 2); r++) {
         var rw = rows[r],
           off = Math.max(0, rw.fi - 2);
         for (var j = off; j < off + 9; j++) show(rw.els[j]);
@@ -237,7 +245,7 @@ var VOD = (function () {
       if (Math.abs(i - ri) <= 2) {
         if (!rw.items.length && !rw.done) fill(rw);
         else drawRow(rw);
-      } else if (rw.el.classList.contains('f')) drawRow(rw);
+      } else clearRow(rw);
     }
   }
   function rowsKey(k) {
@@ -339,7 +347,8 @@ var VOD = (function () {
     /* the input has the keys (the TV's keyboard types into it); only Enter, Back and Down are ours */
     if (k === 13) {
       e.preventDefault();
-      runSearch();
+      if (document.activeElement !== $('vd-q')) $('vd-q').focus(); /* the keyboard again */
+      else runSearch();
     } else if (k === 461 || k === 27) {
       e.preventDefault();
       $('vd-q').blur();
@@ -584,15 +593,16 @@ var VOD = (function () {
         rows[0].total = nw.items.length;
         rows[0].fi = Math.min(rows[0].fi, nw.items.length - 1);
       }
-      if (had !== !!nw.items.length) {
-        var keep = rows[ri] ? rows[ri].title : '';
-        buildRows();
-        for (var i = 0; i < rows.length; i++) if (rows[i].title === keep) ri = i;
+      /* the row comes or goes in place: every other row keeps its position */
+      if (!had && nw.items.length) {
+        rows.unshift(nw);
+        $('vd-rows').insertBefore(rowEl(nw), $('vd-rows').firstChild);
+        ri++;
+      } else if (had && !nw.items.length) {
+        $('vd-rows').removeChild(rows.shift().el);
+        ri = Math.max(0, ri - 1);
       }
-      for (var j = 0; j < rows.length; j++) {
-        for (var e in rows[j].els) rows[j].strip.removeChild(rows[j].els[e]);
-        rows[j].els = {};
-      }
+      for (var j = 0; j < rows.length; j++) clearRow(rows[j]); /* redrawn with the new marks */
       drawRows();
     });
   }
@@ -641,12 +651,17 @@ var VOD = (function () {
       };
     start(cur, spec.at || 0);
   }
+  function hidePlayer() {
+    ['vd-play', 'vd-bar', 'vd-menu', 'vd-next', 'vd-pmsg', 'vd-spin'].forEach(function (id) {
+      player(id, false);
+    });
+  }
   function start(cur, at) {
     release();
     area = 'player';
     P = { cur: cur, at: at, started: false, failed: false, seek: null, seekN: 0, seekAt: 0, menu: null, subs: [], sub: -1, tries: 0 };
+    hidePlayer();
     player('vd-play', true);
-    player('vd-pmsg', false);
     player('vd-spin', true);
     var v = document.createElement('video');
     v.autoplay = true;
@@ -834,12 +849,7 @@ var VOD = (function () {
   function stop() {
     var done = function () {
       release();
-      player('vd-play', false);
-      player('vd-bar', false);
-      player('vd-menu', false);
-      player('vd-next', false);
-      player('vd-pmsg', false);
-      player('vd-spin', false);
+      hidePlayer();
       if (!o.on) return;
       area = 'details';
       loadState().then(function () {
@@ -1014,7 +1024,7 @@ var VOD = (function () {
     if (P.failed || !P.video) return;
     var v = P.video;
     if (k === 13) {
-      if (P.seek !== null) return;
+      if (P.seek !== null || !P.started) return;
       if (v.paused) {
         v.play();
         showBar(3000);
@@ -1072,16 +1082,35 @@ var VOD = (function () {
     if (P) {
       save();
       release();
-      player('vd-play', false);
     }
+    hidePlayer();
     gen++;
     closeDetails();
     $('vd-q').blur();
     msg('');
+    /* nothing kept while the launcher shows: rows, cards and pictures go, and come back on the next visit */
+    rows = [];
+    lib = null;
+    S = { q: '', results: [], fi: 0, els: [] };
+    $('vd-rows').textContent = '';
+    $('vd-grid').textContent = '';
+    $('vd-q').value = '';
     $('vd').classList.remove('on');
   };
+  /* webOS repeats keydown while OK is held, not always with e.repeat: a held OK is one press, so it can't open a title and then
+     press Play (a stream) on its own */
+  var okAt = 0;
   o.key = function (e) {
     var k = e.keyCode;
+    if (k === 13) {
+      var now = Date.now(),
+        held = e.repeat || now - okAt < 400;
+      okAt = now;
+      if (held) {
+        e.preventDefault();
+        return;
+      }
+    }
     if (area === 'search') return searchKey(e);
     e.preventDefault();
     if (area === 'tabs') tabsKey(k);
@@ -1090,17 +1119,21 @@ var VOD = (function () {
     else if (area === 'results') resultsKey(k);
     else if (area === 'player') playerKey(k);
   };
-  /* the tile shows once the service knows a curator */
-  api('/api/vod/status').then(
-    function (s) {
-      base = s.base || '';
-      if (s.configured && !o.ready) {
-        o.ready = true;
-        lastSig = '';
-        load();
-      }
-    },
-    function () {}
-  );
+  /* the tile shows while the service knows a curator; asked again on every load(), since after a boot the service can start after
+     the page, and the address can be set later */
+  o.check = function () {
+    api('/api/vod/status').then(
+      function (s) {
+        base = s.base || '';
+        if (!!s.configured !== o.ready) {
+          o.ready = !!s.configured;
+          lastSig = '';
+          load();
+        }
+      },
+      function () {}
+    );
+  };
+  o.check();
   return o;
 })();
