@@ -5425,7 +5425,7 @@ var VOD = (function () {
       var at = VL.resumeAt(itemOf('films', d.id));
       if (at) {
         out.push({ label: '▶  Resume from ' + VL.clock(at), play: { at: at } });
-        out.push({ label: '↺  From the start', play: { at: 0 } });
+        out.push({ label: 'From the start', play: { at: 0 } });
       } else out.push({ label: '▶  Play', play: { at: 0 } });
       return out;
     }
