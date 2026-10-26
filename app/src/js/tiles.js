@@ -44,7 +44,7 @@ function tile(a) {
       paint(d, { c: f, b: hsl2rgb(hashHue(a.id), 0.4, 0.2) });
     }
   }; /* not remembered: a failed load must not pin a made-up colour */
-  i.src = a.id === '__live' ? LIVE_ICON : API + '/icon/' + encodeURIComponent(a.id);
+  i.src = a.id === '__live' ? LIVE_ICON : a.id === '__vod' ? VOD_ICON : API + '/icon/' + encodeURIComponent(a.id);
   d.appendChild(i);
   if (i.decode) i.decode().catch(function () {});
   return d;

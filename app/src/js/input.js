@@ -38,7 +38,7 @@ function options(e) {
 /* Pointer focus follows real pointer movement only: a tile sliding under a still cursor, a cursor jitter when
    the remote is picked up, or a pointer move right after a button press must not steal the focus. */
 document.addEventListener('mousemove', function (ev) {
-  if (stack.length || LIVE.on || Date.now() - lastKey < 1500) return;
+  if (stack.length || LIVE.on || VOD.on || Date.now() - lastKey < 1500) return;
   if (lastMX < 0) {
     lastMX = ev.clientX;
     lastMY = ev.clientY;
@@ -57,6 +57,10 @@ document.addEventListener('keydown', function (e) {
   lastKey = Date.now();
   if (LIVE.on) {
     LIVE.key(e);
+    return;
+  }
+  if (VOD.on) {
+    VOD.key(e); /* fork: Films & Series */
     return;
   }
   if (stack.length) {
@@ -156,12 +160,14 @@ document.addEventListener('webOSRelaunch', function () {
     return;
   } /* the Guide button while Live TV is open */
   if (LIVE.on) LIVE.exit();
+  if (VOD.on) VOD.exit();
   load();
   wantInputs();
 });
 document.addEventListener('visibilitychange', function () {
   if (document.hidden) {
     if (LIVE.on) LIVE.exit();
+    if (VOD.on) VOD.exit();
     closeRunningMenu();
   } else load();
 });

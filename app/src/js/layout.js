@@ -86,6 +86,7 @@ function load() {
       cfg = x.config || {};
       applyTheme(cfg.theme);
       if (liveOn()) apps.push({ id: '__live', title: t('Live TV') });
+      if (VOD.ready) apps.push({ id: '__vod', title: 'Films & Series' }); /* fork */
       store();
       rebuild();
       if (!perfReady) {

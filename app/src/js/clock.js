@@ -510,6 +510,7 @@ function perfMark(m) {
 var perfReady = false;
 function launch(id, params) {
   if (id === '__live') return LIVE.enter();
+  if (id === '__vod') return VOD.enter(); /* fork */
   api('/api/launch', { id: id, params: params }).then(function (x) {
     if (x && x.returnValue === false) toast(t('Could not open') + ' ' + id);
   });
