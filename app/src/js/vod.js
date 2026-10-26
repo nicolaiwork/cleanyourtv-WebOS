@@ -498,7 +498,7 @@ var VOD = (function () {
           (i === D.si ? ' on' : '') +
           (D.group === 'season' && i === D.si ? ' f' : '') +
           '">Season ' +
-          s.season +
+          esc(s.season) +
           '</div>';
       });
       h += '</div><div class="veps">';
@@ -516,7 +516,7 @@ var VOD = (function () {
           '<div class="vep' +
           (D.group === 'ep' && i === D.ei ? ' f' : '') +
           '"><div class="n">' +
-          (ep.num || i + 1) +
+          esc(ep.num || i + 1) +
           '</div><div class="l">' +
           esc(ep.label || ep.title) +
           '</div>' +
@@ -597,10 +597,438 @@ var VOD = (function () {
     });
   }
 
-  /* ---------- the player (next commit) ---------- */
+  /* ---------- the player: one <video> per playback, created on play and removed on stop, so nothing holds a connection ---------- */
+  var MENU_KEY = 1062 /* the 123 button of the 2025 Magic Remote; F2 in a desktop browser */,
+    START_MS = 20000,
+    SAVE_MS = 10000,
+    SEEK_MS = 400,
+    NEXT_S = 10;
+  var P =
+    null; /* {cur, video, at, started, failed, startT, saveT, barT, seek, seekN, seekT, seekAt, menu, subs, sub, tries, subT, next, nextT, nextN} */
+  function duration() {
+    var v = P && P.video;
+    return v && isFinite(v.duration) && v.duration > 0 ? v.duration : (P && P.cur.durHint) || 0;
+  }
+  function player(id, on) {
+    $(id).classList.toggle('on', !!on);
+  }
   function playFrom(spec) {
-    toast('Playing comes with the player');
-    return spec;
+    var d = D && D.data;
+    if (!d) return;
+    var cur;
+    if (D.kind === 'films')
+      cur = {
+        kind: 'film',
+        id: d.id,
+        name: d.label || d.name,
+        poster: d.poster || '',
+        play: d.play,
+        durHint: d.duration_secs || 0,
+        ext: d.ext || '',
+      };
+    else
+      cur = {
+        kind: 'episode',
+        id: spec.ep.id,
+        name: spec.ep.label || spec.ep.title || '',
+        poster: d.poster || '',
+        show: { id: d.id, name: d.label || d.name || '', poster: d.poster || '' },
+        season: spec.season,
+        num: spec.ep.num || 0,
+        play: spec.ep.play,
+        durHint: spec.ep.duration_secs || 0,
+        ext: spec.ep.ext || '',
+      };
+    start(cur, spec.at || 0);
+  }
+  function start(cur, at) {
+    release();
+    area = 'player';
+    P = { cur: cur, at: at, started: false, failed: false, seek: null, seekN: 0, seekAt: 0, menu: null, subs: [], sub: -1, tries: 0 };
+    player('vd-play', true);
+    player('vd-pmsg', false);
+    player('vd-spin', true);
+    var v = document.createElement('video');
+    v.autoplay = true;
+    P.video = v;
+    v.addEventListener('loadedmetadata', function () {
+      if (P && P.video === v && P.at > 0) v.currentTime = P.at;
+    });
+    function playing() {
+      if (!P || P.video !== v || v.paused) return;
+      player('vd-spin', false);
+      if (!P.started && v.currentTime > 0) {
+        P.started = true;
+        clearTimeout(P.startT);
+        tracksStart();
+      }
+    }
+    v.addEventListener('playing', playing);
+    v.addEventListener('timeupdate', function () {
+      playing();
+      if (P && P.video === v && P.barOn) drawBar();
+    });
+    v.addEventListener('waiting', function () {
+      if (P && P.video === v) player('vd-spin', true);
+    });
+    v.addEventListener('ended', function () {
+      if (P && P.video === v) ended();
+    });
+    v.addEventListener(
+      'error',
+      function () {
+        if (P && P.video === v && !P.started) fail();
+      },
+      true
+    );
+    v.src = /^https?:/.test(cur.play) ? cur.play : base + cur.play;
+    $('vd-stage').appendChild(v);
+    P.startT = setTimeout(function () {
+      if (P && P.video === v && !P.started) fail();
+    }, START_MS);
+    P.saveT = setInterval(save, SAVE_MS);
+    showBar(4000);
+  }
+  function fail() {
+    player('vd-spin', false);
+    P.failed = true;
+    var ext = P.cur.ext ? ' (.' + esc(P.cur.ext) + ')' : '';
+    release(true);
+    setHtml(
+      $('vd-pmsg'),
+      '<b>' + esc(P.cur.name) + "</b>This title can't be played on the TV" + ext + '.<div class="small">Press Back.</div>'
+    );
+    player('vd-pmsg', true);
+  }
+  /* stop the video and let go of the connection; keepP leaves the player's state for the message */
+  function release(keepP) {
+    if (!P) return;
+    clearTimeout(P.startT);
+    clearInterval(P.saveT);
+    clearTimeout(P.barT);
+    clearTimeout(P.seekT);
+    clearTimeout(P.subT);
+    clearInterval(P.nextT);
+    var v = P.video;
+    P.video = null;
+    if (v) {
+      try {
+        v.pause();
+        v.removeAttribute('src');
+        v.load();
+      } catch (e) {}
+      if (v.parentNode) v.parentNode.removeChild(v);
+    }
+    if (!keepP) P = null;
+  }
+  function save(then) {
+    var v = P && P.video;
+    if (!v || !P.started) return then && then();
+    var pos = P.seek !== null ? P.seek : v.currentTime,
+      dur = duration(),
+      c = P.cur;
+    if (!VL.shouldSave(pos, dur)) return then && then();
+    var b = { op: 'pos', kind: c.kind, id: c.id, pos: Math.floor(pos), dur: Math.floor(dur), name: c.name.slice(0, 200), poster: c.poster };
+    if (c.kind === 'episode') {
+      b.show = { id: c.show.id, name: c.show.name.slice(0, 200), poster: c.show.poster };
+      b.season = c.season;
+      b.num = c.num;
+    }
+    var w = VL.watched(pos, dur);
+    api('/api/vod/state', b)
+      .then(function () {
+        if (w) return api('/api/vod/state', { op: 'watched', kind: c.kind, id: c.id, on: true });
+      })
+      .then(
+        function () {
+          if (then) then();
+        },
+        function () {
+          if (then) then();
+        }
+      );
+  }
+  /* the bar: title, progress, elapsed / total, when it ends */
+  function drawBar() {
+    var v = P.video,
+      dur = duration(),
+      pos = P.seek !== null ? P.seek : v ? v.currentTime : 0,
+      c = P.cur,
+      title = c.kind === 'episode' ? c.show.name + '  ·  ' + VL.epCode(c.season, c.num) + '  ·  ' + c.name : c.name;
+    $('vd-btitle').textContent = title;
+    $('vd-bfill').style.transform = 'scaleX(' + (dur ? Math.min(1, pos / dur) : 0) + ')';
+    $('vd-btime').textContent =
+      VL.clock(pos) +
+      (dur ? ' / ' + VL.clock(dur) + '    ends at ' + VL.endsAt(Date.now(), Math.max(0, dur - pos)) : '') +
+      (v && v.paused && P.seek === null ? '    ❚❚ Paused' : '');
+  }
+  function showBar(ms) {
+    P.barOn = true;
+    drawBar();
+    player('vd-bar', true);
+    clearTimeout(P.barT);
+    if (ms)
+      P.barT = setTimeout(function () {
+        if (P && P.video && !P.video.paused && P.seek === null) {
+          P.barOn = false;
+          player('vd-bar', false);
+        }
+      }, ms);
+  }
+  /* Left/Right: one seek once the keys rest, not one per key repeat (every seek is a new request to the provider) */
+  function skip(dir) {
+    var v = P.video;
+    if (!v || !P.started) return;
+    var now = Date.now();
+    if (P.seek === null || now - P.seekAt > SEEK_MS) {
+      if (P.seek === null) P.seek = v.currentTime;
+      P.seekN = 0;
+    }
+    P.seekAt = now;
+    P.seekN++;
+    P.seek = Math.max(0, Math.min(duration() ? duration() - 2 : 1e9, P.seek + dir * VL.skipStep(P.seekN)));
+    showBar();
+    clearTimeout(P.seekT);
+    P.seekT = setTimeout(function () {
+      if (!P || !P.video) return;
+      P.video.currentTime = P.seek;
+      P.seek = null;
+      showBar(3000);
+    }, SEEK_MS);
+  }
+  function ended() {
+    var c = P.cur;
+    save(function () {
+      var nx = c.kind === 'episode' && D && D.data ? VL.after(D.data.seasons, c.id) : null;
+      if (!nx) return stop();
+      var season = c.season;
+      D.data.seasons.forEach(function (s) {
+        if (s.episodes.indexOf(nx) >= 0) season = s.season;
+      });
+      release(true);
+      P.next = { ep: nx, season: season };
+      P.nextN = NEXT_S;
+      drawNext();
+      player('vd-next', true);
+      P.nextT = setInterval(function () {
+        if (!P || !P.next) return;
+        if (--P.nextN <= 0) return playNext();
+        drawNext();
+      }, 1000);
+    });
+  }
+  function drawNext() {
+    $('vd-next').innerHTML =
+      '<div class="small">Next in ' +
+      P.nextN +
+      ' s</div><b>' +
+      esc(VL.epCode(P.next.season, P.next.ep.num) + '  ·  ' + (P.next.ep.label || P.next.ep.title)) +
+      '</b><div class="small">OK plays it now, Back stops</div>';
+  }
+  function playNext() {
+    var n = P.next;
+    player('vd-next', false);
+    playFrom({ ep: n.ep, season: n.season, at: 0 });
+  }
+  /* back to the details, which now show Resume / ✓ */
+  function stop() {
+    var done = function () {
+      release();
+      player('vd-play', false);
+      player('vd-bar', false);
+      player('vd-menu', false);
+      player('vd-next', false);
+      player('vd-pmsg', false);
+      player('vd-spin', false);
+      if (!o.on) return;
+      area = 'details';
+      loadState().then(function () {
+        if (D && D.data) {
+          if (D.kind === 'series') {
+            var nx = VL.nextEpisode(D.data.seasons, ST.items);
+            if (nx)
+              for (var i = 0; i < D.data.seasons.length; i++)
+                if (D.data.seasons[i].season === nx.season) {
+                  D.si = i;
+                  D.ei = Math.max(0, D.data.seasons[i].episodes.indexOf(nx.ep));
+                }
+          }
+          D.group = 'btn';
+          D.bi = 0;
+          drawDetails();
+        }
+      });
+    };
+    if (P && P.video) save(done);
+    else done();
+  }
+
+  /* audio language and subtitles, remembered with Live TV's choice (live.audio, live.subs) */
+  function pref(k) {
+    try {
+      return localStorage.getItem('live.' + k) || '';
+    } catch (e) {
+      return '';
+    }
+  }
+  function setPref(k, v) {
+    try {
+      localStorage.setItem('live.' + k, v);
+    } catch (e) {}
+  }
+  function audioList() {
+    var a = P && P.video && P.video.audioTracks,
+      out = [];
+    if (a) for (var i = 0; i < a.length; i++) out.push(a[i]);
+    return out;
+  }
+  function audioNow(list) {
+    for (var i = 0; i < list.length; i++) if (list[i].enabled) return i;
+    return 0;
+  }
+  function setAudio(i) {
+    var list = audioList();
+    if (!list[i]) return;
+    list[i].enabled = true;
+    for (var j = 0; j < list.length; j++) if (j !== i) list[j].enabled = false;
+  }
+  function setSub(i) {
+    var id = P && P.video && P.video.mediaId;
+    P.sub = i;
+    if (!id) return;
+    if (i < 0) return LT.luna('luna://com.webos.media/setSubtitleEnable', { mediaId: id, enable: false });
+    LT.luna('luna://com.webos.media/selectTrack', { mediaId: id, type: 'text', index: P.subs[i].index }, function () {
+      LT.luna('luna://com.webos.media/setSubtitleEnable', { mediaId: id, enable: true });
+    });
+  }
+  function tracksStart() {
+    var list = audioList(),
+      a = LT.pick(
+        list.map(function (x) {
+          return x.language;
+        }),
+        pref('audio')
+      );
+    if (a >= 0 && !list[a].enabled) setAudio(a);
+    askSubs(P.video);
+  }
+  function askSubs(v) {
+    var id = v && v.mediaId;
+    if (!id) return;
+    LT.luna('luna://com.webos.media/getPipelineState', { mediaId: id }, function (r) {
+      if (!P || P.video !== v || !r) return;
+      if (!LT.known(r) && P.tries++ < 5) {
+        P.subT = setTimeout(function () {
+          askSubs(v);
+        }, 1000);
+        return;
+      }
+      P.subs = LT.subs(r);
+      var s = LT.pick(
+        P.subs.map(function (x) {
+          return x.lang;
+        }),
+        pref('subs')
+      );
+      if (s >= 0) setSub(s);
+      if (P.menu) drawMenu();
+    });
+  }
+  function menuItems() {
+    var it = [],
+      list = audioList();
+    if (list.length > 1) {
+      var names = LT.labels(
+        list.map(function (x) {
+          return x.language;
+        }),
+        'Audio'
+      );
+      var stepA = function (d) {
+        var i = (audioNow(list) + d + list.length) % list.length;
+        setAudio(i);
+        setPref('audio', LT.lang(list[i].language));
+      };
+      it.push({ label: 'Audio', sub: names[audioNow(list)], step: stepA });
+    }
+    if (P.subs.length) {
+      var subNames = LT.labels(
+        P.subs.map(function (x) {
+          return x.lang;
+        }),
+        'Subtitles'
+      );
+      var stepS = function (d) {
+        var n = P.subs.length + 1,
+          i = ((P.sub + 1 + d + n) % n) - 1; /* -1 is Off */
+        setSub(i);
+        setPref('subs', i < 0 ? '' : LT.lang(P.subs[i].lang));
+      };
+      it.push({ label: 'Subtitles', sub: P.sub < 0 ? 'Off' : subNames[P.sub], step: stepS });
+    }
+    if (!it.length) it.push({ label: 'No audio or subtitle choices', sub: '' });
+    it.push({ label: 'Close', sub: '', close: true });
+    return it;
+  }
+  function drawMenu() {
+    P.menu.items = menuItems();
+    if (P.menu.i >= P.menu.items.length) P.menu.i = P.menu.items.length - 1;
+    var h = '<h3>' + esc(P.cur.name) + '</h3>';
+    P.menu.items.forEach(function (m, i) {
+      h +=
+        '<div class="mrow' +
+        (i === P.menu.i ? ' f' : '') +
+        '"><div class="ml">' +
+        esc(m.label) +
+        '</div><div class="mv">' +
+        esc(m.sub) +
+        '</div></div>';
+    });
+    setHtml($('vd-menu'), h);
+  }
+  function menuKey(k) {
+    var m = P.menu,
+      row = m.items[m.i];
+    if (k === 38 && m.i > 0) m.i--;
+    else if (k === 40 && m.i < m.items.length - 1) m.i++;
+    else if ((k === 37 || k === 39) && row.step) row.step(k === 37 ? -1 : 1);
+    else if (k === 13 && row.step) row.step(1);
+    else if ((k === 13 && row.close) || k === MENU_KEY || k === 113 || isBack(k)) {
+      P.menu = null;
+      player('vd-menu', false);
+      return;
+    }
+    drawMenu();
+  }
+  function playerKey(k) {
+    if (!P) return;
+    if (P.menu) return menuKey(k);
+    if (P.next) {
+      if (k === 13) {
+        clearInterval(P.nextT);
+        playNext();
+      } else if (isBack(k)) stop();
+      return;
+    }
+    if (isBack(k)) return stop();
+    if (P.failed || !P.video) return;
+    var v = P.video;
+    if (k === 13) {
+      if (P.seek !== null) return;
+      if (v.paused) {
+        v.play();
+        showBar(3000);
+      } else {
+        v.pause();
+        save();
+        showBar();
+      }
+    } else if (k === 37 || k === 39) skip(k === 37 ? -1 : 1);
+    else if (k === MENU_KEY || k === 113) {
+      P.menu = { i: 0, items: [] };
+      drawMenu();
+      player('vd-menu', true);
+    }
   }
 
   /* ---------- entering and leaving ---------- */
@@ -641,6 +1069,11 @@ var VOD = (function () {
   };
   o.exit = function () {
     o.on = false;
+    if (P) {
+      save();
+      release();
+      player('vd-play', false);
+    }
     gen++;
     closeDetails();
     $('vd-q').blur();
@@ -655,6 +1088,7 @@ var VOD = (function () {
     else if (area === 'rows') rowsKey(k);
     else if (area === 'details') detailsKey(k);
     else if (area === 'results') resultsKey(k);
+    else if (area === 'player') playerKey(k);
   };
   /* the tile shows once the service knows a curator */
   api('/api/vod/status').then(
