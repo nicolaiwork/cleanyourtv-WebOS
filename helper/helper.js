@@ -54,6 +54,7 @@ loaded.push(core);
 const notify = load('notify', () => require('./notify').create(ctx));
 if (notify) load('voice', () => require('./voice').create(ctx));
 load('live', () => require('./live').create(ctx));
+load('vod', () => require('./vod').create(ctx)); // fork: Films & Series (docs/vod.md)
 load('theme', () => require('./theme').create(ctx));
 const inputkey = load('inputkey', () => require('./inputkey').create(ctx));
 if (notify) load('notifyapi', () => require('./notifyapi').create(ctx));

@@ -17,6 +17,7 @@ module.exports = {
   CHANNEL: D + '/channel', // the update channel (a test build tag)
   SOURCE: D + '/source', // "owner/repo [branch]": another repository, for testing
   LIVE: env.CYTV_LIVE_DIR || D + '/live',
+  VOD: env.CYTV_VOD_DIR || D + '/vod', // Films & Series: the curator's address, resume positions and watched marks
   THEMES: env.CYTV_THEMES || path.join(__dirname, 'themes'),
   VOICE: D + '/voice',
   HOOK: D + '/inputhook',
