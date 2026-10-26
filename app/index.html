@@ -5875,7 +5875,27 @@ var VOD = (function () {
     if (!id) return;
     if (i < 0) return LT.luna('luna://com.webos.media/setSubtitleEnable', { mediaId: id, enable: false });
     LT.luna('luna://com.webos.media/selectTrack', { mediaId: id, type: 'text', index: P.subs[i].index }, function () {
-      LT.luna('luna://com.webos.media/setSubtitleEnable', { mediaId: id, enable: true });
+      LT.luna('luna://com.webos.media/setSubtitleEnable', { mediaId: id, enable: true }, function () {
+        subStyle(id, 0);
+      });
+    });
+  }
+  /* The TV draws a film's subtitles itself, large and without an outline by default. This is the size Nicolai picked on the TV
+     (2026-10-26): small, white, a thin black outline. Values found in the TV's media server (com.webos.media). */
+  var SUB_STYLE = [
+    ['setSubtitleCustomStyleEnable', { enable: true }],
+    ['setSubtitleFontSize', { fontSize: 0 }],
+    ['setSubtitleCharacterFontSize', { charFontSize: 'small' }],
+    ['setSubtitleCharacterColor', { charColor: 'white' }],
+    ['setSubtitleCharacterEdge', { charEdgeType: 'uniform' }],
+    ['setSubtitleCharacterEdgeColor', { charEdgeColor: 'black' }],
+  ];
+  function subStyle(id, n) {
+    if (n >= SUB_STYLE.length || !P || !P.video || P.video.mediaId !== id) return;
+    var p = { mediaId: id };
+    for (var k in SUB_STYLE[n][1]) p[k] = SUB_STYLE[n][1][k];
+    LT.luna('luna://com.webos.media/' + SUB_STYLE[n][0], p, function () {
+      subStyle(id, n + 1);
     });
   }
   function tracksStart() {
