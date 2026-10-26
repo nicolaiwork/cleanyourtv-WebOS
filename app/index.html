@@ -4967,10 +4967,11 @@ var LIVE = (function () {
 /* ---------- Films & Series (fork): the library of an iptv-curator server, Plex-style: rows of posters, details, search, a player ---------- */
 /* The page talks only to the service (helper/vod.js), which passes the curator's JSON through. Details are asked for only when a title is
    opened, never for a whole row; posters come from the curator's own image cache. docs/vod.md */
+/* a clapperboard: films and series */
 var VOD_ICON =
   'data:image/svg+xml;utf8,' +
   encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 130"><rect width="130" height="130" fill="#3d6df2"/><rect x="28" y="30" width="74" height="70" rx="10" fill="none" stroke="#fff" stroke-width="8"/><path d="M28 50 H102 M28 80 H102 M48 30 V100 M82 30 V100" stroke="#fff" stroke-width="6"/></svg>'
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 130"><rect width="130" height="130" fill="#3d6df2"/><rect x="26" y="58" width="78" height="46" rx="7" fill="none" stroke="#fff" stroke-width="8"/><g transform="rotate(-13 26 52)"><rect x="26" y="36" width="78" height="17" rx="4" fill="#fff"/><path d="M42 36 L50 53 M60 36 L68 53 M78 36 L86 53 M96 36 L102 48" stroke="#3d6df2" stroke-width="6"/></g><path d="M57 70 V92 L76 81 Z" fill="#fff"/></svg>'
   );
 var VOD = (function () {
   var o = { on: false, ready: false };
