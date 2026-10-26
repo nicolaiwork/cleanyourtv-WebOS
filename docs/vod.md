@@ -35,7 +35,9 @@ films and series played in the last 90 days. At the end of an episode the next o
 ## Being gentle with the provider
 
 - A title's details are fetched only when you open it, never for a row.
-- Rows load 40 titles at a time; posters load only for what is on screen once the focus rests, from the curator's image cache.
+- Rows load 40 titles at a time. Posters come from the curator, which fetches every ticked title's poster ahead (slowly, one at a
+  time) and stores it at card size; the screen loads them once the focus rests, for what is on screen and the next screenful.
+  Both tabs keep their rows while the screen is open, so switching tabs shows them as they were.
 - One stream at a time: leaving the player stops the video and lets go of the connection.
 
 ## Trying it without a TV

@@ -1224,6 +1224,9 @@ svg.st {
   left: 0;
   top: 190px;
   width: 1920px;
+}
+/* one tab's rows */
+.vbox {
   transition: transform calc(0.22s * var(--spd)) ease-out;
 }
 .vrow {
@@ -5149,6 +5152,10 @@ var VOD = (function () {
     rows = [],
     ri = 0,
     gen = 0;
+  /* each tab's rows while the screen is open (kind -> {rows, ri, box}): switching tabs shows them as they were, posters and all */
+  var T = {};
+  /* poster paths the TV has loaded once: a new card sets them at once, they come from its cache */
+  var seen = {};
   var D = null; /* the open details: {kind, card, data, group, bi, si, ei, btns, from} */
   var S = { q: '', results: [], fi: 0, els: [] };
   var KINDS = ['films', 'series'];
@@ -5205,11 +5212,12 @@ var VOD = (function () {
     $('vd-top').innerHTML = h;
   }
   function setTab(i) {
+    if (tab < 2 && T[KINDS[tab]]) T[KINDS[tab]].ri = ri;
     tab = i;
     ti = i;
     $('vd-search').classList.toggle('on', tab === 2);
     $('vd-rows').style.display = tab === 2 ? 'none' : '';
-    if (tab < 2) buildRows();
+    if (tab < 2) showRows();
     else drawSearch();
     drawTabs();
   }
@@ -5225,12 +5233,17 @@ var VOD = (function () {
     tx.textContent = it.label || it.name || '';
     d.appendChild(tx);
     if (it.poster) {
-      var i = new Image();
+      var i = new Image(),
+        src = img(it.poster);
       i.alt = '';
+      i.onload = function () {
+        seen[src] = 1;
+      };
       i.onerror = function () {
         if (i.parentNode) i.parentNode.removeChild(i);
       };
-      i._src = img(it.poster); /* set once the focus rests (see showSoon) */
+      if (seen[src]) i.src = src;
+      else i._src = src; /* set once the focus rests (see showSoon) */
       d.appendChild(i);
     }
     var mine = itemOf(kind, it.id);
@@ -5258,25 +5271,38 @@ var VOD = (function () {
           });
     return { title: 'Continue watching', kind: kind, src: 'continue', items: items, total: items.length, done: true };
   }
-  function buildRows() {
-    gen++;
+  function showRows() {
     var kind = KINDS[tab];
+    if (!T[kind]) buildRows(kind);
+    for (var k in T) T[k].box.style.display = k === kind ? '' : 'none';
+    rows = T[kind].rows;
+    ri = T[kind].ri;
+    if (!rows.length) msg('<b>Nothing here yet</b>Tick some categories on the curator page.');
+    else msg('');
+    drawRows();
+  }
+  function buildRows(kind) {
     var list = [continueRow(kind), { title: 'Recently added', kind: kind, src: 'recent', items: [], total: -1 }];
     ((lib && lib[kind]) || []).forEach(function (c) {
       if (c.count > 0) list.push({ title: c.name, kind: kind, src: 'cat', cid: c.id, items: [], total: c.count });
     });
-    rows = list.filter(function (rw) {
-      return rw.src !== 'continue' || rw.items.length;
+    var t = (T[kind] = {
+      rows: list.filter(function (rw) {
+        return rw.src !== 'continue' || rw.items.length;
+      }),
+      ri: 0,
+      box: document.createElement('div'),
     });
-    var box = $('vd-rows');
-    box.textContent = '';
-    rows.forEach(function (rw) {
-      box.appendChild(rowEl(rw));
+    t.box.className = 'vbox';
+    t.rows.forEach(function (rw) {
+      t.box.appendChild(rowEl(rw));
     });
-    ri = 0;
-    if (!rows.length) msg('<b>Nothing here yet</b>Tick some categories on the curator page.');
-    else msg('');
-    drawRows();
+    $('vd-rows').appendChild(t.box);
+  }
+  /* a row still on one of the tabs (an answer can come after the screen was left) */
+  function alive(rw) {
+    var t = T[rw.kind];
+    return !!t && t.rows.indexOf(rw) >= 0;
   }
   function rowEl(rw) {
     rw.fi = 0;
@@ -5304,7 +5330,7 @@ var VOD = (function () {
     p.then(
       function (list) {
         rw.loading = false;
-        if (rows.indexOf(rw) < 0) return; /* the tab was rebuilt meanwhile; opening a title doesn't drop the answer */
+        if (!alive(rw)) return; /* the screen was left meanwhile; switching tabs or opening a title doesn't drop the answer */
         rw.items = rw.items.concat(list);
         if (rw.src === 'recent' || list.length < PAGE || (rw.total > 0 && rw.items.length >= rw.total)) rw.done = true;
         if (!rw.items.length) rw.strip.innerHTML = '<div class="vempty">Nothing here.</div>';
@@ -5312,7 +5338,7 @@ var VOD = (function () {
       },
       function (e) {
         rw.loading = false;
-        if (rows.indexOf(rw) < 0) return;
+        if (!alive(rw)) return;
         rw.done = true;
         rw.strip.innerHTML = '<div class="vempty">' + esc('Could not load this row: ' + e.message) + '</div>';
       }
@@ -5344,8 +5370,9 @@ var VOD = (function () {
     rw.el.classList.toggle('f', focused);
     if (!rw.done && n - rw.fi <= 10) fill(rw);
   }
-  /* Posters load only for what is on screen once the focus rests: holding Right through a long row must not make the curator fetch
-     every poster it passes from the provider. */
+  /* Posters load once the focus rests, for what is on screen and the next screenful (right, and the row below), so a step never shows
+     an empty card: the curator has them on disk (it fetches the ticked titles' posters ahead), and holding Right through a long row
+     doesn't ask for every poster it passes. */
   var imgT = 0;
   function show(el) {
     var i = el && el.querySelector('img');
@@ -5356,18 +5383,18 @@ var VOD = (function () {
     imgT = setTimeout(function () {
       if (tab === 2) {
         var r0 = Math.max(0, Math.floor(S.fi / COLS) - 1);
-        for (var i = r0 * COLS; i < Math.min(S.els.length, (r0 + 3) * COLS); i++) show(S.els[i]);
+        for (var i = r0 * COLS; i < Math.min(S.els.length, (r0 + 5) * COLS); i++) show(S.els[i]);
         return;
       }
-      for (var r = ri; r < Math.min(rows.length, ri + 2); r++) {
+      for (var r = Math.max(0, ri - 1); r < Math.min(rows.length, ri + 3); r++) {
         var rw = rows[r],
           off = Math.max(0, rw.fi - 2);
-        for (var j = off; j < off + 9; j++) show(rw.els[j]);
+        for (var j = off; j < off + 18; j++) show(rw.els[j]);
       }
-    }, 250);
+    }, 150);
   }
   function drawRows() {
-    $('vd-rows').style.transform = 'translateY(' + -ri * ROW_H + 'px)';
+    T[KINDS[tab]].box.style.transform = 'translateY(' + -ri * ROW_H + 'px)';
     for (var i = 0; i < rows.length; i++) {
       var rw = rows[i];
       if (Math.abs(i - ri) <= 2) {
@@ -5613,7 +5640,7 @@ var VOD = (function () {
     D.btns = buttons();
     var h =
       '<div class="dposter">' +
-      (d.poster || c.poster ? '<img src="' + esc(img(d.poster || c.poster)) + '" alt="">' : '') +
+      (c.poster || d.poster ? '<img src="' + esc(img(c.poster || d.poster)) + '" alt="">' : '') /* the card's, already loaded */ +
       '</div><div class="dmeta"><h1>' +
       esc(d.label || d.name) +
       '</h1><div class="facts">' +
@@ -5709,30 +5736,35 @@ var VOD = (function () {
     }
     drawDetails();
   }
-  /* after the player or details: the Continue watching row and the ✓ marks follow what was watched */
+  /* after the player or details: the Continue watching row and the ✓ marks follow what was watched, on both tabs */
   function refreshContinue() {
     loadState().then(function () {
+      if (tab < 2 && T[KINDS[tab]]) T[KINDS[tab]].ri = ri;
+      for (var k in T) syncContinue(k);
       if (tab === 2 || area !== 'rows') return drawSearch();
-      var kind = KINDS[tab],
-        had = rows.length && rows[0].src === 'continue',
-        nw = continueRow(kind);
-      if (had && nw.items.length) {
-        rows[0].items = nw.items;
-        rows[0].total = nw.items.length;
-        rows[0].fi = Math.min(rows[0].fi, nw.items.length - 1);
-      }
-      /* the row comes or goes in place: every other row keeps its position */
-      if (!had && nw.items.length) {
-        rows.unshift(nw);
-        $('vd-rows').insertBefore(rowEl(nw), $('vd-rows').firstChild);
-        ri++;
-      } else if (had && !nw.items.length) {
-        $('vd-rows').removeChild(rows.shift().el);
-        ri = Math.max(0, ri - 1);
-      }
-      for (var j = 0; j < rows.length; j++) clearRow(rows[j]); /* redrawn with the new marks */
+      ri = T[KINDS[tab]].ri;
       drawRows();
     });
+  }
+  function syncContinue(kind) {
+    var t = T[kind],
+      had = t.rows.length && t.rows[0].src === 'continue',
+      nw = continueRow(kind);
+    if (had && nw.items.length) {
+      t.rows[0].items = nw.items;
+      t.rows[0].total = nw.items.length;
+      t.rows[0].fi = Math.min(t.rows[0].fi, nw.items.length - 1);
+    }
+    /* the row comes or goes in place: every other row keeps its position */
+    if (!had && nw.items.length) {
+      t.rows.unshift(nw);
+      t.box.insertBefore(rowEl(nw), t.box.firstChild);
+      t.ri++;
+    } else if (had && !nw.items.length) {
+      t.box.removeChild(t.rows.shift().el);
+      t.ri = Math.max(0, t.ri - 1);
+    }
+    for (var j = 0; j < t.rows.length; j++) clearRow(t.rows[j]); /* redrawn with the new marks */
   }
 
   /* ---------- the player: one <video> per playback, created on play and removed on stop, so nothing holds a connection ---------- */
@@ -6238,6 +6270,7 @@ var VOD = (function () {
     msg('');
     /* nothing kept while the launcher shows: rows, cards and pictures go, and come back on the next visit */
     rows = [];
+    T = {};
     lib = null;
     S = { q: '', results: [], fi: 0, els: [] };
     $('vd-rows').textContent = '';

@@ -65,6 +65,9 @@
   left: 0;
   top: 190px;
   width: 1920px;
+}
+/* one tab's rows */
+.vbox {
   transition: transform calc(0.22s * var(--spd)) ease-out;
 }
 .vrow {
