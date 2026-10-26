@@ -290,6 +290,8 @@ var TXL = {
       'Stream': 'Stream',
       'streams': 'streams',
       'Statistics': 'Statistieken',
+      'Audio': 'Audio',
+      'Subtitles': 'Ondertiteling',
       'Close': 'Sluiten',
       'Tuning...': 'Afstemmen...',
       'Checking why...': 'Oorzaak wordt gezocht...',
@@ -330,6 +332,8 @@ var TXL = {
       'Stream': 'Stream',
       'streams': 'Streams',
       'Statistics': 'Statistik',
+      'Audio': 'Ton',
+      'Subtitles': 'Untertitel',
       'Close': 'Schließen',
       'Tuning...': 'Sender wird eingestellt...',
       'Checking why...': 'Ursache wird gesucht...',
@@ -371,6 +375,8 @@ var TXL = {
       'Stream': 'Flux',
       'streams': 'flux',
       'Statistics': 'Statistiques',
+      'Audio': 'Audio',
+      'Subtitles': 'Sous-titres',
       'Close': 'Fermer',
       'Tuning...': 'Connexion...',
       'Checking why...': 'Recherche de la cause...',
@@ -411,6 +417,8 @@ var TXL = {
       'Stream': 'Emisión',
       'streams': 'emisiones',
       'Statistics': 'Estadísticas',
+      'Audio': 'Audio',
+      'Subtitles': 'Subtítulos',
       'Close': 'Cerrar',
       'Tuning...': 'Sintonizando...',
       'Checking why...': 'Buscando la causa...',
@@ -522,6 +530,7 @@ function perfMark(m) {
 var perfReady = false;
 function launch(id, params) {
   if (id === '__live') return LIVE.enter();
+  if (id === '__vod') return VOD.enter(); /* fork */
   api('/api/launch', { id: id, params: params }).then(function (x) {
     if (x && x.returnValue === false) toast(t('Could not open') + ' ' + id);
   });

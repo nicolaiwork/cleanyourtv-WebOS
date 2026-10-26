@@ -15,6 +15,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cytv-test-'));
 process.env.CYTV_DIR = path.join(tmp, 'cytv');
 process.env.CYTV_SERVICE_DIR = path.join(tmp, 'svc');
 process.env.CYTV_LIVE_DIR = path.join(tmp, 'live', 'deep'); // exercises mkdir -p as well
+process.env.CYTV_VOD_DIR = path.join(tmp, 'vod');
 process.env.CYTV_RUNFILE = path.join(tmp, 'run.json');
 process.env.CYTV_PROC = path.join(tmp, 'proc');
 for (const d of [process.env.CYTV_DIR, process.env.CYTV_SERVICE_DIR, process.env.CYTV_PROC]) fs.mkdirSync(d);

@@ -37,7 +37,7 @@ The playlist and your favourites are kept, so switching it on again brings them 
 | OK | Open the guide | Play the channel |
 | Guide | Open the guide | Close the guide |
 | Green | Add / remove favourite | Add / remove favourite |
-| Yellow | Player menu (favourite, stream, statistics) | Filters |
+| Yellow, or 123 | Player menu (favourite, stream, audio, subtitles, statistics) | Filters |
 | Blue | Statistics | |
 | Red | | Search (the TV's keyboard) |
 | Back | Return to the launcher | Clear filters and search, then close the guide |
@@ -71,7 +71,22 @@ the [Input key](input-key.md).
   several streams. If one does not start, the next is tried; a stream that stalls is reloaded once.
 - When a channel does not play, the screen says why: the server refused it, the stream is gone, it needs DRM, it is not video, or
   it is too slow.
-- **Statistics** (Blue) show the resolution, buffer, dropped frames and which stream is playing.
+- **Statistics** (Blue) show the resolution, buffer, dropped frames, which stream is playing and the stream's audio and subtitle
+  languages (the one in use in brackets).
+
+## Audio language and subtitles
+
+When a stream carries several audio languages or subtitles, the player menu (Yellow, or **123** on remotes without colour keys
+such as the 2025 Magic Remote) shows an **Audio** row and a **Subtitles** row. OK or Right picks the next one, Left the previous
+one; subtitles go round **Off** and each language. The choice is remembered by language, so the next channel that has it starts
+with it too (for example Danish audio on channels that put Swedish first). A channel without that language keeps its own default.
+
+- Audio is switched with the video element's `audioTracks`, so the TV's own decoder changes language without restarting the stream.
+- Subtitles are drawn by the TV's player: DVB teletext inside the stream (`.ts`) is listed by
+  `luna://com.webos.media/getPipelineState` and shown with `selectTrack` and `setSubtitleEnable` (DVB bitmap subtitles are
+  likely listed the same way, but that is not checked). Subtitles in separate files (WebVTT in HLS) are not offered.
+- Checked on webOS 26 (Chromium 132) with MPEG-TS streams. On older webOS, where the browser has no `audioTracks`, the rows do not
+  appear and the stream plays as before.
 
 There is no recording and no pause.
 
