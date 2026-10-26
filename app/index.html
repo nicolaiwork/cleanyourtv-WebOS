@@ -5884,11 +5884,11 @@ var VOD = (function () {
      (2026-10-26): small, white, a thin black outline. Values found in the TV's media server (com.webos.media). */
   var SUB_STYLE = [
     ['setSubtitleCustomStyleEnable', { enable: true }],
-    ['setSubtitleFontSize', { fontSize: 0 }],
-    ['setSubtitleCharacterFontSize', { charFontSize: 'small' }],
     ['setSubtitleCharacterColor', { charColor: 'white' }],
     ['setSubtitleCharacterEdge', { charEdgeType: 'uniform' }],
     ['setSubtitleCharacterEdgeColor', { charEdgeColor: 'black' }],
+    /* last: the size settings override each other (setSubtitleCharacterFontSize after this one undoes it) */
+    ['setSubtitleFontSize', { fontSize: 0 }],
   ];
   function subStyle(id, n) {
     if (n >= SUB_STYLE.length || !P || !P.video || P.video.mediaId !== id) return;
