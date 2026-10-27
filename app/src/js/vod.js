@@ -15,7 +15,7 @@ var VOD = (function () {
     COLS = 7;
   var base = '',
     lib = null,
-    ST = { items: {} },
+    ST = { items: {}, hidden: {}, list: {} },
     tab = 0 /* 0 films, 1 series, 2 search */,
     area = 'rows' /* tabs, rows, details, search, results, player */,
     ti = 0,
@@ -26,10 +26,34 @@ var VOD = (function () {
   var T = {};
   /* poster paths the TV has loaded once: a new card sets them at once, they come from its cache */
   var seen = {};
-  var D = null; /* the open details: {kind, card, data, group, bi, si, ei, btns, from} */
+  var D = null; /* the open details: {kind, card, data, group, bi, si, ei, mi, btns, sim, menu, from, prev} */
   var S = { q: '', results: [], fi: 0, els: [] };
   var KINDS = ['films', 'series'];
   var TABS = ['Films', 'Series', 'Search'];
+  /* kept in the browser between visits and boots: the tab, where each tab's rows were left, each tab's sort */
+  var MEM = (function () {
+    try {
+      var m = JSON.parse(localStorage.getItem('vod.mem') || '{}');
+      return m && typeof m === 'object' ? m : {};
+    } catch (e) {
+      return {};
+    }
+  })();
+  function keepMem() {
+    try {
+      localStorage.setItem('vod.mem', JSON.stringify(MEM));
+    } catch (e) {}
+  }
+  if (MEM.tab === 1) tab = 1;
+  if (!MEM.sort) MEM.sort = {};
+  /* the sorts the curator offers for a category (library.json "sorts"), none from an older curator */
+  function sortsOffered() {
+    return (lib && lib.sorts) || [];
+  }
+  function sortOf(kind) {
+    var s = MEM.sort[kind];
+    return s && sortsOffered().indexOf(s) >= 0 ? s : '';
+  }
 
   function esc(s) {
     return String(s === undefined || s === null ? '' : s).replace(/[&<>"]/g, function (c) {
@@ -65,7 +89,7 @@ var VOD = (function () {
   function loadState() {
     return api('/api/vod/state').then(
       function (s) {
-        ST = s && s.items ? s : { items: {} };
+        ST = s && s.items ? { items: s.items, hidden: s.hidden || {}, list: s.list || {} } : { items: {}, hidden: {}, list: {} };
       },
       function () {}
     );
@@ -79,7 +103,37 @@ var VOD = (function () {
     var h = '';
     for (var i = 0; i < TABS.length; i++)
       h += '<div class="vtab' + (i === tab ? ' on' : '') + (area === 'tabs' && i === ti ? ' f' : '') + '">' + TABS[i] + '</div>';
+    if (hasSort())
+      h +=
+        '<div class="vsort' +
+        (area === 'sort' ? ' f' : '') +
+        '">Sort: <b>' +
+        esc(VL.sortLabel(sortOf(KINDS[tab]) || 'added', sortsOffered())) +
+        '</b></div>';
     $('vd-top').innerHTML = h;
+  }
+  /* the sort pill (top right, on Films and Series): Up from the first row, OK steps through the curator's sorts */
+  function hasSort() {
+    return tab < 2 && sortsOffered().length > 1 && !!T[KINDS[tab]];
+  }
+  function sortKey(k) {
+    if (k === 13) {
+      var kind = KINDS[tab];
+      MEM.sort[kind] = VL.nextSort(sortOf(kind) || 'added', sortsOffered());
+      MEM[kind] = { row: rows[ri] ? VL.rowKey(rows[ri]) : '', fi: {} };
+      keepMem();
+      /* the category rows again in the new order; Continue watching, My list and Recently added stay as they are */
+      var t = T[kind];
+      t.box.parentNode.removeChild(t.box);
+      delete T[kind];
+      showRows();
+      drawTabs();
+    } else if (k === 40) {
+      if (!rows.length) return;
+      area = 'rows';
+      drawTabs();
+      drawRows();
+    } else if (k === 38 || k === 37 || isBack(k)) toTabs();
   }
   function setTab(i) {
     if (tab < 2 && T[KINDS[tab]]) T[KINDS[tab]].ri = ri;
@@ -116,30 +170,49 @@ var VOD = (function () {
       else i._src = src; /* set once the focus rests (see showSoon) */
       d.appendChild(i);
     }
-    var mine = itemOf(kind, it.id);
-    if (kind === 'films' && mine && mine.watched) {
+    if (it.sub) {
+      d.className += ' hs';
+      var sb = document.createElement('div');
+      sb.className = 'vsub';
+      sb.textContent = it.sub;
+      d.appendChild(sb);
+    }
+    var mine = itemOf(kind, it.id),
+      prog = it.prog !== undefined ? it.prog : kind === 'films' && mine && mine.pos > 0 && mine.dur > 0 ? mine.pos / mine.dur : -1;
+    if (kind === 'films' && mine && mine.watched && it.prog === undefined) {
       var w = document.createElement('div');
       w.className = 'vw';
       w.textContent = '✓';
       d.appendChild(w);
-    } else if (kind === 'films' && mine && mine.pos > 0 && mine.dur > 0) {
+    } else if (prog >= 0) {
       var b = document.createElement('div');
       b.className = 'vbar';
-      b.style.width = Math.min(100, Math.round((100 * mine.pos) / mine.dur)) + '%';
+      b.style.width = Math.min(100, Math.round(100 * prog)) + '%';
       d.appendChild(b);
     }
     return d;
   }
   function continueRow(kind) {
-    var items =
-      kind === 'films'
-        ? VL.continueFilms(ST.items).map(function (x) {
-            return { id: x.id, label: x.name, poster: x.poster };
-          })
-        : VL.continueShows(ST.items, Date.now()).map(function (x) {
-            return { id: x.id, label: x.name, poster: x.poster };
-          });
+    var list = kind === 'films' ? VL.continueFilms(ST.items, ST.hidden) : VL.continueShows(ST.items, Date.now(), ST.hidden);
+    var items = list.map(function (x) {
+      return { id: x.id, label: x.name, poster: x.poster, sub: VL.continueSub(x), prog: VL.continueProgress(x) };
+    });
     return { title: 'Continue watching', kind: kind, src: 'continue', items: items, total: items.length, done: true };
+  }
+  function listRow(kind) {
+    var items = VL.myList(ST.list, kind === 'films' ? 'film' : 'show').map(function (x) {
+      return { id: x.id, label: x.name, poster: x.poster };
+    });
+    return { title: 'My list', kind: kind, src: 'mylist', items: items, total: items.length, done: true };
+  }
+  /* the rows made from what the viewer did, on top of a tab: Continue watching and My list, each only when it has titles */
+  function personalRows(kind) {
+    return [continueRow(kind), listRow(kind)].filter(function (rw) {
+      return rw.items.length;
+    });
+  }
+  function isPersonal(rw) {
+    return rw.src === 'continue' || rw.src === 'mylist';
   }
   function showRows() {
     var kind = KINDS[tab];
@@ -152,20 +225,19 @@ var VOD = (function () {
     drawRows();
   }
   function buildRows(kind) {
-    var list = [continueRow(kind), { title: 'Recently added', kind: kind, src: 'recent', items: [], total: -1 }];
+    var list = personalRows(kind).concat([{ title: 'Recently added', kind: kind, src: 'recent', items: [], total: -1 }]);
     ((lib && lib[kind]) || []).forEach(function (c) {
-      if (c.count > 0) list.push({ title: c.name, kind: kind, src: 'cat', cid: c.id, items: [], total: c.count });
+      if (c.count > 0) list.push({ title: c.name, kind: kind, src: 'cat', cid: c.id, items: [], total: c.count, sort: sortOf(kind) });
     });
-    var t = (T[kind] = {
-      rows: list.filter(function (rw) {
-        return rw.src !== 'continue' || rw.items.length;
-      }),
-      ri: 0,
-      box: document.createElement('div'),
-    });
+    var t = (T[kind] = { rows: list, ri: 0, box: document.createElement('div') });
     t.box.className = 'vbox';
     t.rows.forEach(function (rw) {
       t.box.appendChild(rowEl(rw));
+    });
+    /* back where this tab was left on the last visit (a row loads far enough to reach its title, at most 12 pages) */
+    t.ri = VL.recall(MEM[kind], t.rows);
+    t.rows.forEach(function (rw) {
+      rw.want = Math.min(rw.want || 0, PAGE * 12);
     });
     $('vd-rows').appendChild(t.box);
   }
@@ -175,7 +247,7 @@ var VOD = (function () {
     return !!t && t.rows.indexOf(rw) >= 0;
   }
   function rowEl(rw) {
-    rw.fi = 0;
+    rw.fi = rw.fi || 0;
     rw.els = {};
     rw.el = document.createElement('div');
     rw.el.className = 'vrow';
@@ -196,7 +268,10 @@ var VOD = (function () {
     var p =
       rw.src === 'recent'
         ? vget('/vod/' + rw.kind + '/recent.json')
-        : vget('/vod/' + rw.kind + '/' + rw.cid + '.json', { offset: rw.items.length, limit: PAGE });
+        : vget(
+            '/vod/' + rw.kind + '/' + rw.cid + '.json',
+            rw.sort ? { offset: rw.items.length, limit: PAGE, sort: rw.sort } : { offset: rw.items.length, limit: PAGE }
+          );
     p.then(
       function (list) {
         rw.loading = false;
@@ -204,6 +279,11 @@ var VOD = (function () {
         rw.items = rw.items.concat(list);
         if (rw.src === 'recent' || list.length < PAGE || (rw.total > 0 && rw.items.length >= rw.total)) rw.done = true;
         if (!rw.items.length) rw.strip.innerHTML = '<div class="vempty">Nothing here.</div>';
+        if (rw.want) {
+          if (rw.want >= rw.items.length && !rw.done) return fill(rw); /* the next page, towards where the row was left */
+          rw.fi = Math.min(rw.want, rw.items.length - 1);
+          rw.want = 0;
+        }
         drawRow(rw);
       },
       function (e) {
@@ -289,6 +369,10 @@ var VOD = (function () {
       if (ri > 0) {
         ri--;
         drawRows();
+      } else if (hasSort()) {
+        area = 'sort';
+        drawTabs();
+        drawRow(rw);
       } else toTabs();
     } else if (k === 40 && ri < rows.length - 1) {
       ri++;
@@ -432,8 +516,28 @@ var VOD = (function () {
     return a.join('  ·  ');
   }
   function openDetails(kind, c, from) {
-    var g = ++gen;
-    D = { kind: kind, card: c, data: null, group: 'btn', bi: 0, si: 0, ei: 0, btns: [], from: from };
+    var g = ++gen,
+      prev = from === 'details' ? D : null;
+    if (prev) {
+      prev.menu = null;
+      /* at most four titles deep: the oldest is let go */
+      for (var n = 1, p = prev; p.prev; p = p.prev, n++) if (n >= 3) p.prev = null;
+    }
+    D = {
+      kind: kind,
+      card: c,
+      data: null,
+      group: 'btn',
+      bi: 0,
+      si: 0,
+      ei: 0,
+      mi: 0,
+      btns: [],
+      sim: [],
+      from: prev ? prev.from : from,
+      prev: prev,
+    };
+    $('vd-dmain').style.transform = '';
     area = 'details';
     var det = $('vd-det');
     det.classList.add('on');
@@ -455,14 +559,9 @@ var VOD = (function () {
           $('vd-bd').src = img(d.backdrop);
           $('vd-bd').style.display = '';
         }
-        var nx = kind === 'series' ? VL.nextEpisode(d.seasons, ST.items) : null;
-        if (nx)
-          for (var i = 0; i < d.seasons.length; i++)
-            if (d.seasons[i].season === nx.season) {
-              D.si = i;
-              D.ei = Math.max(0, d.seasons[i].episodes.indexOf(nx.ep));
-            }
+        toNext();
         drawDetails();
+        loadSimilar(g);
       },
       function (e) {
         if (g !== gen || !D) return;
@@ -477,6 +576,17 @@ var VOD = (function () {
       }
     );
   }
+  /* the season and episode the list opens at: the one Continue plays */
+  function toNext() {
+    var d = D.data,
+      nx = D.kind === 'series' && d.seasons ? VL.nextEpisode(d.seasons, ST.items) : null;
+    if (nx)
+      for (var i = 0; i < d.seasons.length; i++)
+        if (d.seasons[i].season === nx.season) {
+          D.si = i;
+          D.ei = Math.max(0, d.seasons[i].episodes.indexOf(nx.ep));
+        }
+  }
   function buttons() {
     var d = D.data,
       out = [];
@@ -486,17 +596,183 @@ var VOD = (function () {
         out.push({ label: '▶  Resume from ' + VL.clock(at), play: { at: at } });
         out.push({ label: 'From the start', play: { at: 0 } });
       } else out.push({ label: '▶  Play', play: { at: 0 } });
-      return out;
+    } else {
+      var nx = VL.nextEpisode(d.seasons, ST.items);
+      if (nx) {
+        var started = !!itemOf('series', nx.ep.id) || nx.resume > 0 || anyPlayed(d);
+        out.push({
+          label: nx.again
+            ? '▶  Watch again from ' + VL.epCode(nx.season, nx.ep.num)
+            : '▶  ' +
+              (started ? 'Continue ' : 'Play ') +
+              VL.epCode(nx.season, nx.ep.num) +
+              (nx.resume ? '  ·  ' + VL.clock(nx.resume) : ''),
+          play: { ep: nx.ep, season: nx.season, at: nx.resume },
+        });
+      }
     }
-    var nx = VL.nextEpisode(d.seasons, ST.items);
-    if (!nx) return out;
-    var started = !!itemOf('series', nx.ep.id) || nx.resume > 0 || anyPlayed(d);
-    out.push({
-      label:
-        '▶  ' + (started ? 'Continue ' : 'Play ') + VL.epCode(nx.season, nx.ep.num) + (nx.resume ? '  ·  ' + VL.clock(nx.resume) : ''),
-      play: { ep: nx.ep, season: nx.season, at: nx.resume },
-    });
+    var mine = !!ST.list[listKey()];
+    out.push({ label: mine ? '✓  My list' : '+  My list', small: true, run: toggleList });
+    out.push({ label: 'More', small: true, run: openMenu });
     return out;
+  }
+  /* ---------- what can be done to a title by hand: My list, watched or not, off Continue watching ---------- */
+  function listKey() {
+    return (D.kind === 'films' ? 'film:' : 'show:') + D.data.id;
+  }
+  function changed() {
+    return loadState().then(function () {
+      if (D && D.data) drawDetails();
+    });
+  }
+  function toggleList() {
+    var d = D.data;
+    api('/api/vod/state', {
+      op: 'list',
+      kind: D.kind === 'films' ? 'film' : 'show',
+      id: d.id,
+      on: !ST.list[listKey()],
+      name: String(d.label || d.name || '').slice(0, 200),
+      poster: d.poster || '',
+    }).then(changed, changed);
+  }
+  /* an episode as the service keeps it, with the one after it (null after the show's last) */
+  function epItem(d, season, ep) {
+    return {
+      kind: 'episode',
+      id: ep.id,
+      name: String(ep.label || ep.title || '').slice(0, 200),
+      poster: d.poster || '',
+      show: { id: d.id, name: String(d.label || d.name || '').slice(0, 200), poster: d.poster || '' },
+      season: season,
+      num: ep.num || 0,
+      next: VL.nextOf(d.seasons, ep.id),
+    };
+  }
+  function mark(items, on) {
+    return api('/api/vod/state', { op: 'mark', on: on, items: items }).then(changed, changed);
+  }
+  function seasonItems(si) {
+    var s = D.data.seasons[si];
+    return s.episodes.map(function (ep) {
+      return epItem(D.data, s.season, ep);
+    });
+  }
+  function allWatched(items) {
+    for (var i = 0; i < items.length; i++) {
+      var it = ST.items['episode:' + items[i].id];
+      if (!it || !it.watched) return false;
+    }
+    return items.length > 0;
+  }
+  function inContinue() {
+    var list = D.kind === 'films' ? VL.continueFilms(ST.items, ST.hidden) : VL.continueShows(ST.items, Date.now(), ST.hidden);
+    for (var i = 0; i < list.length; i++) if (list[i].id === D.data.id) return true;
+    return false;
+  }
+  function menuOf() {
+    var d = D.data,
+      out = [];
+    if (D.kind === 'films') {
+      var it = itemOf('films', d.id),
+        film = { kind: 'film', id: d.id, name: String(d.label || d.name || '').slice(0, 200), poster: d.poster || '' };
+      out.push(
+        it && it.watched
+          ? {
+              label: 'Mark as unwatched',
+              run: function () {
+                mark([film], false);
+              },
+            }
+          : {
+              label: 'Mark as watched',
+              run: function () {
+                mark([film], true);
+              },
+            }
+      );
+    } else if (d.seasons && d.seasons.length) {
+      var si = D.si,
+        sItems = seasonItems(si),
+        all = [];
+      d.seasons.forEach(function (x, i) {
+        all = all.concat(seasonItems(i));
+      });
+      var name = 'season ' + d.seasons[si].season;
+      out.push(
+        allWatched(sItems)
+          ? {
+              label: 'Mark ' + name + ' as unwatched',
+              run: function () {
+                mark(sItems, false);
+              },
+            }
+          : {
+              label: 'Mark ' + name + ' as watched',
+              run: function () {
+                mark(sItems, true);
+              },
+            }
+      );
+      if (d.seasons.length > 1)
+        out.push(
+          allWatched(all)
+            ? {
+                label: 'Mark every season as unwatched',
+                run: function () {
+                  mark(all, false);
+                },
+              }
+            : {
+                label: 'Mark every season as watched',
+                run: function () {
+                  mark(all, true);
+                },
+              }
+        );
+    }
+    if (inContinue())
+      out.push({
+        label: 'Remove from Continue watching',
+        run: function () {
+          api('/api/vod/state', { op: 'hide', kind: D.kind === 'films' ? 'film' : 'show', id: d.id }).then(changed, changed);
+        },
+      });
+    out.push({ label: 'Close', run: function () {} });
+    return out;
+  }
+  function openMenu() {
+    D.menu = { i: 0, items: menuOf() };
+    drawDetails();
+  }
+  function dmenuKey(k) {
+    var m = D.menu;
+    if (k === 38 && m.i > 0) m.i--;
+    else if (k === 40 && m.i < m.items.length - 1) m.i++;
+    else if (k === 13) {
+      D.menu = null;
+      m.items[m.i].run();
+    } else if (isBack(k) || k === 37) D.menu = null;
+    drawDetails();
+  }
+  /* an episode's own watched mark: Right from the episode, OK sets or clears it */
+  function toggleEp() {
+    var s = D.data.seasons[D.si],
+      ep = s.episodes[D.ei],
+      it = itemOf('series', ep.id);
+    mark([epItem(D.data, s.season, ep)], !(it && it.watched));
+  }
+  /* ---------- More like this: titles the curator finds close to this one (its cached lists only; never the provider) ---------- */
+  function loadSimilar(g) {
+    if (!lib || !lib.similar) return;
+    vget('/vod/' + (D.kind === 'films' ? 'film/' : 'show/') + D.data.id + '/similar.json').then(
+      function (list) {
+        if (g !== gen || !D || !list || !list.length) return;
+        D.sim = list.slice(0, 20);
+        drawDetails();
+      },
+      function () {}
+    );
   }
   function anyPlayed(d) {
     for (var i = 0; i < d.seasons.length; i++)
@@ -521,7 +797,7 @@ var VOD = (function () {
       esc([d.director, d.cast].filter(Boolean).join('  ·  ')) +
       '</div><div class="vbtns">';
     D.btns.forEach(function (b, i) {
-      h += '<div class="vbtn' + (D.group === 'btn' && i === D.bi ? ' f' : '') + '">' + esc(b.label) + '</div>';
+      h += '<div class="vbtn' + (b.small ? ' sm' : '') + (D.group === 'btn' && i === D.bi ? ' f' : '') + '">' + esc(b.label) + '</div>';
     });
     h += '</div>';
     if (D.kind === 'series' && d.seasons && d.seasons.length) {
@@ -537,7 +813,7 @@ var VOD = (function () {
       });
       h += '</div><div class="veps">';
       var eps = d.seasons[D.si].episodes,
-        w = VL.windowOf(D.ei, eps.length, 2, 4);
+        w = VL.windowOf(D.ei, eps.length, 2, D.sim.length ? 3 : 4);
       for (var i = w[0]; i < w[1]; i++) {
         var ep = eps[i],
           mine = itemOf('series', ep.id),
@@ -546,9 +822,18 @@ var VOD = (function () {
         else if (mine && mine.pos > 0 && mine.dur > 0)
           right = '<div class="pb"><i style="width:' + Math.min(100, Math.round((100 * mine.pos) / mine.dur)) + '%"></i></div>';
         else if (ep.duration_secs) right = '<div class="r">' + VL.fmtLength(ep.duration_secs) + '</div>';
+        /* the focused episode's watched mark, reached with Right */
+        if ((D.group === 'ep' || D.group === 'eptog') && i === D.ei)
+          right +=
+            '<div class="vtog' +
+            (D.group === 'eptog' ? ' f' : '') +
+            '">' +
+            (mine && mine.watched ? 'Mark unwatched' : 'Mark watched') +
+            '</div>';
         h +=
           '<div class="vep' +
-          (D.group === 'ep' && i === D.ei ? ' f' : '') +
+          ((D.group === 'ep' || D.group === 'eptog') && i === D.ei ? ' f' : '') +
+          (D.group === 'eptog' && i === D.ei ? ' t' : '') +
           '"><div class="n">' +
           esc(ep.num || i + 1) +
           '</div><div class="l">' +
@@ -559,31 +844,88 @@ var VOD = (function () {
       }
       h += '</div>';
     }
-    setHtml($('vd-dmain'), h + '</div>');
+    if (D.sim.length) {
+      var sw = VL.windowOf(D.mi, D.sim.length, 2, 7);
+      h +=
+        '<div class="vsim' +
+        (D.group === 'sim' ? ' on' : '') +
+        '"><h2>More like this</h2><div class="vsstrip" style="transform:translateX(' +
+        -Math.max(0, D.mi - 2) * CARD +
+        'px)">';
+      for (var m = sw[0]; m < sw[1]; m++) {
+        var it = D.sim[m];
+        h +=
+          '<div class="vp' +
+          (D.group === 'sim' && m === D.mi ? ' f' : '') +
+          '" style="left:' +
+          m * CARD +
+          'px;background:hsl(' +
+          hashHue(String(it.id)) +
+          ',30%,24%)"><div class="vt">' +
+          esc(it.label || it.name) +
+          '</div>' +
+          (it.poster ? '<img src="' + esc(img(it.poster)) + '" alt="" onerror="this.parentNode.removeChild(this)">' : '') +
+          '</div>';
+      }
+      h +=
+        '</div><div class="vlabel">' +
+        (D.group === 'sim' && D.sim[D.mi] ? esc(D.sim[D.mi].label || D.sim[D.mi].name) : '') +
+        '</div></div>';
+    }
+    if (D.menu) {
+      h += '<div class="vdmenu">';
+      D.menu.items.forEach(function (it, i) {
+        h += '<div class="mrow' + (i === D.menu.i ? ' f' : '') + '"><div class="ml">' + esc(it.label) + '</div></div>';
+      });
+      h += '</div>';
+    }
+    var main = $('vd-dmain');
+    setHtml(main, h + '</div>');
+    /* More like this sits below the episodes: the page moves up while it has the focus */
+    var row = D.group === 'sim' && main.querySelector('.vsim');
+    main.style.transform = row ? 'translateY(' + -Math.max(0, row.offsetTop + 470 - 1040 + 110) + 'px)' : '';
   }
   function closeDetails() {
     gen++;
     D = null;
     $('vd-det').classList.remove('on');
     $('vd-bd').removeAttribute('src');
+    $('vd-dmain').style.transform = '';
   }
   function backFromDetails() {
     var from = D ? D.from : 'rows';
+    if (D && D.prev) {
+      /* back to the title this one was opened from */
+      gen++;
+      D = D.prev;
+      var bd = D.data && D.data.backdrop;
+      if (bd) $('vd-bd').src = img(bd);
+      else $('vd-bd').removeAttribute('src');
+      $('vd-bd').style.display = bd ? '' : 'none';
+      return changed();
+    }
     closeDetails();
     area = from;
     if (from === 'results') drawSearch();
     else refreshContinue();
   }
   function detailsKey(k) {
+    if (D && D.menu) return dmenuKey(k);
     if (isBack(k)) return backFromDetails();
     if (!D || !D.data) return;
     var d = D.data,
-      series = D.kind === 'series' && d.seasons && d.seasons.length;
+      series = D.kind === 'series' && d.seasons && d.seasons.length,
+      sim = D.sim.length > 0;
     if (D.group === 'btn') {
       if (k === 37 && D.bi > 0) D.bi--;
       else if (k === 39 && D.bi < D.btns.length - 1) D.bi++;
       else if (k === 40 && series) D.group = 'season';
-      else if (k === 13 && D.btns[D.bi]) return playFrom(D.btns[D.bi].play);
+      else if (k === 40 && sim) D.group = 'sim';
+      else if (k === 13 && D.btns[D.bi]) {
+        var b = D.btns[D.bi];
+        if (b.play) return playFrom(b.play);
+        return b.run();
+      }
     } else if (D.group === 'season') {
       if (k === 37 && D.si > 0) {
         D.si--;
@@ -598,43 +940,71 @@ var VOD = (function () {
       if (k === 38) {
         if (D.ei > 0) D.ei--;
         else D.group = 'season';
-      } else if (k === 40 && D.ei < eps.length - 1) D.ei++;
+      } else if (k === 40) {
+        if (D.ei < eps.length - 1) D.ei++;
+        else if (sim) D.group = 'sim';
+      } else if (k === 39 && eps[D.ei]) D.group = 'eptog';
       else if (k === 13 && eps[D.ei]) {
         var ep = eps[D.ei];
         return playFrom({ ep: ep, season: d.seasons[D.si].season, at: VL.resumeAt(itemOf('series', ep.id)) });
       }
+    } else if (D.group === 'eptog') {
+      if (k === 37) D.group = 'ep';
+      else if (k === 13) return toggleEp();
+      else if (k === 38 || k === 40) {
+        D.group = 'ep';
+        return detailsKey(k);
+      }
+    } else if (D.group === 'sim') {
+      if (k === 37 && D.mi > 0) D.mi--;
+      else if (k === 39 && D.mi < D.sim.length - 1) D.mi++;
+      else if (k === 38) D.group = series ? 'ep' : 'btn';
+      else if (k === 13 && D.sim[D.mi]) return openDetails(D.kind, D.sim[D.mi], 'details');
     }
     drawDetails();
   }
-  /* after the player or details: the Continue watching row and the ✓ marks follow what was watched, on both tabs */
+  /* after the player or details: Continue watching, My list and the ✓ marks follow what was done, on both tabs */
   function refreshContinue() {
     loadState().then(function () {
       if (tab < 2 && T[KINDS[tab]]) T[KINDS[tab]].ri = ri;
-      for (var k in T) syncContinue(k);
+      for (var k in T) syncPersonal(k);
       if (tab === 2 || area !== 'rows') return drawSearch();
+      rows = T[KINDS[tab]].rows; /* a new list when a personal row came or went */
       ri = T[KINDS[tab]].ri;
       drawRows();
     });
   }
-  function syncContinue(kind) {
+  /* the personal rows come, go or change in place: every other row keeps its position, and the focus stays on its row */
+  function syncPersonal(kind) {
     var t = T[kind],
-      had = t.rows.length && t.rows[0].src === 'continue',
-      nw = continueRow(kind);
-    if (had && nw.items.length) {
-      t.rows[0].items = nw.items;
-      t.rows[0].total = nw.items.length;
-      t.rows[0].fi = Math.min(t.rows[0].fi, nw.items.length - 1);
-    }
-    /* the row comes or goes in place: every other row keeps its position */
-    if (!had && nw.items.length) {
-      t.rows.unshift(nw);
-      t.box.insertBefore(rowEl(nw), t.box.firstChild);
-      t.ri++;
-    } else if (had && !nw.items.length) {
-      t.box.removeChild(t.rows.shift().el);
-      t.ri = Math.max(0, t.ri - 1);
-    }
-    for (var j = 0; j < t.rows.length; j++) clearRow(t.rows[j]); /* redrawn with the new marks */
+      n0 = 0;
+    while (n0 < t.rows.length && isPersonal(t.rows[n0])) n0++;
+    var focus = t.rows[t.ri],
+      old = t.rows.slice(0, n0),
+      now = personalRows(kind).map(function (nw) {
+        for (var i = 0; i < old.length; i++)
+          if (old[i].src === nw.src) {
+            old[i].items = nw.items;
+            old[i].total = nw.items.length;
+            old[i].fi = Math.min(old[i].fi, nw.items.length - 1);
+            return old[i];
+          }
+        rowEl(nw);
+        return nw;
+      });
+    old.forEach(function (rw) {
+      if (now.indexOf(rw) < 0) t.box.removeChild(rw.el);
+    });
+    var first = t.rows[n0] ? t.rows[n0].el : null;
+    now.forEach(function (rw) {
+      t.box.insertBefore(rw.el, first);
+    });
+    t.rows = now.concat(t.rows.slice(n0));
+    var at = t.rows.indexOf(focus);
+    if (at < 0 && focus) for (var j = 0; j < now.length; j++) if (now[j].src === focus.src) at = j; /* the same row, rebuilt */
+    t.ri = at >= 0 ? at : Math.min(t.ri, t.rows.length - 1);
+    if (t.ri < 0) t.ri = 0;
+    for (var r = 0; r < t.rows.length; r++) clearRow(t.rows[r]); /* redrawn with the new marks */
   }
 
   /* ---------- the player: one <video> per playback, created on play and removed on stop, so nothing holds a connection ---------- */
@@ -644,7 +1014,8 @@ var VOD = (function () {
     SEEK_MS = 400,
     NEXT_S = 10;
   var P =
-    null; /* {cur, video, at, started, failed, startT, saveT, barT, seek, seekN, seekT, seekAt, menu, subs, sub, tries, subT, next, nextT, nextN} */
+    null; /* {cur, video, at, started, failed, startT, saveT, barT, seek, seekN, seekT, seekAt, menu, subs, sub, tries, subT, next, nextT, nextN,
+             after, early, earlyOff} */
   function duration() {
     var v = P && P.video;
     return v && isFinite(v.duration) && v.duration > 0 ? v.duration : (P && P.cur.durHint) || 0;
@@ -662,6 +1033,7 @@ var VOD = (function () {
         id: d.id,
         name: d.label || d.name,
         poster: d.poster || '',
+        backdrop: d.backdrop || '',
         play: d.play,
         durHint: d.duration_secs || 0,
         ext: d.ext || '',
@@ -675,6 +1047,8 @@ var VOD = (function () {
         show: { id: d.id, name: d.label || d.name || '', poster: d.poster || '' },
         season: spec.season,
         num: spec.ep.num || 0,
+        next: VL.nextOf(d.seasons, spec.ep.id),
+        backdrop: d.backdrop || '',
         play: spec.ep.play,
         durHint: spec.ep.duration_secs || 0,
         ext: spec.ep.ext || '',
@@ -682,17 +1056,60 @@ var VOD = (function () {
     start(cur, spec.at || 0);
   }
   function hidePlayer() {
-    ['vd-play', 'vd-bar', 'vd-menu', 'vd-next', 'vd-pmsg', 'vd-spin'].forEach(function (id) {
+    ['vd-play', 'vd-bar', 'vd-menu', 'vd-next', 'vd-pmsg', 'vd-spin', 'vd-load', 'vd-early'].forEach(function (id) {
       player(id, false);
     });
+    $('vd-limg').removeAttribute('src');
+  }
+  /* the episode after the one playing, with its season, or null (films, the last episode, details not open) */
+  function nextAfter(c) {
+    var nx = c.kind === 'episode' && D && D.data && D.data.seasons ? VL.after(D.data.seasons, c.id) : null;
+    if (!nx) return null;
+    var season = c.season;
+    D.data.seasons.forEach(function (s) {
+      if (s.episodes.indexOf(nx) >= 0) season = s.season;
+    });
+    return { ep: nx, season: season };
+  }
+  /* while a title starts: its backdrop (or poster) and name under the spinner, instead of a black screen */
+  function drawLoad(cur) {
+    var pic = cur.backdrop || cur.poster;
+    $('vd-limg').onerror = function () {
+      this.style.display = 'none';
+    };
+    if (pic) $('vd-limg').src = img(pic);
+    $('vd-limg').style.display = pic ? '' : 'none';
+    $('vd-ltitle').textContent =
+      cur.kind === 'episode' ? cur.show.name + '  ·  ' + VL.epCode(cur.season, cur.num) + '  ·  ' + cur.name : cur.name;
+    player('vd-load', true);
+  }
+  /* "Next episode" once the episode counts as watched (the last minutes, its credits): OK plays it, Down hides it */
+  function early() {
+    var v = P && P.video;
+    if (!v || !P.after || P.next) return;
+    var on = VL.watched(P.seek !== null ? P.seek : v.currentTime, duration());
+    if (!on) P.earlyOff = false;
+    on = on && !P.earlyOff;
+    if (on === !!P.early) return;
+    P.early = on;
+    if (on)
+      setHtml(
+        $('vd-early'),
+        '<b>▶  Next episode</b>' +
+          esc(VL.epCode(P.after.season, P.after.ep.num) + '  ·  ' + (P.after.ep.label || P.after.ep.title || '')) +
+          '<div class="small">OK plays it  ·  Down hides this</div>'
+      );
+    player('vd-early', on);
   }
   function start(cur, at) {
     release();
     area = 'player';
     P = { cur: cur, at: at, started: false, failed: false, seek: null, seekN: 0, seekAt: 0, menu: null, subs: [], sub: -1, tries: 0 };
     hidePlayer();
+    P.after = nextAfter(cur);
     player('vd-play', true);
     player('vd-spin', true);
+    drawLoad(cur);
     var v = document.createElement('video');
     v.autoplay = true;
     P.video = v;
@@ -705,6 +1122,7 @@ var VOD = (function () {
       if (!P.started && v.currentTime > 0) {
         P.started = true;
         clearTimeout(P.startT);
+        player('vd-load', false);
         tracksStart();
       }
     }
@@ -712,6 +1130,7 @@ var VOD = (function () {
     v.addEventListener('timeupdate', function () {
       playing();
       if (P && P.video === v && P.barOn) drawBar();
+      if (P && P.video === v) early();
     });
     v.addEventListener('waiting', function () {
       if (P && P.video === v) player('vd-spin', true);
@@ -736,6 +1155,7 @@ var VOD = (function () {
   }
   function fail() {
     player('vd-spin', false);
+    player('vd-load', false);
     P.failed = true;
     var ext = P.cur.ext ? ' (.' + esc(P.cur.ext) + ')' : '';
     release(true);
@@ -778,6 +1198,7 @@ var VOD = (function () {
       b.show = { id: c.show.id, name: c.show.name.slice(0, 200), poster: c.show.poster };
       b.season = c.season;
       b.num = c.num;
+      b.next = c.next;
     }
     var w = VL.watched(pos, dur);
     api('/api/vod/state', b)
@@ -844,14 +1265,11 @@ var VOD = (function () {
   function ended() {
     var c = P.cur;
     save(function () {
-      var nx = c.kind === 'episode' && D && D.data ? VL.after(D.data.seasons, c.id) : null;
+      var nx = nextAfter(c);
       if (!nx) return stop();
-      var season = c.season;
-      D.data.seasons.forEach(function (s) {
-        if (s.episodes.indexOf(nx) >= 0) season = s.season;
-      });
       release(true);
-      P.next = { ep: nx, season: season };
+      player('vd-early', false);
+      P.next = nx;
       P.nextN = NEXT_S;
       drawNext();
       player('vd-next', true);
@@ -1073,6 +1491,19 @@ var VOD = (function () {
     if (isBack(k)) return stop();
     if (P.failed || !P.video) return;
     var v = P.video;
+    if (P.early && k === 13) {
+      /* the next episode now: this one is saved (watched) first */
+      var nx = P.after;
+      return save(function () {
+        if (!P || !o.on) return;
+        P.next = nx;
+        playNext();
+      });
+    }
+    if (P.early && k === 40) {
+      P.earlyOff = true;
+      return early();
+    }
     if (k === 13) {
       if (P.seek !== null || !P.started) return;
       if (v.paused) {
@@ -1114,7 +1545,7 @@ var VOD = (function () {
         if (!o.on) return;
         base = r[0].base || base;
         msg('');
-        setTab(tab === 2 ? 0 : tab);
+        setTab(tab === 2 ? (MEM.tab === 1 ? 1 : 0) : tab);
         area = rows.length ? 'rows' : 'tabs';
         drawTabs();
         drawRows();
@@ -1129,6 +1560,11 @@ var VOD = (function () {
   };
   o.exit = function () {
     o.on = false;
+    /* where each tab was left, for the next visit */
+    if (tab < 2 && T[KINDS[tab]]) T[KINDS[tab]].ri = ri;
+    for (var kd in T) MEM[kd] = VL.remember(T[kd].rows, T[kd].ri);
+    if (tab < 2) MEM.tab = tab;
+    keepMem();
     if (P) {
       save();
       release();
@@ -1166,6 +1602,7 @@ var VOD = (function () {
     e.preventDefault();
     if (area === 'tabs') tabsKey(k);
     else if (area === 'rows') rowsKey(k);
+    else if (area === 'sort') sortKey(k);
     else if (area === 'details') detailsKey(k);
     else if (area === 'results') resultsKey(k);
     else if (area === 'player') playerKey(k);

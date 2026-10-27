@@ -39,8 +39,8 @@ let settings = readJson(SETTINGS, {});
 const base = () => baseFrom(settings, readJson(LIVE_SETTINGS, {}));
 
 // ---- the library: only these curator paths, only these query keys ----
-const ALLOWED = /^\/vod\/(library\.json|(films|series)\/[0-9A-Za-z_-]{1,40}\.json|(film|show)\/\d{1,12}\.json|search\.json)$/;
-const KEYS = ['offset', 'limit', 'q'];
+const ALLOWED = /^\/vod\/(library\.json|(films|series)\/[0-9A-Za-z_-]{1,40}\.json|(film|show)\/\d{1,12}(\/similar)?\.json|search\.json)$/;
+const KEYS = ['offset', 'limit', 'q', 'sort'];
 async function get(q, json) {
   const p = q.get('path') || '';
   if (!ALLOWED.test(p)) return json({ error: 'not a library path' }, 400);
@@ -62,8 +62,14 @@ async function get(q, json) {
   }
 }
 
-// ---- what the viewer watched: {items: {"film:501": {kind, id, name, poster, pos, dur, watched, at, show?, season?, num?}}} ----
-let state = (o => ({ items: o && o.items && typeof o.items === 'object' ? o.items : {} }))(readJson(STATE, {}));
+// ---- what the viewer watched: {items: {"film:501": {kind, id, name, poster, pos, dur, watched, at, show?, season?, num?, next?}},
+//      hidden: {"film:501" | "show:601": at} (taken off Continue watching until played again), list: {"film:501" | "show:601": {…}}} ----
+const MAX_HIDDEN = 500,
+  MAX_LIST = 500,
+  MAX_MARK = 500;
+const empty = () => ({ items: {}, hidden: {}, list: {} });
+const obj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+let state = (o => ({ items: obj(o && o.items), hidden: obj(o && o.hidden), list: obj(o && o.list) }))(readJson(STATE, {}));
 /** @type {any} */
 let stateT = 0;
 const saveState = () => {
@@ -80,8 +86,70 @@ const isText = v => typeof v === 'string' && v.length <= 200;
 // a curator image path; the curator adds ?v=<n> (its image version) since it stores posters at TV size
 const isPoster = v => v === '' || (typeof v === 'string' && /^\/vod\/img\/[0-9a-f]{32}(\?v=\d{1,6})?$/.test(v));
 const isTime = v => typeof v === 'number' && isFinite(v) && v >= 0 && v < 1e6;
+const isShow = s => !!s && isId(s.id) && isText(s.name) && isPoster(s.poster);
+// the episode after this one ({season, num}), or null after the show's last: a show whose last episode was watched is finished
+const isNext = v => v === null || (!!v && isId(v.season) && isId(v.num));
+// keeps the newest `max` entries of a map whose values have (or are) a time
+function cap(map, max, at) {
+  const keys = Object.keys(map);
+  if (keys.length <= max) return;
+  keys.sort((a, c) => at(map[c]) - at(map[a]));
+  for (const k of keys.slice(max)) delete map[k];
+}
+// what is known about a title, from a pos or mark request; null if something is malformed
+function titleOf(b) {
+  if (KINDS.indexOf(b.kind) < 0 || !isId(b.id) || !isText(b.name) || !isPoster(b.poster)) return null;
+  const it = { kind: b.kind, id: b.id, name: b.name, poster: b.poster };
+  if (b.kind === 'episode') {
+    if (!isShow(b.show) || !isId(b.season) || !isId(b.num) || (b.next !== undefined && !isNext(b.next))) return null;
+    it.show = { id: b.show.id, name: b.show.name, poster: b.show.poster };
+    it.season = b.season;
+    it.num = b.num;
+    if (b.next !== undefined) it.next = b.next && { season: b.next.season, num: b.next.num };
+  }
+  return it;
+}
 function applyOp(st, b, now) {
-  if (!b || typeof b !== 'object' || KINDS.indexOf(b.kind) < 0 || !isId(b.id)) return false;
+  if (!b || typeof b !== 'object') return false;
+  if (!st.hidden) st.hidden = {};
+  if (!st.list) st.list = {};
+  // Remove from Continue watching: a film, or a show (all its episodes), until it is played again
+  if (b.op === 'hide') {
+    if ((b.kind !== 'film' && b.kind !== 'show') || !isId(b.id)) return false;
+    st.hidden[b.kind + ':' + b.id] = now;
+    cap(st.hidden, MAX_HIDDEN, v => v);
+    return true;
+  }
+  // My list: films and shows
+  if (b.op === 'list') {
+    if ((b.kind !== 'film' && b.kind !== 'show') || !isId(b.id)) return false;
+    const key = b.kind + ':' + b.id;
+    if (!b.on) {
+      delete st.list[key];
+      return true;
+    }
+    if (!isText(b.name) || !isPoster(b.poster)) return false;
+    st.list[key] = { kind: b.kind, id: b.id, name: b.name, poster: b.poster, at: now };
+    cap(st.list, MAX_LIST, v => v.at);
+    return true;
+  }
+  // watched or not, set by hand: one title or a whole season ({items: [...]}, in viewing order); unwatched forgets the title
+  if (b.op === 'mark') {
+    const list = Array.isArray(b.items) ? b.items : [b];
+    if (!list.length || list.length > MAX_MARK) return false;
+    const its = list.map(titleOf);
+    if (its.indexOf(null) >= 0) return false;
+    its.forEach((it, i) => {
+      const key = it.kind + ':' + it.id,
+        old = st.items[key];
+      if (!b.on) return delete st.items[key];
+      // the last one marked is the newest, so the next episode after a marked season is the one after its last
+      st.items[key] = Object.assign(it, { pos: old ? old.pos : 0, dur: old ? old.dur : 0, watched: true, at: now + i });
+    });
+    cap(st.items, MAX_ITEMS, v => v.at);
+    return true;
+  }
+  if (KINDS.indexOf(b.kind) < 0 || !isId(b.id)) return false;
   const key = b.kind + ':' + b.id;
   if (b.op === 'forget') {
     delete st.items[key];
@@ -94,23 +162,14 @@ function applyOp(st, b, now) {
     it.at = now;
     return true;
   }
-  if (b.op !== 'pos' || !isTime(b.pos) || !isTime(b.dur) || !isText(b.name) || !isPoster(b.poster)) return false;
-  const it = { kind: b.kind, id: b.id, name: b.name, poster: b.poster, pos: b.pos, dur: b.dur, watched: false, at: now };
-  if (b.kind === 'episode') {
-    const s = b.show;
-    if (!s || !isId(s.id) || !isText(s.name) || !isPoster(s.poster) || !isId(b.season) || !isId(b.num)) return false;
-    it.show = { id: s.id, name: s.name, poster: s.poster };
-    it.season = b.season;
-    it.num = b.num;
-  }
+  if (b.op !== 'pos' || !isTime(b.pos) || !isTime(b.dur)) return false;
+  const it = titleOf(b);
+  if (!it) return false;
+  Object.assign(it, { pos: b.pos, dur: b.dur, watched: false, at: now });
   const old = st.items[key];
   if (old && old.watched && b.pos === 0) it.watched = true; // reopening a watched title doesn't unwatch it until it plays
   st.items[key] = it;
-  const keys = Object.keys(st.items);
-  if (keys.length > MAX_ITEMS) {
-    keys.sort((a, c) => st.items[c].at - st.items[a].at);
-    for (const k of keys.slice(MAX_ITEMS)) delete st.items[k];
-  }
+  cap(st.items, MAX_ITEMS, v => v.at);
   return true;
 }
 
@@ -141,4 +200,4 @@ async function handle(req, res, u, body) {
 }
 
 const create = (/** @type {any} */ _ctx) => ({ name: 'vod', prefix: '/api/vod/', handle, start() {} });
-module.exports = { create, applyOp, baseFrom };
+module.exports = { create, applyOp, baseFrom, empty };

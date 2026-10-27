@@ -44,7 +44,16 @@ run(async () => {
   ok(r.code === 200 && r.j.path === '/vod/films/1.json?offset=40&limit=40', 'get: paging passed on, other keys dropped');
   r = await call(feature, '/api/vod/get?path=' + encodeURIComponent('/vod/search.json') + '&q=' + encodeURIComponent('olsen banden'));
   ok(r.code === 200 && /^\/vod\/search\.json\?q=olsen(\+|%20)banden$/.test(r.j.path), 'get: search');
-  for (const p of ['/vod/films/recent.json', '/vod/series/12.json', '/vod/film/501.json', '/vod/show/601.json'])
+  r = await call(feature, '/api/vod/get?path=' + encodeURIComponent('/vod/films/1.json') + '&offset=0&limit=40&sort=name');
+  ok(r.code === 200 && r.j.path === '/vod/films/1.json?offset=0&limit=40&sort=name', 'get: the sort is passed on');
+  for (const p of [
+    '/vod/films/recent.json',
+    '/vod/series/12.json',
+    '/vod/film/501.json',
+    '/vod/show/601.json',
+    '/vod/film/501/similar.json',
+    '/vod/show/601/similar.json',
+  ])
     ok((await call(feature, '/api/vod/get?path=' + encodeURIComponent(p))).code === 200, 'get: allowed ' + p);
   const n = seen.length;
   for (const p of [
@@ -53,6 +62,8 @@ run(async () => {
     '/api/account',
     '/vod/img/abc',
     '/vod/film/../x.json',
+    '/vod/film/501/../../api.json',
+    '/vod/films/1/similar.json',
     'http://evil/vod/library.json',
   ])
     ok((await call(feature, '/api/vod/get?path=' + encodeURIComponent(p))).code === 400, 'get: refused ' + p);
@@ -108,6 +119,40 @@ run(async () => {
       400,
     'state: nothing else after the poster path'
   );
+
+  // by hand: watched, unwatched, a whole season, hidden from Continue watching, My list
+  const st0 = vod.empty();
+  const e = (id, num, next) =>
+    Object.assign({}, ep, { id: id, num: num, next: next, pos: undefined, dur: undefined, op: undefined, name: 'E' + num });
+  ok(vod.applyOp(st0, { op: 'mark', on: true, items: [e(1, 1, { season: 1, num: 2 }), e(2, 2, null)] }, 100), 'mark: a season watched');
+  ok(st0.items['episode:1'].watched && st0.items['episode:2'].watched, 'mark: every episode watched');
+  ok(st0.items['episode:2'].at > st0.items['episode:1'].at, 'mark: the last in viewing order is the newest');
+  ok(st0.items['episode:2'].next === null && st0.items['episode:1'].next.num === 2, 'mark: what comes next is kept');
+  vod.applyOp(st0, Object.assign({}, ep, { id: 1, pos: 600, dur: 2500, op: 'pos' }), 200);
+  ok(
+    vod.applyOp(st0, { op: 'mark', on: true, kind: 'episode', id: 1, name: 'E1', poster: '', show: ep.show, season: 1, num: 1 }, 300),
+    'mark: one'
+  );
+  ok(st0.items['episode:1'].pos === 600 && st0.items['episode:1'].watched, 'mark: the position stays');
+  ok(vod.applyOp(st0, { op: 'mark', on: false, items: [e(1, 1), e(2, 2)] }, 400), 'mark: unwatched');
+  ok(!st0.items['episode:1'] && !st0.items['episode:2'], 'mark: unwatched forgets the episodes');
+  ok(!vod.applyOp(st0, { op: 'mark', on: true, items: [] }, 1), 'mark: refused without titles');
+  ok(!vod.applyOp(st0, { op: 'mark', on: true, items: [e(1, 1, { season: 'x' })] }, 1), 'mark: refused with a bad next');
+  ok(!vod.applyOp(st0, { op: 'mark', on: true, items: [Object.assign(e(1, 1), { show: null })] }, 1), 'mark: an episode needs its show');
+  ok(vod.applyOp(st0, { op: 'hide', kind: 'show', id: 601 }, 500) && st0.hidden['show:601'] === 500, 'hide: a show');
+  ok(vod.applyOp(st0, { op: 'hide', kind: 'film', id: 501 }, 600) && st0.hidden['film:501'] === 600, 'hide: a film');
+  ok(!vod.applyOp(st0, { op: 'hide', kind: 'episode', id: 1 }, 1), 'hide: not an episode');
+  ok(vod.applyOp(st0, { op: 'list', kind: 'show', id: 601, on: true, name: 'Borgen', poster: '' }, 700), 'list: added');
+  ok(st0.list['show:601'].name === 'Borgen' && st0.list['show:601'].at === 700, 'list: kept with its name');
+  ok(!vod.applyOp(st0, { op: 'list', kind: 'film', id: 5, on: true, name: 'x', poster: 'http://evil/x.jpg' }, 1), 'list: refused');
+  ok(vod.applyOp(st0, { op: 'list', kind: 'show', id: 601, on: false }, 800) && !st0.list['show:601'], 'list: removed');
+  ok(
+    (await call(feature, '/api/vod/state', 'POST', { op: 'list', kind: 'film', id: 501, on: true, name: 'Druk', poster: '' })).code === 200,
+    'list: over HTTP'
+  );
+  ok((await call(feature, '/api/vod/state', 'POST', { op: 'hide', kind: 'film', id: 501 })).code === 200, 'hide: over HTTP');
+  s = (await call(feature, '/api/vod/state')).j;
+  ok(s.list['film:501'] && s.hidden['film:501'] > 0, 'state: the list and the hidden titles come back');
 
   // capped: the newest 2000 stay
   const many = { items: {} };

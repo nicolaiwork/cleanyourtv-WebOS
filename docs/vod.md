@@ -18,23 +18,46 @@ curl -X POST localhost:8765/api/vod/settings -d '{"base":"http://<curator>:8000"
 
 | Key | Rows and search | Details | Playing |
 |---|---|---|---|
-| Left / Right | Scroll a row, switch tab | Buttons, seasons | Skip 10 s back / forward; held: 30 s, then a minute (one jump when you let go) |
-| Up / Down | Rows; up from the first row to the tabs | Buttons, seasons, episodes | |
-| OK | Open the title | Play, resume, an episode | Pause / play (the bar shows the time and when it ends) |
+| Left / Right | Scroll a row, switch tab | Buttons, seasons, More like this; Right on an episode reaches its watched mark | Skip 10 s back / forward; held: 30 s, then a minute (one jump when you let go) |
+| Up / Down | Rows; up from the first row to the sort, then the tabs | Buttons, seasons, episodes, More like this | Down hides **Next episode** |
+| OK | Open the title; on the sort, the next order | Play, resume, an episode, a button, the watched mark | Pause / play (the bar shows the time and when it ends); with **Next episode** showing, the next episode |
 | 123 | | | Audio and subtitles (remembered with Live TV's choice) |
-| Back | To the tabs, then the home screen | Back to the row | Stop and save the position |
+| Back | To the tabs, then the home screen | Back to the row, or to the title this one was opened from | Stop and save the position |
 
 The **Search** tab brings up the TV's keyboard; OK searches the names of every ticked film and series.
 
+The screen opens where it was left: the same tab, row and title, also after a reboot (kept in the launcher's own storage).
+
+## Rows
+
+- **Continue watching**: half-watched films, and series with an episode played in the last 90 days. A card shows what is left
+  (`S02E05 · 12 min left`) or the episode that comes next. A series whose last episode was watched leaves the row.
+- **My list**: what you added with **+ My list** on a title's page, newest first.
+- **Recently added**, then the ticked categories. **Sort** (top right) orders the categories by newest, A–Z, year or rating; each tab
+  keeps its own. It shows only when the curator offers it.
+
+## A title's page
+
+- **Play** / **Resume** / **Continue S01E03** / **Watch again from S01E01** (after the last episode), **+ My list** and **More**:
+  mark the film, the season or the whole series as watched or unwatched, and **Remove from Continue watching** (the position is
+  kept; playing it again brings it back).
+- An episode's own watched mark: Right on the episode, then OK. Unwatched forgets the episode's position.
+- **More like this**: up to 20 titles from the same ticked categories, closest first (shared genres where the curator knows them,
+  then the year, then the rating). Opening one keeps the first title to go back to. It shows only when the curator offers it.
+
 ## What it remembers
 
-Positions (every 10 seconds and on stop) and watched marks are kept by the service in `/media/developer/cleanyourtv/vod/state.json`,
-never on the curator. A title counts as watched with less than 5 minutes or 5 % left. **Continue watching** lists half-watched
-films and series played in the last 90 days. At the end of an episode the next one starts after a 10 second countdown.
+Positions (every 10 seconds and on stop), watched marks, My list and what was taken off Continue watching are kept by the service in
+`/media/developer/cleanyourtv/vod/state.json`, never on the curator. A title counts as watched with less than 5 minutes or 5 % left.
+
+While a title starts, its backdrop and name show under the spinner. In the last minutes of an episode (once it counts as watched)
+**Next episode** shows in the corner: OK plays it, Down hides it. At the end of an episode the next one starts after a 10 second
+countdown.
 
 ## Being gentle with the provider
 
-- A title's details are fetched only when you open it, never for a row.
+- A title's details are fetched only when you open it, never for a row. More like this and the sorts come from the curator's
+  own lists; they never ask the provider.
 - Rows load 40 titles at a time. Posters come from the curator, which fetches every ticked title's poster ahead (slowly, one at a
   time) and stores it at card size; the screen loads them once the focus rests, for what is on screen and the next screenful.
   Both tabs keep their rows while the screen is open, so switching tabs shows them as they were.
