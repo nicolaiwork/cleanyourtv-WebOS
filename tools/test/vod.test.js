@@ -100,6 +100,15 @@ run(async () => {
   for (const b of bad)
     ok((await call(feature, '/api/vod/state', 'POST', b)).code === 400, 'state: refused ' + JSON.stringify(b).slice(0, 60));
 
+  // the curator's image paths carry its image version (?v=n): a position with one is kept
+  const v = Object.assign({}, pos, { id: 503, poster: '/vod/img/' + 'b'.repeat(32) + '?v=2' });
+  ok((await call(feature, '/api/vod/state', 'POST', v)).code === 200, 'state: a poster path with ?v= is accepted');
+  ok(
+    (await call(feature, '/api/vod/state', 'POST', Object.assign({}, v, { poster: '/vod/img/' + 'b'.repeat(32) + '?v=2&x=1' }))).code ===
+      400,
+    'state: nothing else after the poster path'
+  );
+
   // capped: the newest 2000 stay
   const many = { items: {} };
   for (let i = 0; i < 2005; i++) vod.applyOp(many, { op: 'pos', kind: 'film', id: i, pos: 10, dur: 100, name: '', poster: '' }, 1000 + i);

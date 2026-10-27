@@ -77,7 +77,8 @@ const saveState = () => {
 const KINDS = ['film', 'episode'];
 const isId = v => typeof v === 'number' && v >= 0 && v % 1 === 0 && v < 1e12;
 const isText = v => typeof v === 'string' && v.length <= 200;
-const isPoster = v => v === '' || (typeof v === 'string' && /^\/vod\/img\/[0-9a-f]{32}$/.test(v));
+// a curator image path; the curator adds ?v=<n> (its image version) since it stores posters at TV size
+const isPoster = v => v === '' || (typeof v === 'string' && /^\/vod\/img\/[0-9a-f]{32}(\?v=\d{1,6})?$/.test(v));
 const isTime = v => typeof v === 'number' && isFinite(v) && v >= 0 && v < 1e6;
 function applyOp(st, b, now) {
   if (!b || typeof b !== 'object' || KINDS.indexOf(b.kind) < 0 || !isId(b.id)) return false;
