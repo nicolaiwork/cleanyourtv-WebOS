@@ -795,3 +795,23 @@
 #vd-thint.on {
   opacity: 1;
 }
+/* My list: a grid below the focused title's details (padded so the focus ring isn't cut off) */
+#vd-list {
+  position: absolute;
+  left: 0;
+  top: 584px;
+  width: 1920px;
+  height: 496px;
+  overflow: hidden;
+  display: none;
+  z-index: 1;
+}
+#vd-list.on {
+  display: block;
+}
+#vd-lgrid {
+  position: relative;
+  left: 96px;
+  top: 16px;
+  transition: transform calc(0.2s * var(--spd)) ease-out;
+}

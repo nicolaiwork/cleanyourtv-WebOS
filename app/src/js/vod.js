@@ -16,7 +16,7 @@ var VOD = (function () {
   var base = '',
     lib = null,
     ST = { items: {}, hidden: {}, list: {} },
-    tab = 0 /* 0 films, 1 series, 2 search */,
+    tab = 0 /* 0 films, 1 series, LIST my list, FIND search */,
     area = 'rows' /* tabs, rows, details, search, results, player */,
     ti = 0,
     rows = [],
@@ -35,7 +35,11 @@ var VOD = (function () {
   var D = null; /* the open details: {kind, card, data, group, bi, si, ei, mi, btns, sim, menu, from, prev} */
   var S = { q: '', results: [], fi: 0, els: [] };
   var KINDS = ['films', 'series'];
-  var TABS = ['Films', 'Series', 'Search'];
+  var TABS = ['Films', 'Series', 'My list', 'Search'];
+  var LIST = 2,
+    FIND = 3;
+  /* the My list tab: films and series together, newest first, as a grid */
+  var L = { items: [], fi: 0, els: [] };
   /* kept in the browser between visits and boots: the tab, where each tab's rows were left, each tab's sort */
   var MEM = (function () {
     try {
@@ -50,7 +54,7 @@ var VOD = (function () {
       localStorage.setItem('vod.mem', JSON.stringify(MEM));
     } catch (e) {}
   }
-  if (MEM.tab === 1) tab = 1;
+  if (MEM.tab === 1 || MEM.tab === LIST) tab = MEM.tab;
   if (!MEM.sort) MEM.sort = {};
   /* the sorts the curator offers for a category (library.json "sorts"), none from an older curator */
   function sortsOffered() {
@@ -145,11 +149,14 @@ var VOD = (function () {
     if (tab < 2 && T[KINDS[tab]]) T[KINDS[tab]].ri = ri;
     tab = i;
     ti = i;
-    $('vd-search').classList.toggle('on', tab === 2);
-    $('vd-rows').style.display = tab === 2 ? 'none' : '';
-    $('vd').classList.toggle('srch', tab === 2);
-    if (tab === 2) showInfo(null);
+    $('vd-search').classList.toggle('on', tab === FIND);
+    $('vd-list').classList.toggle('on', tab === LIST);
+    $('vd-rows').style.display = tab < 2 ? '' : 'none';
+    $('vd').classList.toggle('srch', tab === FIND);
+    msg('');
+    if (tab === FIND) showInfo(null);
     if (tab < 2) showRows();
+    else if (tab === LIST) showList();
     else drawSearch();
     drawTabs();
   }
@@ -256,6 +263,9 @@ var VOD = (function () {
       });
     });
     if (!want.length) return;
+    want.forEach(function (id) {
+      CARDS[kind][id] = { none: true }; /* asked for: not again while the answer is on its way */
+    });
     vget('/vod/cards/' + kind + '.json', { ids: want.slice(0, 60).join(',') }).then(
       function (list) {
         want.forEach(function (id) {
@@ -264,6 +274,7 @@ var VOD = (function () {
         list.forEach(function (c) {
           CARDS[kind][c.id] = c;
         });
+        if (o.on && tab === LIST) showList();
         var t = T[kind];
         if (!t) return;
         t.rows.forEach(function (rw) {
@@ -430,7 +441,7 @@ var VOD = (function () {
     var it = rw.items[rw.fi];
     rw.label.textContent = it ? (it.label || it.name) + (it.year ? '  ·  ' + it.year : '') : '';
     rw.el.classList.toggle('f', focused);
-    if (rows[ri] === rw && (area === 'rows' || area === 'tabs' || area === 'sort')) showInfo(it, rw);
+    if (tab < 2 && rows[ri] === rw && (area === 'rows' || area === 'tabs' || area === 'sort')) showInfo(it, rw);
     if (!rw.done && n - rw.fi <= 10) fill(rw);
   }
   /* Posters load once the focus rests, for what is on screen and the next screenful (right, and the row below), so a step never shows
@@ -444,9 +455,14 @@ var VOD = (function () {
   function showSoon() {
     clearTimeout(imgT);
     imgT = setTimeout(function () {
-      if (tab === 2) {
+      if (tab === FIND) {
         var r0 = Math.max(0, Math.floor(S.fi / COLS) - 1);
         for (var i = r0 * COLS; i < Math.min(S.els.length, (r0 + 5) * COLS); i++) show(S.els[i]);
+        return;
+      }
+      if (tab === LIST) {
+        var l0 = Math.floor(L.fi / COLS) * COLS;
+        for (var n = l0; n < Math.min(L.els.length, l0 + 3 * COLS); n++) show(L.els[n]);
         return;
       }
       for (var r = Math.max(0, ri - 1); r < Math.min(rows.length, ri + 3); r++) {
@@ -500,7 +516,8 @@ var VOD = (function () {
     ti = tab;
     drawTabs();
     if (tab < 2 && rows[ri]) drawRow(rows[ri]);
-    if (tab === 2) drawSearch();
+    if (tab === LIST) drawList();
+    if (tab === FIND) drawSearch();
   }
   function tabsKey(k) {
     if (k === 37 && ti > 0) {
@@ -510,7 +527,14 @@ var VOD = (function () {
       ti++;
       setTab(ti);
     } else if (k === 40 || k === 13) {
-      if (tab === 2) {
+      if (tab === LIST) {
+        if (!L.items.length) return;
+        area = 'list';
+        drawTabs();
+        drawList();
+        return;
+      }
+      if (tab === FIND) {
         area = 'search';
         drawTabs();
         drawSearch();
@@ -529,14 +553,15 @@ var VOD = (function () {
     heroSrc = '',
     infoKey = '';
   function showFocus() {
+    if (tab === LIST) return drawList();
     var rw = tab < 2 ? rows[ri] : null;
     showInfo(rw ? rw.items[rw.fi] : null, rw);
   }
-  function metaOf(it) {
+  function metaOf(it, kind) {
     var a = [];
     if (it.year) a.push(esc(it.year));
     if (it.rating) a.push('<b>★ ' + esc(it.rating) + '</b>');
-    if (it.runtime && rows[ri] && rows[ri].kind === 'films') a.push(VL.fmtLength(it.runtime * 60));
+    if (it.runtime && kind === 'films') a.push(VL.fmtLength(it.runtime * 60));
     if (it.genres && it.genres.length) a.push(esc(it.genres.join(', ')));
     return a.join('  ·  ');
   }
@@ -552,7 +577,7 @@ var VOD = (function () {
         '<h1>' +
         esc(it.label || it.name) +
         '</h1><div class="im">' +
-        metaOf(it) +
+        metaOf(it, rw && rw.kind) +
         '</div>' +
         (it.sub ? '<div class="is">' + esc(it.sub) + '</div>' : '') +
         (it.overview ? '<div class="io">' + esc(it.overview) + '</div>' : '');
@@ -594,6 +619,66 @@ var VOD = (function () {
       $(id).classList.remove('on');
       $(id).removeAttribute('src');
     });
+  }
+
+  /* ---------- My list: a grid of what was added with + My list, films and series together ---------- */
+  function listItems() {
+    var out = [];
+    ['films', 'series'].forEach(function (kind) {
+      VL.myList(ST.list, kind === 'films' ? 'film' : 'show').forEach(function (x) {
+        var it = { kind: kind, id: x.id, label: x.name, poster: x.poster, at: x.at };
+        merge(it, CARDS[kind][x.id]);
+        out.push(it);
+      });
+    });
+    return out.sort(function (a, b) {
+      return b.at - a.at;
+    });
+  }
+  /* (re)built from the list: on the tab, after a title's page (it may have left the list), when cards come */
+  function showList() {
+    needCards('films');
+    needCards('series');
+    var cur = L.items[L.fi];
+    L.items = listItems();
+    L.fi = 0;
+    for (var i = 0; cur && i < L.items.length; i++) if (L.items[i].kind === cur.kind && L.items[i].id === cur.id) L.fi = i;
+    L.els = [];
+    var grid = $('vd-lgrid');
+    grid.textContent = '';
+    L.items.forEach(function (it, n) {
+      var e = card(it, it.kind);
+      e.style.left = (n % COLS) * CARD + 'px';
+      e.style.top = Math.floor(n / COLS) * 340 + 'px';
+      grid.appendChild(e);
+      L.els.push(e);
+    });
+    if (!L.items.length) {
+      if (area === 'list') area = 'tabs';
+      msg('<b>My list is empty</b>Add films and series with + My list on their page.');
+      showInfo(null);
+      drawTabs();
+    } else msg('');
+    drawList();
+  }
+  function drawList() {
+    for (var i = 0; i < L.els.length; i++) L.els[i].classList.toggle('f', area === 'list' && i === L.fi);
+    $('vd-lgrid').style.transform = 'translateY(' + -Math.floor(L.fi / COLS) * 340 + 'px)';
+    var it = L.items[L.fi];
+    if (it) showInfo(it, { kind: it.kind });
+    showSoon();
+  }
+  function gridKey(k) {
+    var n = L.items.length;
+    if (k === 37 && L.fi % COLS > 0) L.fi--;
+    else if (k === 39 && L.fi % COLS < COLS - 1 && L.fi < n - 1) L.fi++;
+    else if (k === 40 && Math.floor(L.fi / COLS) < Math.floor((n - 1) / COLS)) L.fi = Math.min(n - 1, L.fi + COLS);
+    else if (k === 38) {
+      if (L.fi >= COLS) L.fi -= COLS;
+      else return toTabs();
+    } else if (k === 13 && L.items[L.fi]) return openDetails(L.items[L.fi].kind, L.items[L.fi], 'list');
+    else if (isBack(k)) return toTabs();
+    drawList();
   }
 
   /* ---------- search ---------- */
@@ -1261,7 +1346,8 @@ var VOD = (function () {
     loadState().then(function () {
       if (tab < 2 && T[KINDS[tab]]) T[KINDS[tab]].ri = ri;
       for (var k in T) syncPersonal(k);
-      if (tab === 2 || area !== 'rows') return drawSearch();
+      if (tab === LIST) return showList();
+      if (tab === FIND || area !== 'rows') return drawSearch();
       rows = T[KINDS[tab]].rows; /* a new list when a personal row came or went */
       ri = T[KINDS[tab]].ri;
       drawRows();
@@ -1855,7 +1941,13 @@ var VOD = (function () {
         if (!o.on) return;
         base = r[0].base || base;
         msg('');
-        setTab(tab === 2 ? (MEM.tab === 1 ? 1 : 0) : tab);
+        setTab(tab === FIND ? (MEM.tab === 1 || MEM.tab === LIST ? MEM.tab : 0) : tab);
+        if (tab === LIST) {
+          area = L.items.length ? 'list' : 'tabs';
+          drawTabs();
+          drawList();
+          return;
+        }
         area = rows.length ? 'rows' : 'tabs';
         drawTabs();
         drawRows();
@@ -1873,7 +1965,7 @@ var VOD = (function () {
     /* where each tab was left, for the next visit */
     if (tab < 2 && T[KINDS[tab]]) T[KINDS[tab]].ri = ri;
     for (var kd in T) MEM[kd] = VL.remember(T[kd].rows, T[kd].ri);
-    if (tab < 2) MEM.tab = tab;
+    if (tab !== FIND) MEM.tab = tab;
     keepMem();
     if (P) {
       save();
@@ -1915,6 +2007,7 @@ var VOD = (function () {
     e.preventDefault();
     if (area === 'tabs') tabsKey(k);
     else if (area === 'rows') rowsKey(k);
+    else if (area === 'list') gridKey(k);
     else if (area === 'sort') sortKey(k);
     else if (area === 'details') detailsKey(k);
     else if (area === 'results') resultsKey(k);

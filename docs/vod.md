@@ -36,7 +36,8 @@ the focus rests). Names and overviews are TMDB's Danish ones where TMDB has them
 
 - **Continue watching**: half-watched films, and series with an episode played in the last 90 days. A card shows what is left
   (`S02E05 · 12 min left`) or the episode that comes next. A series whose last episode was watched leaves the row.
-- **My list**: what you added with **+ My list** on a title's page, newest first.
+- **My list**: what you added with **+ My list** on a title's page, newest first. The **My list** tab (between Series and
+  Search) shows all of it, films and series together, as a grid under the focused title's details.
 - **Because you watched …**: titles like the one played last on that tab.
 - The curator's rows, made with TMDB (when the curator has a TMDB token): **Trending now** (TMDB's week), **Popular**, **New
   releases** / **New series**, **Top rated**, **Danish**, **Nordic**, **Kids & family**, one row per genre, and **Recently added**
