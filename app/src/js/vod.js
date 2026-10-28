@@ -737,6 +737,7 @@ var VOD = (function () {
         esc(c.label || c.name) +
         '</h1><div class="facts">Loading…</div></div>'
     );
+    loadSimilar(g); /* at the same time as the details, not after them */
     vget(kind === 'films' ? '/vod/film/' + c.id + '.json' : '/vod/show/' + c.id + '.json').then(
       function (d) {
         if (g !== gen || !D) return;
@@ -747,7 +748,6 @@ var VOD = (function () {
         }
         toNext();
         drawDetails();
-        loadSimilar(g);
       },
       function (e) {
         if (g !== gen || !D) return;
@@ -1049,11 +1049,11 @@ var VOD = (function () {
   /* ---------- More like this: titles the curator finds close to this one (its cached lists only; never the provider) ---------- */
   function loadSimilar(g) {
     if (!lib || !lib.similar) return;
-    vget('/vod/' + (D.kind === 'films' ? 'film/' : 'show/') + D.data.id + '/similar.json').then(
+    vget('/vod/' + (D.kind === 'films' ? 'film/' : 'show/') + D.card.id + '/similar.json').then(
       function (list) {
         if (g !== gen || !D || !list || !list.length) return;
         D.sim = list.slice(0, 20);
-        drawDetails();
+        drawDetails(); /* nothing until the details are there; they draw it then */
       },
       function () {}
     );
