@@ -242,7 +242,7 @@ var VOD = (function () {
     return rw.src === 'continue' || rw.src === 'mylist' || rw.src === 'because';
   }
   /* label: the curator's (TMDB's Danish) title over the name saved when the title was played */
-  var CARD_KEYS = ['label', 'overview', 'genres', 'backdrop', 'rating', 'year', 'runtime'];
+  var CARD_KEYS = ['label', 'poster', 'overview', 'genres', 'backdrop', 'rating', 'year', 'runtime'];
   function merge(it, c) {
     if (c) for (var i = 0; i < CARD_KEYS.length; i++) if (c[CARD_KEYS[i]] !== undefined) it[CARD_KEYS[i]] = c[CARD_KEYS[i]];
   }
@@ -267,12 +267,14 @@ var VOD = (function () {
         var t = T[kind];
         if (!t) return;
         t.rows.forEach(function (rw) {
-          if (isPersonal(rw))
-            rw.items.forEach(function (it) {
-              merge(it, CARDS[kind][it.id]);
-            });
+          if (!isPersonal(rw)) return;
+          rw.items.forEach(function (it) {
+            merge(it, CARDS[kind][it.id]);
+          });
+          clearRow(rw); /* drawn again with the cards' posters */
         });
-        if (o.on && KINDS[tab] === kind) showFocus();
+        if (o.on && tab < 2 && KINDS[tab] === kind && (area === 'rows' || area === 'tabs' || area === 'sort')) drawRows();
+        else if (o.on && KINDS[tab] === kind) showFocus();
       },
       function () {}
     );
@@ -762,6 +764,11 @@ var VOD = (function () {
       }
     );
   }
+  /* the poster saved with a title (My list, Continue watching): the card's, which is TMDB's where the curator has one; the
+     details' is the provider's, whose image host often fails */
+  function posterOf(d) {
+    return (D && D.card && D.card.poster) || d.poster || '';
+  }
   /* the season and episode the list opens at: the one Continue plays */
   function toNext() {
     var d = D.data,
@@ -827,7 +834,7 @@ var VOD = (function () {
       id: d.id,
       on: !ST.list[listKey()],
       name: String(d.label || d.name || '').slice(0, 200),
-      poster: d.poster || '',
+      poster: posterOf(d),
     }).then(changed, changed);
   }
   /* an episode as the service keeps it, with the one after it (null after the show's last) */
@@ -836,8 +843,8 @@ var VOD = (function () {
       kind: 'episode',
       id: ep.id,
       name: String(ep.label || ep.title || '').slice(0, 200),
-      poster: d.poster || '',
-      show: { id: d.id, name: String(d.label || d.name || '').slice(0, 200), poster: d.poster || '' },
+      poster: posterOf(d),
+      show: { id: d.id, name: String(d.label || d.name || '').slice(0, 200), poster: posterOf(d) },
       season: season,
       num: ep.num || 0,
       next: VL.nextOf(d.seasons, ep.id),
@@ -869,7 +876,7 @@ var VOD = (function () {
       out = [];
     if (D.kind === 'films') {
       var it = itemOf('films', d.id),
-        film = { kind: 'film', id: d.id, name: String(d.label || d.name || '').slice(0, 200), poster: d.poster || '' };
+        film = { kind: 'film', id: d.id, name: String(d.label || d.name || '').slice(0, 200), poster: posterOf(d) };
       out.push(
         it && it.watched
           ? {
@@ -1318,7 +1325,7 @@ var VOD = (function () {
         kind: 'film',
         id: d.id,
         name: d.label || d.name,
-        poster: d.poster || '',
+        poster: posterOf(d),
         backdrop: d.backdrop || '',
         play: d.play,
         durHint: d.duration_secs || 0,
@@ -1329,8 +1336,8 @@ var VOD = (function () {
         kind: 'episode',
         id: spec.ep.id,
         name: spec.ep.label || spec.ep.title || '',
-        poster: d.poster || '',
-        show: { id: d.id, name: d.label || d.name || '', poster: d.poster || '' },
+        poster: posterOf(d),
+        show: { id: d.id, name: d.label || d.name || '', poster: posterOf(d) },
         season: spec.season,
         num: spec.ep.num || 0,
         next: VL.nextOf(d.seasons, spec.ep.id),
