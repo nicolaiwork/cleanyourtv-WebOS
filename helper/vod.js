@@ -175,9 +175,12 @@ function applyOp(st, b, now) {
 }
 
 // ---- trailers: YouTube's player in a page the launcher shows in a frame. YouTube refuses to play in a page without a web
-// address (error 153), and the launcher is a file:// page; this one is http://127.0.0.1:8765. It plays with sound, tells the
-// launcher what the player does ({t: 'state' | 'error' | 'time'}) and takes its commands ({c: 'toggle' | 'seek', d}). ----
-const TRAILER_KEY = /^[\w-]{6,20}$/;
+// address (error 153), and the launcher is a file:// page; this one is http://127.0.0.1:8795/trailer?v=<key>. It plays with
+// sound, tells the launcher what the player does ({t: 'state' | 'error' | 'time'}) and takes its commands ({c: 'toggle' |
+// 'seek', d}) from the launcher only. It has a server of its own: YouTube's script runs in it, and on the service's own origin
+// it could read the service's API; from this one the service refuses it (server.js accepts no http origin). ----
+const TRAILER_PORT = 8795;
+const TRAILER_URL = /^\/trailer\?v=([\w-]{6,20})$/;
 function trailerPage(key) {
   return (
     '<!doctype html><html><head><meta charset="utf-8"><style>' +
@@ -194,7 +197,7 @@ function trailerPage(key) {
     'onApiChange:nocc,' +
     'onStateChange:function(e){if(e.data===1)nocc();tell({t:"state",s:e.data})},' +
     'onError:function(e){tell({t:"error",code:e.data})}}})}' +
-    'window.addEventListener("message",function(e){var m;try{m=JSON.parse(e.data)}catch(x){return}' +
+    'window.addEventListener("message",function(e){if(e.source!==parent)return;var m;try{m=JSON.parse(e.data)}catch(x){return}' +
     'if(!player||!m||!player.getPlayerState)return;' +
     'if(m.c==="toggle"){if(player.getPlayerState()===1)player.pauseVideo();else player.playVideo()}' +
     'else if(m.c==="seek")player.seekTo(Math.max(0,player.getCurrentTime()+(+m.d||0)),true)});' +
@@ -219,12 +222,6 @@ async function handle(req, res, u, body) {
     return json({ returnValue: true });
   }
   if (u === '/api/vod/get') return get(q, json);
-  if (u === '/api/vod/trailer') {
-    const key = q.get('v') || '';
-    if (!TRAILER_KEY.test(key)) return json({ error: 'not a YouTube key' }, 400);
-    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
-    return res.end(trailerPage(key));
-  }
   if (u === '/api/vod/state' && req.method === 'GET') return json(state);
   if (u === '/api/vod/state' && req.method === 'POST') {
     const b = await body(req);
@@ -235,5 +232,21 @@ async function handle(req, res, u, body) {
   web.notFound(res);
 }
 
-const create = (/** @type {any} */ _ctx) => ({ name: 'vod', prefix: '/api/vod/', handle, start() {} });
-module.exports = { create, applyOp, baseFrom, empty };
+// the trailer page's server: that page only
+function trailerServe(/** @type {any} */ req, /** @type {any} */ res) {
+  const m = req.method === 'GET' ? TRAILER_URL.exec(req.url || '') : null;
+  if (!m) {
+    res.writeHead(404);
+    return res.end();
+  }
+  res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
+  res.end(trailerPage(m[1]));
+}
+function startTrailers() {
+  const srv = require('http').createServer(trailerServe);
+  srv.on('error', (/** @type {any} */ e) => console.error('trailer page: ' + e.message)); // the launcher then opens YouTube's app
+  srv.listen(TRAILER_PORT, '127.0.0.1');
+}
+
+const create = (/** @type {any} */ _ctx) => ({ name: 'vod', prefix: '/api/vod/', handle, start: startTrailers });
+module.exports = { create, applyOp, baseFrom, empty, trailerServe };

@@ -6477,15 +6477,17 @@ var VOD = (function () {
   /* ---------- trailers: YouTube's player over the title's page (the service's /api/vod/trailer page), so Back comes back here.
      YouTube's own app would go to its home screen on Back. A video YouTube won't play outside its site opens in its app. ---------- */
   var TR = null; /* {frame, key, playing, failT, hintT} */
+  var TRAILER = 'http://127.0.0.1:8795/trailer?v='; /* the service's trailer page, on a port of its own (helper/vod.js) */
   function openTrailer(key) {
     closeTrailer();
     var f = document.createElement('iframe');
     f.setAttribute('allow', 'autoplay; encrypted-media');
+    f.setAttribute('sandbox', 'allow-scripts allow-same-origin'); /* no navigating the launcher, no pop-ups */
     f.setAttribute('scrolling', 'no');
     f.setAttribute('tabindex', '-1');
     TR = { frame: f, key: key, playing: false };
     f.onload = keepKeys;
-    f.src = API + '/api/vod/trailer?v=' + encodeURIComponent(key);
+    f.src = TRAILER + encodeURIComponent(key);
     $('vd-tframe').appendChild(f);
     area = 'trailer';
     $('vd-trailer').classList.add('on');

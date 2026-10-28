@@ -81,10 +81,25 @@ run(async () => {
   r = await call(feature, '/api/vod/get?path=' + encodeURIComponent('/vod/library.json'));
   ok(r.code === 502 && typeof r.j.error === 'string', 'get: an unreachable curator is a 502');
 
-  // trailers: a page holding YouTube's player for one key
-  r = await call(feature, '/api/vod/trailer?v=xdPMKhjMSFs');
+  // trailers: a page holding YouTube's player for one key, on a server of its own (not the service's origin)
+  const page = url => {
+    const res = {
+      code: 0,
+      out: '',
+      writeHead(c) {
+        this.code = c;
+      },
+      end(o) {
+        this.out = o || '';
+      },
+    };
+    vod.trailerServe({ method: 'GET', url: url }, res);
+    return res;
+  };
+  r = page('/trailer?v=xdPMKhjMSFs');
   ok(r.code === 200 && /"xdPMKhjMSFs"/.test(r.out) && /youtube\.com\/iframe_api/.test(r.out), 'trailer: a page with the player');
   ok(/overflow:hidden/.test(r.out), 'trailer: the page never scrolls');
+  ok(/e\.source!==parent/.test(r.out), 'trailer: commands from the launcher only');
   let parses = true;
   try {
     new Function(r.out.split('<script>')[1].split('</script>')[0]); // eslint-disable-line no-new-func
@@ -92,8 +107,9 @@ run(async () => {
     parses = false;
   }
   ok(parses, "trailer: the page's script parses");
-  for (const v of ['', 'x', 'a"onload="b', 'abc/def/../x', 'a'.repeat(21)])
-    ok((await call(feature, '/api/vod/trailer?v=' + encodeURIComponent(v))).code === 400, 'trailer: refused key ' + JSON.stringify(v));
+  for (const u of ['/trailer?v=', '/trailer?v=x', '/trailer?v=a%22onload', '/trailer?v=' + 'a'.repeat(21), '/api/vod/status', '/'])
+    ok(page(u).code === 404, 'trailer: nothing else served: ' + u);
+  ok((await call(feature, '/api/vod/trailer?v=xdPMKhjMSFs')).code !== 200, "trailer: not on the service's own origin");
 
   // state
   const pos = { op: 'pos', kind: 'film', id: 501, pos: 1200.5, dur: 7020, name: 'Druk', poster: '/vod/img/' + 'a'.repeat(32) };
