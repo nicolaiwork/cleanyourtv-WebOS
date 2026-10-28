@@ -804,8 +804,7 @@ var VOD = (function () {
         label: 'Trailer',
         small: true,
         run: function () {
-          /* YouTube's TV app plays it; Back there comes back here */
-          launch('youtube.leanback.v4', { contentTarget: 'https://www.youtube.com/tv?v=' + d.trailer });
+          openTrailer(d.trailer);
         },
       });
     out.push({ label: 'More', small: true, run: openMenu });
@@ -957,6 +956,94 @@ var VOD = (function () {
       it = itemOf('series', ep.id);
     mark([epItem(D.data, s.season, ep)], !(it && it.watched));
   }
+  /* ---------- trailers: YouTube's player over the title's page (the service's /api/vod/trailer page), so Back comes back here.
+     YouTube's own app would go to its home screen on Back. A video YouTube won't play outside its site opens in its app. ---------- */
+  var TR = null; /* {frame, key, playing, failT, hintT} */
+  function openTrailer(key) {
+    closeTrailer();
+    var f = document.createElement('iframe');
+    f.setAttribute('allow', 'autoplay; encrypted-media');
+    f.setAttribute('scrolling', 'no');
+    f.setAttribute('tabindex', '-1');
+    TR = { frame: f, key: key, playing: false };
+    f.onload = keepKeys;
+    f.src = API + '/api/vod/trailer?v=' + encodeURIComponent(key);
+    $('vd-tframe').appendChild(f);
+    area = 'trailer';
+    $('vd-trailer').classList.add('on');
+    $('vd-tspin').classList.add('on');
+    trHint('OK pauses  ·  Left / Right skips  ·  Back returns to the title');
+    /* nothing playing after 15 s (YouTube unreachable): its app instead */
+    TR.failT = setTimeout(function () {
+      if (TR && !TR.playing) trailerApp();
+    }, 15000);
+  }
+  function closeTrailer() {
+    if (!TR) return;
+    clearTimeout(TR.failT);
+    clearTimeout(TR.hintT);
+    try {
+      TR.frame.src = 'about:blank'; /* stops the video and lets go of the connection */
+    } catch (e) {}
+    if (TR.frame.parentNode) TR.frame.parentNode.removeChild(TR.frame);
+    TR = null;
+    $('vd-trailer').classList.remove('on');
+    $('vd-tspin').classList.remove('on');
+    $('vd-thint').classList.remove('on');
+  }
+  function backFromTrailer() {
+    closeTrailer();
+    if (!o.on) return;
+    area = 'details';
+    if (D && D.data) drawDetails();
+  }
+  function trailerApp() {
+    var key = TR && TR.key;
+    backFromTrailer();
+    if (key) launch('youtube.leanback.v4', { contentTarget: 'https://www.youtube.com/tv?v=' + key });
+  }
+  function trHint(text) {
+    if (!TR) return;
+    $('vd-thint').textContent = text;
+    $('vd-thint').classList.add('on');
+    clearTimeout(TR.hintT);
+    TR.hintT = setTimeout(function () {
+      $('vd-thint').classList.remove('on');
+    }, 4000);
+  }
+  /* the remote's keys must stay with the screen, not go to YouTube's frame */
+  function keepKeys() {
+    if (TR && document.activeElement === TR.frame) TR.frame.blur();
+  }
+  function trSend(c) {
+    if (TR && TR.frame.contentWindow) TR.frame.contentWindow.postMessage(JSON.stringify(c), '*');
+  }
+  window.addEventListener('message', function (e) {
+    if (!TR || e.source !== TR.frame.contentWindow) return;
+    var m;
+    try {
+      m = JSON.parse(e.data);
+    } catch (x) {
+      return;
+    }
+    if (m.t === 'state' && m.s === 1) {
+      TR.playing = true;
+      $('vd-tspin').classList.remove('on');
+      keepKeys();
+    } else if (m.t === 'state' && m.s === 0) backFromTrailer(); /* the end */
+    else if (m.t === 'error') trailerApp(); /* not allowed outside YouTube, or gone */
+  });
+  window.addEventListener('blur', function () {
+    if (TR) setTimeout(keepKeys, 0);
+  });
+  function trailerKey(k) {
+    if (isBack(k)) return backFromTrailer();
+    if (k === 13) {
+      trSend({ c: 'toggle' });
+      trHint('OK plays / pauses  ·  Back returns to the title');
+    } else if (k === 37 || k === 39) trSend({ c: 'seek', d: k === 37 ? -10 : 10 });
+  }
+
   /* ---------- More like this: titles the curator finds close to this one (its cached lists only; never the provider) ---------- */
   function loadSimilar(g) {
     if (!lib || !lib.similar) return;
@@ -1784,6 +1871,7 @@ var VOD = (function () {
       release();
     }
     hidePlayer();
+    closeTrailer();
     gen++;
     closeDetails();
     $('vd-q').blur();
@@ -1822,6 +1910,7 @@ var VOD = (function () {
     else if (area === 'details') detailsKey(k);
     else if (area === 'results') resultsKey(k);
     else if (area === 'player') playerKey(k);
+    else if (area === 'trailer') trailerKey(k);
   };
   /* the tile shows while the service knows a curator; asked again on every load(), since after a boot the service can start after
      the page, and the address can be set later */

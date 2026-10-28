@@ -48,7 +48,8 @@ the focus rests). Names and overviews are TMDB's Danish ones where TMDB has them
 ## A title's page
 
 - **Play** / **Resume** / **Continue S01E03** / **Watch again from S01E01** (after the last episode), **+ My list**, **Trailer**
-  (opens it in YouTube's TV app, when TMDB knows one) and **More**:
+  (when TMDB knows one: YouTube's player over the title's page; OK pauses, Left / Right skips 10 s, Back or the end returns to
+  the title; a video YouTube won't play outside its site opens in YouTube's app) and **More**:
   mark the film, the season or the whole series as watched or unwatched, and **Remove from Continue watching** (the position is
   kept; playing it again brings it back).
 - An episode's own watched mark: Right on the episode, then OK. Unwatched forgets the episode's position.

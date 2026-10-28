@@ -1905,13 +1905,62 @@ svg.st {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* a trailer: YouTube's player over the title's page */
+#vd-trailer {
+  z-index: 9;
+  background: #000;
+  overflow: hidden;
+}
+#vd-tframe,
+#vd-tframe iframe {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  border: 0;
+  overflow: hidden;
+}
+#vd-tspin {
+  position: absolute;
+  left: 920px;
+  top: 500px;
+  width: 80px;
+  height: 80px;
+  border-radius: 40px;
+  border: 6px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
+  animation: vdspin 1s linear infinite;
+  opacity: 0;
+  pointer-events: none;
+}
+#vd-tspin.on {
+  opacity: 1;
+}
+#vd-thint {
+  position: absolute;
+  left: 50%;
+  bottom: 72px;
+  transform: translateX(-50%);
+  padding: 18px 34px;
+  border-radius: 34px;
+  font-size: 26px;
+  white-space: nowrap;
+  background: rgba(12, 13, 17, 0.85);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity calc(0.25s * var(--spd)) linear;
+}
+#vd-thint.on {
+  opacity: 1;
+}
 </style></head><body>
 <div class="glow" id="gA"></div><div class="glow" id="gB"></div>
 <div id="top"><div id="clock"><div id="time"></div><div id="date"></div></div><div id="bar"></div></div>
 <div id="shelf"><div id="name"></div></div>
 <div id="view"><div id="scroll"><div id="dock"></div><div id="grid"></div></div></div>
 <div id="lv"><div id="lv-stage"></div><div id="lv-spin" class="layer"></div><div id="lv-osd" class="layer"><img class="logo" id="lv-ologo" alt=""><div class="num" id="lv-onum"></div><div class="info"><div class="name" id="lv-oname"></div><div class="now" id="lv-onow"></div><div class="next" id="lv-onext"></div><div class="facts" id="lv-ofacts"></div><div class="pbar"><i id="lv-obar"></i></div></div></div><div id="lv-numin" class="layer"></div><div id="lv-guide" class="layer"><div id="lv-glow"></div><div id="lv-gtop"><div id="lv-gtitle"></div><div id="lv-gtabs"></div><input id="lv-search" type="text" autocomplete="off"><div id="lv-gclock"></div></div><div id="lv-rows"></div><div id="lv-detail"></div></div><div id="lv-filter" class="layer"></div><div id="lv-menu" class="layer"></div><div id="lv-msg" class="layer"></div><div id="lv-tune" class="layer"></div><div id="lv-toast" class="layer"></div><div id="lv-stats" class="layer"></div></div>
-<div id="vd"><div id="vd-hero"><img id="vd-hb0" class="hb" alt=""><img id="vd-hb1" class="hb" alt=""><div class="hshade"></div></div><div id="vd-info"></div><div id="vd-top"></div><div id="vd-rows"></div><div id="vd-search"><input id="vd-q" type="text" autocomplete="off" placeholder="Search films and series"><div id="vd-results"><div id="vd-grid"></div></div></div><div id="vd-det" class="vlayer"><img id="vd-bd" alt=""><div class="shade"></div><div class="dwrap" id="vd-dmain"></div></div><div id="vd-msg"></div><div id="vd-play" class="vlayer"><div id="vd-stage"></div><div id="vd-load" class="vpl"><img id="vd-limg" alt=""><div id="vd-ltitle"></div></div><div id="vd-spin" class="vpl"></div><div id="vd-bar" class="vpl"><div id="vd-btitle"></div><div class="track"><i id="vd-bfill"></i></div><div id="vd-btime"></div></div><div id="vd-pmsg" class="vpl"></div><div id="vd-next" class="vpl"></div><div id="vd-early" class="vpl"></div><div id="vd-menu" class="vpl"></div></div></div>
+<div id="vd"><div id="vd-hero"><img id="vd-hb0" class="hb" alt=""><img id="vd-hb1" class="hb" alt=""><div class="hshade"></div></div><div id="vd-info"></div><div id="vd-top"></div><div id="vd-rows"></div><div id="vd-search"><input id="vd-q" type="text" autocomplete="off" placeholder="Search films and series"><div id="vd-results"><div id="vd-grid"></div></div></div><div id="vd-det" class="vlayer"><img id="vd-bd" alt=""><div class="shade"></div><div class="dwrap" id="vd-dmain"></div></div><div id="vd-trailer" class="vlayer"><div id="vd-tframe"></div><div id="vd-tspin"></div><div id="vd-thint"></div></div><div id="vd-msg"></div><div id="vd-play" class="vlayer"><div id="vd-stage"></div><div id="vd-load" class="vpl"><img id="vd-limg" alt=""><div id="vd-ltitle"></div></div><div id="vd-spin" class="vpl"></div><div id="vd-bar" class="vpl"><div id="vd-btitle"></div><div class="track"><i id="vd-bfill"></i></div><div id="vd-btime"></div></div><div id="vd-pmsg" class="vpl"></div><div id="vd-next" class="vpl"></div><div id="vd-early" class="vpl"></div><div id="vd-menu" class="vpl"></div></div></div>
 <div id="toast"></div>
 <script>
 var API = 'http://127.0.0.1:8765',
@@ -6273,8 +6322,7 @@ var VOD = (function () {
         label: 'Trailer',
         small: true,
         run: function () {
-          /* YouTube's TV app plays it; Back there comes back here */
-          launch('youtube.leanback.v4', { contentTarget: 'https://www.youtube.com/tv?v=' + d.trailer });
+          openTrailer(d.trailer);
         },
       });
     out.push({ label: 'More', small: true, run: openMenu });
@@ -6426,6 +6474,94 @@ var VOD = (function () {
       it = itemOf('series', ep.id);
     mark([epItem(D.data, s.season, ep)], !(it && it.watched));
   }
+  /* ---------- trailers: YouTube's player over the title's page (the service's /api/vod/trailer page), so Back comes back here.
+     YouTube's own app would go to its home screen on Back. A video YouTube won't play outside its site opens in its app. ---------- */
+  var TR = null; /* {frame, key, playing, failT, hintT} */
+  function openTrailer(key) {
+    closeTrailer();
+    var f = document.createElement('iframe');
+    f.setAttribute('allow', 'autoplay; encrypted-media');
+    f.setAttribute('scrolling', 'no');
+    f.setAttribute('tabindex', '-1');
+    TR = { frame: f, key: key, playing: false };
+    f.onload = keepKeys;
+    f.src = API + '/api/vod/trailer?v=' + encodeURIComponent(key);
+    $('vd-tframe').appendChild(f);
+    area = 'trailer';
+    $('vd-trailer').classList.add('on');
+    $('vd-tspin').classList.add('on');
+    trHint('OK pauses  ·  Left / Right skips  ·  Back returns to the title');
+    /* nothing playing after 15 s (YouTube unreachable): its app instead */
+    TR.failT = setTimeout(function () {
+      if (TR && !TR.playing) trailerApp();
+    }, 15000);
+  }
+  function closeTrailer() {
+    if (!TR) return;
+    clearTimeout(TR.failT);
+    clearTimeout(TR.hintT);
+    try {
+      TR.frame.src = 'about:blank'; /* stops the video and lets go of the connection */
+    } catch (e) {}
+    if (TR.frame.parentNode) TR.frame.parentNode.removeChild(TR.frame);
+    TR = null;
+    $('vd-trailer').classList.remove('on');
+    $('vd-tspin').classList.remove('on');
+    $('vd-thint').classList.remove('on');
+  }
+  function backFromTrailer() {
+    closeTrailer();
+    if (!o.on) return;
+    area = 'details';
+    if (D && D.data) drawDetails();
+  }
+  function trailerApp() {
+    var key = TR && TR.key;
+    backFromTrailer();
+    if (key) launch('youtube.leanback.v4', { contentTarget: 'https://www.youtube.com/tv?v=' + key });
+  }
+  function trHint(text) {
+    if (!TR) return;
+    $('vd-thint').textContent = text;
+    $('vd-thint').classList.add('on');
+    clearTimeout(TR.hintT);
+    TR.hintT = setTimeout(function () {
+      $('vd-thint').classList.remove('on');
+    }, 4000);
+  }
+  /* the remote's keys must stay with the screen, not go to YouTube's frame */
+  function keepKeys() {
+    if (TR && document.activeElement === TR.frame) TR.frame.blur();
+  }
+  function trSend(c) {
+    if (TR && TR.frame.contentWindow) TR.frame.contentWindow.postMessage(JSON.stringify(c), '*');
+  }
+  window.addEventListener('message', function (e) {
+    if (!TR || e.source !== TR.frame.contentWindow) return;
+    var m;
+    try {
+      m = JSON.parse(e.data);
+    } catch (x) {
+      return;
+    }
+    if (m.t === 'state' && m.s === 1) {
+      TR.playing = true;
+      $('vd-tspin').classList.remove('on');
+      keepKeys();
+    } else if (m.t === 'state' && m.s === 0) backFromTrailer(); /* the end */
+    else if (m.t === 'error') trailerApp(); /* not allowed outside YouTube, or gone */
+  });
+  window.addEventListener('blur', function () {
+    if (TR) setTimeout(keepKeys, 0);
+  });
+  function trailerKey(k) {
+    if (isBack(k)) return backFromTrailer();
+    if (k === 13) {
+      trSend({ c: 'toggle' });
+      trHint('OK plays / pauses  ·  Back returns to the title');
+    } else if (k === 37 || k === 39) trSend({ c: 'seek', d: k === 37 ? -10 : 10 });
+  }
+
   /* ---------- More like this: titles the curator finds close to this one (its cached lists only; never the provider) ---------- */
   function loadSimilar(g) {
     if (!lib || !lib.similar) return;
@@ -7253,6 +7389,7 @@ var VOD = (function () {
       release();
     }
     hidePlayer();
+    closeTrailer();
     gen++;
     closeDetails();
     $('vd-q').blur();
@@ -7291,6 +7428,7 @@ var VOD = (function () {
     else if (area === 'details') detailsKey(k);
     else if (area === 'results') resultsKey(k);
     else if (area === 'player') playerKey(k);
+    else if (area === 'trailer') trailerKey(k);
   };
   /* the tile shows while the service knows a curator; asked again on every load(), since after a boot the service can start after
      the page, and the address can be set later */

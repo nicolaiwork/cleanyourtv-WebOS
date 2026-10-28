@@ -174,6 +174,35 @@ function applyOp(st, b, now) {
   return true;
 }
 
+// ---- trailers: YouTube's player in a page the launcher shows in a frame. YouTube refuses to play in a page without a web
+// address (error 153), and the launcher is a file:// page; this one is http://127.0.0.1:8765. It plays with sound, tells the
+// launcher what the player does ({t: 'state' | 'error' | 'time'}) and takes its commands ({c: 'toggle' | 'seek', d}). ----
+const TRAILER_KEY = /^[\w-]{6,20}$/;
+function trailerPage(key) {
+  return (
+    '<!doctype html><html><head><meta charset="utf-8"><style>' +
+    'html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000}#p{width:100%;height:100%;border:0}' +
+    '</style></head><body><div id="p"></div><script>' +
+    'var player;' +
+    // captions off, as in YouTube's own app (the embedded player turns them on when the TV's language isn't the video's)
+    'function nocc(){try{player.unloadModule("captions");player.unloadModule("cc")}catch(x){}}' +
+    'function tell(m){parent.postMessage(JSON.stringify(m),"*")}' +
+    'function onYouTubeIframeAPIReady(){player=new YT.Player("p",{videoId:' +
+    JSON.stringify(key) +
+    ',playerVars:{autoplay:1,controls:0,rel:0,playsinline:1,iv_load_policy:3,fs:0,disablekb:1,cc_load_policy:0},' +
+    'events:{onReady:function(){player.unMute();player.setVolume(100);player.playVideo();nocc();tell({t:"ready"})},' +
+    'onApiChange:nocc,' +
+    'onStateChange:function(e){if(e.data===1)nocc();tell({t:"state",s:e.data})},' +
+    'onError:function(e){tell({t:"error",code:e.data})}}})}' +
+    'window.addEventListener("message",function(e){var m;try{m=JSON.parse(e.data)}catch(x){return}' +
+    'if(!player||!m||!player.getPlayerState)return;' +
+    'if(m.c==="toggle"){if(player.getPlayerState()===1)player.pauseVideo();else player.playVideo()}' +
+    'else if(m.c==="seek")player.seekTo(Math.max(0,player.getCurrentTime()+(+m.d||0)),true)});' +
+    'setInterval(function(){if(player&&player.getCurrentTime)tell({t:"time",at:player.getCurrentTime(),dur:player.getDuration(),muted:player.isMuted()})},1000);' +
+    '</script><script src="https://www.youtube.com/iframe_api"></script></body></html>'
+  );
+}
+
 // ---- HTTP API (mounted under /api/vod by the helper) ----
 async function handle(req, res, u, body) {
   const json = (o, c) => web.json(res, o, c);
@@ -190,6 +219,12 @@ async function handle(req, res, u, body) {
     return json({ returnValue: true });
   }
   if (u === '/api/vod/get') return get(q, json);
+  if (u === '/api/vod/trailer') {
+    const key = q.get('v') || '';
+    if (!TRAILER_KEY.test(key)) return json({ error: 'not a YouTube key' }, 400);
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+    return res.end(trailerPage(key));
+  }
   if (u === '/api/vod/state' && req.method === 'GET') return json(state);
   if (u === '/api/vod/state' && req.method === 'POST') {
     const b = await body(req);
