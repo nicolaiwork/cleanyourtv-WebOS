@@ -46,6 +46,8 @@ run(async () => {
   ok(r.code === 200 && /^\/vod\/search\.json\?q=olsen(\+|%20)banden$/.test(r.j.path), 'get: search');
   r = await call(feature, '/api/vod/get?path=' + encodeURIComponent('/vod/films/1.json') + '&offset=0&limit=40&sort=name');
   ok(r.code === 200 && r.j.path === '/vod/films/1.json?offset=0&limit=40&sort=name', 'get: the sort is passed on');
+  r = await call(feature, '/api/vod/get?path=' + encodeURIComponent('/vod/cards/series.json') + '&ids=' + encodeURIComponent('601,602'));
+  ok(r.code === 200 && r.j.path === '/vod/cards/series.json?ids=601%2C602', 'get: the cards of given titles');
   for (const p of [
     '/vod/films/recent.json',
     '/vod/series/12.json',
@@ -53,6 +55,8 @@ run(async () => {
     '/vod/show/601.json',
     '/vod/film/501/similar.json',
     '/vod/show/601/similar.json',
+    '/vod/home/films.json',
+    '/vod/home/series.json',
   ])
     ok((await call(feature, '/api/vod/get?path=' + encodeURIComponent(p))).code === 200, 'get: allowed ' + p);
   const n = seen.length;
@@ -64,6 +68,8 @@ run(async () => {
     '/vod/film/../x.json',
     '/vod/film/501/../../api.json',
     '/vod/films/1/similar.json',
+    '/vod/home/music.json',
+    '/vod/cards/films.json/x',
     'http://evil/vod/library.json',
   ])
     ok((await call(feature, '/api/vod/get?path=' + encodeURIComponent(p))).code === 400, 'get: refused ' + p);

@@ -39,8 +39,9 @@ let settings = readJson(SETTINGS, {});
 const base = () => baseFrom(settings, readJson(LIVE_SETTINGS, {}));
 
 // ---- the library: only these curator paths, only these query keys ----
-const ALLOWED = /^\/vod\/(library\.json|(films|series)\/[0-9A-Za-z_-]{1,40}\.json|(film|show)\/\d{1,12}(\/similar)?\.json|search\.json)$/;
-const KEYS = ['offset', 'limit', 'q', 'sort'];
+const ALLOWED =
+  /^\/vod\/(library\.json|(films|series)\/[0-9A-Za-z_-]{1,40}\.json|(film|show)\/\d{1,12}(\/similar)?\.json|search\.json|(home|cards)\/(films|series)\.json)$/;
+const KEYS = ['offset', 'limit', 'q', 'sort', 'ids'];
 async function get(q, json) {
   const p = q.get('path') || '';
   if (!ALLOWED.test(p)) return json({ error: 'not a library path' }, 400);

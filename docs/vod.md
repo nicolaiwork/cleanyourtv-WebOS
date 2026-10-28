@@ -1,7 +1,7 @@
 # Films & Series (this fork only)
 
-A Plex-style screen for the films and series of an iptv-curator server: rows of posters, a details page,
-search, and a player that remembers where you stopped. It is personal to this fork and not offered upstream. The curator is the only
+A streaming-service screen for the films and series of an iptv-curator server: the focused title's backdrop and details over rows
+of posters (Trending now, Popular, genres…), a details page, search, and a player that remembers where you stopped. It is personal to this fork and not offered upstream. The curator is the only
 thing that talks to the IPTV provider; the TV reads the curator's library (`docs/vod-api.md` in the curator's repository) and plays
 a title through the curator's play address, which redirects to the provider.
 
@@ -16,34 +16,45 @@ curl -X POST localhost:8765/api/vod/settings -d '{"base":"http://<curator>:8000"
 
 ## Keys
 
-| Key | Rows and search | Details | Playing |
-|---|---|---|---|
-| Left / Right | Scroll a row, switch tab | Buttons, seasons, More like this; Right on an episode reaches its watched mark | Skip 10 s back / forward; held: 30 s, then a minute (one jump when you let go) |
-| Up / Down | Rows; up from the first row to the sort, then the tabs | Buttons, seasons, episodes, More like this | Down hides **Next episode** |
-| OK | Open the title; on the sort, the next order | Play, resume, an episode, a button, the watched mark | Pause / play (the bar shows the time and when it ends); with **Next episode** showing, the next episode |
-| 123 | | | Audio and subtitles (remembered with Live TV's choice) |
-| Back | To the tabs, then the home screen | Back to the row, or to the title this one was opened from | Stop and save the position |
+| Key          | Rows and search                                                                | Details                                                                        | Playing                                                                                                 |
+| ------------ | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| Left / Right | Scroll a row, switch tab                                                       | Buttons, seasons, More like this; Right on an episode reaches its watched mark | Skip 10 s back / forward; held: 30 s, then a minute (one jump when you let go)                          |
+| Up / Down    | Rows; up from the first row to the tabs (to the sort first, when there is one) | Buttons, seasons, episodes, More like this                                     | Down hides **Next episode**                                                                             |
+| OK           | Open the title; on the sort, the next order                                    | Play, resume, an episode, a button, the watched mark                           | Pause / play (the bar shows the time and when it ends); with **Next episode** showing, the next episode |
+| 123          |                                                                                |                                                                                | Audio and subtitles (remembered with Live TV's choice)                                                  |
+| Back         | To the tabs, then the home screen                                              | Back to the row, or to the title this one was opened from                      | Stop and save the position                                                                              |
 
-The **Search** tab brings up the TV's keyboard; OK searches the names of every ticked film and series.
+The **Search** tab brings up the TV's keyboard; OK searches the names of every ticked film and series (the provider's, and TMDB's
+Danish and original titles).
 
 The screen opens where it was left: the same tab, row and title, also after a reboot (kept in the launcher's own storage).
 
 ## Rows
 
+Above the rows, the focused title's name, year, rating, length, genres and what it is about, over its backdrop (which fades in once
+the focus rests). Names and overviews are TMDB's Danish ones where TMDB has them.
+
 - **Continue watching**: half-watched films, and series with an episode played in the last 90 days. A card shows what is left
   (`S02E05 · 12 min left`) or the episode that comes next. A series whose last episode was watched leaves the row.
 - **My list**: what you added with **+ My list** on a title's page, newest first.
-- **Recently added**, then the ticked categories. **Sort** (top right) orders the categories by newest, A–Z, year or rating; each tab
-  keeps its own. It shows only when the curator offers it.
+- **Because you watched …**: titles like the one played last on that tab.
+- The curator's rows, made with TMDB (when the curator has a TMDB token): **Trending now** (TMDB's week), **Popular**, **New
+  releases** / **New series**, **Top rated**, **Danish**, **Nordic**, **Kids & family**, one row per genre, and **Recently added**
+  (films) / **New episodes** (series). A row shows only with enough titles; while the curator is still fetching TMDB's details (the
+  first time, about half an hour) the ticked categories show instead.
+- Without TMDB on the curator: **Recently added**, then the ticked categories, with **Sort** (top right: newest, A–Z, year or
+  rating; each tab keeps its own) when the curator offers it.
 
 ## A title's page
 
-- **Play** / **Resume** / **Continue S01E03** / **Watch again from S01E01** (after the last episode), **+ My list** and **More**:
+- **Play** / **Resume** / **Continue S01E03** / **Watch again from S01E01** (after the last episode), **+ My list**, **Trailer**
+  (opens it in YouTube's TV app, when TMDB knows one) and **More**:
   mark the film, the season or the whole series as watched or unwatched, and **Remove from Continue watching** (the position is
   kept; playing it again brings it back).
 - An episode's own watched mark: Right on the episode, then OK. Unwatched forgets the episode's position.
-- **More like this**: up to 20 titles from the same ticked categories, closest first (shared genres where the curator knows them,
-  then the year, then the rating). Opening one keeps the first title to go back to. It shows only when the curator offers it.
+- **More like this**: up to 20 titles: TMDB's recommendations that are on the TV first, then the closest titles from the same ticked
+  categories (shared genres, then the year, then the rating). Opening one keeps the first title to go back to. It shows only when
+  the curator offers it.
 
 ## What it remembers
 
@@ -56,8 +67,8 @@ countdown.
 
 ## Being gentle with the provider
 
-- A title's details are fetched only when you open it, never for a row. More like this and the sorts come from the curator's
-  own lists; they never ask the provider.
+- A title's details are fetched only when you open it, never for a row. The rows, More like this and the sorts come from the
+  curator's own lists and from TMDB; they never ask the provider.
 - Rows load 40 titles at a time. Posters come from the curator, which fetches every ticked title's poster ahead (slowly, one at a
   time) and stores it at card size; the screen loads them once the focus rests, for what is on screen and the next screenful.
   Both tabs keep their rows while the screen is open, so switching tabs shows them as they were.

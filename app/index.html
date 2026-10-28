@@ -1194,7 +1194,84 @@ svg.st {
   z-index: 3;
   display: flex;
   align-items: center;
-  background: linear-gradient(rgba(var(--night-rgb), 1) 70%, rgba(var(--night-rgb), 0));
+  background: linear-gradient(rgba(var(--night-rgb), 0.85), rgba(var(--night-rgb), 0));
+}
+/* the focused title's backdrop, top right, fading into the page; two pictures cross-fade (only opacity animates) */
+#vd-hero {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+}
+#vd-hero .hb {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 1440px;
+  height: 810px;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity calc(0.45s * var(--spd)) linear;
+}
+#vd-hero .hb.on {
+  opacity: 1;
+}
+#vd-hero .hshade {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  background: linear-gradient(0deg, rgba(var(--night-rgb), 1) 26%, rgba(var(--night-rgb), 0) 58%),
+    linear-gradient(90deg, rgba(var(--night-rgb), 1) 25%, rgba(var(--night-rgb), 0.7) 46%, rgba(var(--night-rgb), 0) 72%);
+}
+/* the focused title: name, facts, what it is about */
+#vd-info {
+  position: absolute;
+  left: 96px;
+  top: 176px;
+  width: 980px;
+  z-index: 2;
+}
+#vd-info h1 {
+  font-size: 66px;
+  line-height: 1.08;
+  font-weight: 700;
+  max-height: 144px;
+  overflow: hidden;
+}
+#vd-info .im {
+  margin-top: 16px;
+  font-size: 27px;
+  color: var(--ink2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#vd-info .im b {
+  color: #ffcc4d;
+  font-weight: 600;
+}
+#vd-info .is {
+  margin-top: 10px;
+  font-size: 27px;
+  font-weight: 600;
+  color: #ffcc4d;
+}
+#vd-info .io {
+  margin-top: 18px;
+  max-width: 900px;
+  font-size: 27px;
+  line-height: 1.42;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+#vd.srch #vd-hero,
+#vd.srch #vd-info {
+  display: none;
 }
 #vd-top .vtab {
   height: 64px;
@@ -1244,8 +1321,9 @@ svg.st {
 #vd-rows {
   position: absolute;
   left: 0;
-  top: 190px;
+  top: 600px;
   width: 1920px;
+  z-index: 1;
 }
 /* one tab's rows */
 .vbox {
@@ -1253,8 +1331,9 @@ svg.st {
 }
 .vrow {
   position: relative;
-  height: 430px;
+  height: 400px;
   padding-left: 96px;
+  transition: opacity calc(0.2s * var(--spd)) linear;
 }
 .vrow h2 {
   font-size: 30px;
@@ -1272,6 +1351,7 @@ svg.st {
   transition: transform calc(0.18s * var(--spd)) ease-out;
 }
 .vrow .vlabel {
+  display: none; /* the focused title's name is in the details above the rows */
   height: 50px;
   padding-top: 12px;
   font-size: 26px;
@@ -1414,6 +1494,12 @@ svg.st {
   font-size: 60px;
   line-height: 1.1;
   margin-bottom: 14px;
+}
+#vd-det .tagline {
+  font-size: 28px;
+  font-style: italic;
+  color: var(--ink2);
+  margin: -4px 0 14px;
 }
 #vd-det .facts {
   font-size: 28px;
@@ -1825,7 +1911,7 @@ svg.st {
 <div id="shelf"><div id="name"></div></div>
 <div id="view"><div id="scroll"><div id="dock"></div><div id="grid"></div></div></div>
 <div id="lv"><div id="lv-stage"></div><div id="lv-spin" class="layer"></div><div id="lv-osd" class="layer"><img class="logo" id="lv-ologo" alt=""><div class="num" id="lv-onum"></div><div class="info"><div class="name" id="lv-oname"></div><div class="now" id="lv-onow"></div><div class="next" id="lv-onext"></div><div class="facts" id="lv-ofacts"></div><div class="pbar"><i id="lv-obar"></i></div></div></div><div id="lv-numin" class="layer"></div><div id="lv-guide" class="layer"><div id="lv-glow"></div><div id="lv-gtop"><div id="lv-gtitle"></div><div id="lv-gtabs"></div><input id="lv-search" type="text" autocomplete="off"><div id="lv-gclock"></div></div><div id="lv-rows"></div><div id="lv-detail"></div></div><div id="lv-filter" class="layer"></div><div id="lv-menu" class="layer"></div><div id="lv-msg" class="layer"></div><div id="lv-tune" class="layer"></div><div id="lv-toast" class="layer"></div><div id="lv-stats" class="layer"></div></div>
-<div id="vd"><div id="vd-top"></div><div id="vd-rows"></div><div id="vd-search"><input id="vd-q" type="text" autocomplete="off" placeholder="Search films and series"><div id="vd-results"><div id="vd-grid"></div></div></div><div id="vd-det" class="vlayer"><img id="vd-bd" alt=""><div class="shade"></div><div class="dwrap" id="vd-dmain"></div></div><div id="vd-msg"></div><div id="vd-play" class="vlayer"><div id="vd-stage"></div><div id="vd-load" class="vpl"><img id="vd-limg" alt=""><div id="vd-ltitle"></div></div><div id="vd-spin" class="vpl"></div><div id="vd-bar" class="vpl"><div id="vd-btitle"></div><div class="track"><i id="vd-bfill"></i></div><div id="vd-btime"></div></div><div id="vd-pmsg" class="vpl"></div><div id="vd-next" class="vpl"></div><div id="vd-early" class="vpl"></div><div id="vd-menu" class="vpl"></div></div></div>
+<div id="vd"><div id="vd-hero"><img id="vd-hb0" class="hb" alt=""><img id="vd-hb1" class="hb" alt=""><div class="hshade"></div></div><div id="vd-info"></div><div id="vd-top"></div><div id="vd-rows"></div><div id="vd-search"><input id="vd-q" type="text" autocomplete="off" placeholder="Search films and series"><div id="vd-results"><div id="vd-grid"></div></div></div><div id="vd-det" class="vlayer"><img id="vd-bd" alt=""><div class="shade"></div><div class="dwrap" id="vd-dmain"></div></div><div id="vd-msg"></div><div id="vd-play" class="vlayer"><div id="vd-stage"></div><div id="vd-load" class="vpl"><img id="vd-limg" alt=""><div id="vd-ltitle"></div></div><div id="vd-spin" class="vpl"></div><div id="vd-bar" class="vpl"><div id="vd-btitle"></div><div class="track"><i id="vd-bfill"></i></div><div id="vd-btime"></div></div><div id="vd-pmsg" class="vpl"></div><div id="vd-next" class="vpl"></div><div id="vd-early" class="vpl"></div><div id="vd-menu" class="vpl"></div></div></div>
 <div id="toast"></div>
 <script>
 var API = 'http://127.0.0.1:8765',
@@ -5393,7 +5479,7 @@ var VOD_ICON =
 var VOD = (function () {
   var o = { on: false, ready: false };
   var CARD = 224 /* poster width and spacing */,
-    ROW_H = 430,
+    ROW_H = 400,
     PAGE = 40,
     COLS = 7;
   var base = '',
@@ -5407,6 +5493,12 @@ var VOD = (function () {
     gen = 0;
   /* each tab's rows while the screen is open (kind -> {rows, ri, box}): switching tabs shows them as they were, posters and all */
   var T = {};
+  /* the curator's rows for each tab (/vod/home/<kind>.json: Trending now, Popular, genres…), null with an older curator */
+  var HOME = {};
+  /* titles as the browse screen shows them (genres, overview, backdrop), for the rows the TV makes itself: kind -> id -> card */
+  var CARDS = { films: {}, series: {} };
+  /* Because you watched: kind -> {name, items} */
+  var BEC = {};
   /* poster paths the TV has loaded once: a new card sets them at once, they come from its cache */
   var seen = {};
   var D = null; /* the open details: {kind, card, data, group, bi, si, ei, mi, btns, sim, menu, from, prev} */
@@ -5497,7 +5589,7 @@ var VOD = (function () {
   }
   /* the sort pill (top right, on Films and Series): Up from the first row, OK steps through the curator's sorts */
   function hasSort() {
-    return tab < 2 && sortsOffered().length > 1 && !!T[KINDS[tab]];
+    return tab < 2 && !HOME[KINDS[tab]] && sortsOffered().length > 1 && !!T[KINDS[tab]];
   }
   function sortKey(k) {
     if (k === 13) {
@@ -5524,6 +5616,8 @@ var VOD = (function () {
     ti = i;
     $('vd-search').classList.toggle('on', tab === 2);
     $('vd-rows').style.display = tab === 2 ? 'none' : '';
+    $('vd').classList.toggle('srch', tab === 2);
+    if (tab === 2) showInfo(null);
     if (tab < 2) showRows();
     else drawSearch();
     drawTabs();
@@ -5588,14 +5682,103 @@ var VOD = (function () {
     });
     return { title: 'My list', kind: kind, src: 'mylist', items: items, total: items.length, done: true };
   }
-  /* the rows made from what the viewer did, on top of a tab: Continue watching and My list, each only when it has titles */
+  function becauseRow(kind) {
+    var b = BEC[kind];
+    return {
+      title: b ? 'Because you watched ' + b.name : '',
+      kind: kind,
+      src: 'because',
+      items: b ? b.items : [],
+      total: b ? b.items.length : 0,
+      done: true,
+    };
+  }
+  /* the rows made from what the viewer did, on top of a tab: Continue watching, My list and Because you watched, each only when
+     it has titles; their titles get the browse screen's details (genres, overview, backdrop) from the curator */
   function personalRows(kind) {
-    return [continueRow(kind), listRow(kind)].filter(function (rw) {
+    var out = [continueRow(kind), listRow(kind), becauseRow(kind)].filter(function (rw) {
       return rw.items.length;
     });
+    out.forEach(function (rw) {
+      rw.items.forEach(function (it) {
+        merge(it, CARDS[kind][it.id]);
+      });
+    });
+    return out;
   }
   function isPersonal(rw) {
-    return rw.src === 'continue' || rw.src === 'mylist';
+    return rw.src === 'continue' || rw.src === 'mylist' || rw.src === 'because';
+  }
+  /* label: the curator's (TMDB's Danish) title over the name saved when the title was played */
+  var CARD_KEYS = ['label', 'overview', 'genres', 'backdrop', 'rating', 'year', 'runtime'];
+  function merge(it, c) {
+    if (c) for (var i = 0; i < CARD_KEYS.length; i++) if (c[CARD_KEYS[i]] !== undefined) it[CARD_KEYS[i]] = c[CARD_KEYS[i]];
+  }
+  /* the details of the personal rows' titles not known yet, in one request per tab */
+  function needCards(kind) {
+    if (!lib || !lib.cards) return;
+    var want = [];
+    [continueRow(kind), listRow(kind)].forEach(function (rw) {
+      rw.items.forEach(function (it) {
+        if (!CARDS[kind][it.id] && want.indexOf(it.id) < 0) want.push(it.id);
+      });
+    });
+    if (!want.length) return;
+    vget('/vod/cards/' + kind + '.json', { ids: want.slice(0, 60).join(',') }).then(
+      function (list) {
+        want.forEach(function (id) {
+          CARDS[kind][id] = CARDS[kind][id] || { none: true };
+        });
+        list.forEach(function (c) {
+          CARDS[kind][c.id] = c;
+        });
+        var t = T[kind];
+        if (!t) return;
+        t.rows.forEach(function (rw) {
+          if (isPersonal(rw))
+            rw.items.forEach(function (it) {
+              merge(it, CARDS[kind][it.id]);
+            });
+        });
+        if (o.on && KINDS[tab] === kind) showFocus();
+      },
+      function () {}
+    );
+  }
+  /* "Because you watched …": the curator's titles like the one played last on this tab */
+  function loadBecause(kind) {
+    if (!lib || !lib.similar || BEC[kind] !== undefined) return;
+    var last = null;
+    for (var k in ST.items) {
+      var x = ST.items[k];
+      if ((kind === 'films' ? x.kind === 'film' : x.kind === 'episode' && x.show) && (!last || x.at > last.at)) last = x;
+    }
+    if (!last) return;
+    BEC[kind] = null;
+    var id = kind === 'films' ? last.id : last.show.id,
+      name = kind === 'films' ? last.name : last.show.name;
+    /* with the title's card, for its name as the rest of the screen shows it (the saved one can be older) */
+    Promise.all([
+      vget('/vod/' + (kind === 'films' ? 'film/' : 'show/') + id + '/similar.json'),
+      lib.cards ? vget('/vod/cards/' + kind + '.json', { ids: String(id) }).catch(function () {}) : null,
+    ]).then(
+      function (r) {
+        var list = r[0],
+          c = r[1] && r[1][0];
+        if (!list || list.length < 4) return;
+        BEC[kind] = { name: (c && c.label) || name, items: list };
+        if (T[kind]) {
+          if (tab < 2 && KINDS[tab] === kind) T[kind].ri = ri;
+          syncPersonal(kind);
+          if (o.on && tab < 2 && KINDS[tab] === kind && area !== 'details' && area !== 'player') {
+            rows = T[kind].rows;
+            ri = T[kind].ri;
+            drawRows();
+          }
+        }
+      },
+      function () {}
+    );
   }
   function showRows() {
     var kind = KINDS[tab];
@@ -5608,10 +5791,22 @@ var VOD = (function () {
     drawRows();
   }
   function buildRows(kind) {
-    var list = personalRows(kind).concat([{ title: 'Recently added', kind: kind, src: 'recent', items: [], total: -1 }]);
-    ((lib && lib[kind]) || []).forEach(function (c) {
-      if (c.count > 0) list.push({ title: c.name, kind: kind, src: 'cat', cid: c.id, items: [], total: c.count, sort: sortOf(kind) });
-    });
+    var list = personalRows(kind);
+    if (HOME[kind])
+      HOME[kind].forEach(function (r) {
+        if (r.path)
+          list.push({ title: r.title, kind: kind, src: 'cat', cid: String(r.id).replace(/^cat-/, ''), items: [], total: r.count });
+        else if (r.items && r.items.length)
+          list.push({ title: r.title, kind: kind, src: 'home', cid: r.id, items: r.items, total: r.items.length, done: true });
+      });
+    else {
+      list.push({ title: 'Recently added', kind: kind, src: 'recent', items: [], total: -1 });
+      ((lib && lib[kind]) || []).forEach(function (c) {
+        if (c.count > 0) list.push({ title: c.name, kind: kind, src: 'cat', cid: c.id, items: [], total: c.count, sort: sortOf(kind) });
+      });
+    }
+    needCards(kind);
+    loadBecause(kind);
     var t = (T[kind] = { rows: list, ri: 0, box: document.createElement('div') });
     t.box.className = 'vbox';
     t.rows.forEach(function (rw) {
@@ -5701,6 +5896,7 @@ var VOD = (function () {
     var it = rw.items[rw.fi];
     rw.label.textContent = it ? (it.label || it.name) + (it.year ? '  ·  ' + it.year : '') : '';
     rw.el.classList.toggle('f', focused);
+    if (rows[ri] === rw && (area === 'rows' || area === 'tabs' || area === 'sort')) showInfo(it, rw);
     if (!rw.done && n - rw.fi <= 10) fill(rw);
   }
   /* Posters load once the focus rests, for what is on screen and the next screenful (right, and the row below), so a step never shows
@@ -5728,8 +5924,10 @@ var VOD = (function () {
   }
   function drawRows() {
     T[KINDS[tab]].box.style.transform = 'translateY(' + -ri * ROW_H + 'px)';
+    if (!rows.length) showInfo(null);
     for (var i = 0; i < rows.length; i++) {
       var rw = rows[i];
+      rw.el.style.opacity = i < ri ? 0 : 1; /* the rows above the focus would sit under the title's details */
       if (Math.abs(i - ri) <= 2) {
         if (!rw.items.length && !rw.done) fill(rw);
         else drawRow(rw);
@@ -5790,6 +5988,78 @@ var VOD = (function () {
       drawTabs();
       drawRows();
     } else if (isBack(k)) o.exit();
+  }
+
+  /* ---------- the focused title's details over its backdrop, above the rows ---------- */
+  var heroT = 0,
+    heroSrc = '',
+    infoKey = '';
+  function showFocus() {
+    var rw = tab < 2 ? rows[ri] : null;
+    showInfo(rw ? rw.items[rw.fi] : null, rw);
+  }
+  function metaOf(it) {
+    var a = [];
+    if (it.year) a.push(esc(it.year));
+    if (it.rating) a.push('<b>★ ' + esc(it.rating) + '</b>');
+    if (it.runtime && rows[ri] && rows[ri].kind === 'films') a.push(VL.fmtLength(it.runtime * 60));
+    if (it.genres && it.genres.length) a.push(esc(it.genres.join(', ')));
+    return a.join('  ·  ');
+  }
+  /* new elements rather than new text in old ones: webOS 5's compositor can keep showing the old text */
+  function showInfo(it, rw) {
+    var key = it ? (rw ? rw.kind : '') + ':' + it.id + ':' + (it.overview ? 1 : 0) + ':' + (it.sub || '') : '';
+    if (key === infoKey) return;
+    infoKey = key;
+    var box = $('vd-info'),
+      el = document.createElement('div');
+    if (it)
+      el.innerHTML =
+        '<h1>' +
+        esc(it.label || it.name) +
+        '</h1><div class="im">' +
+        metaOf(it) +
+        '</div>' +
+        (it.sub ? '<div class="is">' + esc(it.sub) + '</div>' : '') +
+        (it.overview ? '<div class="io">' + esc(it.overview) + '</div>' : '');
+    box.textContent = '';
+    box.appendChild(el);
+    hero(it && it.backdrop ? img(it.backdrop) : '');
+  }
+  /* the backdrop changes once the focus rests, fading over the last one */
+  function hero(src) {
+    clearTimeout(heroT);
+    if (src === heroSrc) return;
+    heroT = setTimeout(function () {
+      heroSrc = src;
+      var a = $('vd-hb0'),
+        b = $('vd-hb1'),
+        on = a.classList.contains('on') ? a : b,
+        off = on === a ? b : a;
+      if (!src) {
+        on.classList.remove('on');
+        return;
+      }
+      off.onload = function () {
+        if (heroSrc !== src) return;
+        off.classList.add('on');
+        on.classList.remove('on');
+      };
+      off.onerror = function () {
+        if (heroSrc === src) on.classList.remove('on');
+      };
+      off.src = src;
+    }, 320);
+  }
+  function clearHero() {
+    clearTimeout(heroT);
+    heroSrc = '';
+    infoKey = '';
+    $('vd-info').textContent = '';
+    ['vd-hb0', 'vd-hb1'].forEach(function (id) {
+      $(id).classList.remove('on');
+      $(id).removeAttribute('src');
+    });
   }
 
   /* ---------- search ---------- */
@@ -5892,7 +6162,8 @@ var VOD = (function () {
   function facts(d) {
     var a = [];
     if (d.year) a.push(esc(d.year));
-    if (d.genre) a.push(esc(d.genre));
+    if (d.genres && d.genres.length) a.push(esc(d.genres.slice(0, 3).join(', ')));
+    else if (d.genre) a.push(esc(d.genre));
     if (d.duration_secs) a.push(VL.fmtLength(d.duration_secs));
     if (d.seasons && d.seasons.length) a.push(d.seasons.length + (d.seasons.length === 1 ? ' season' : ' seasons'));
     if (d.rating) a.push('<b>★ ' + esc(d.rating) + '</b>');
@@ -5996,6 +6267,15 @@ var VOD = (function () {
     }
     var mine = !!ST.list[listKey()];
     out.push({ label: mine ? '✓  My list' : '+  My list', small: true, run: toggleList });
+    if (d.trailer && /^[\w-]{6,20}$/.test(d.trailer))
+      out.push({
+        label: 'Trailer',
+        small: true,
+        run: function () {
+          /* YouTube's TV app plays it; Back there comes back here */
+          launch('youtube.leanback.v4', { contentTarget: 'https://www.youtube.com/tv?v=' + d.trailer });
+        },
+      });
     out.push({ label: 'More', small: true, run: openMenu });
     return out;
   }
@@ -6172,7 +6452,9 @@ var VOD = (function () {
       (c.poster || d.poster ? '<img src="' + esc(img(c.poster || d.poster)) + '" alt="">' : '') /* the card's, already loaded */ +
       '</div><div class="dmeta"><h1>' +
       esc(d.label || d.name) +
-      '</h1><div class="facts">' +
+      '</h1>' +
+      (d.tagline ? '<div class="tagline">' + esc(d.tagline) + '</div>' : '') +
+      '<div class="facts">' +
       facts(d) +
       '</div>' +
       (d.plot ? '<div class="plot">' + esc(d.plot) + '</div>' : '') +
@@ -6917,6 +7199,22 @@ var VOD = (function () {
       vget('/vod/library.json').then(
         function (l) {
           lib = l;
+          HOME = {};
+          BEC = {};
+          if (!l.home) return;
+          /* both tabs' rows at once (a few hundred kB): switching tabs is then instant */
+          return Promise.all(
+            KINDS.map(function (kind) {
+              return vget('/vod/home/' + kind + '.json').then(
+                function (h) {
+                  HOME[kind] = h && h.rows && h.rows.length ? h.rows : null;
+                },
+                function () {
+                  HOME[kind] = null;
+                }
+              );
+            })
+          );
         },
         function (e) {
           lib = null;
@@ -6965,6 +7263,8 @@ var VOD = (function () {
     $('vd-rows').textContent = '';
     $('vd-grid').textContent = '';
     $('vd-q').value = '';
+    HOME = {};
+    clearHero();
     $('vd').classList.remove('on');
   };
   /* webOS repeats keydown while OK is held, not always with e.repeat: a held OK is one press, so it can't open a title and then

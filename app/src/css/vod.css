@@ -35,7 +35,84 @@
   z-index: 3;
   display: flex;
   align-items: center;
-  background: linear-gradient(rgba(var(--night-rgb), 1) 70%, rgba(var(--night-rgb), 0));
+  background: linear-gradient(rgba(var(--night-rgb), 0.85), rgba(var(--night-rgb), 0));
+}
+/* the focused title's backdrop, top right, fading into the page; two pictures cross-fade (only opacity animates) */
+#vd-hero {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+}
+#vd-hero .hb {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 1440px;
+  height: 810px;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity calc(0.45s * var(--spd)) linear;
+}
+#vd-hero .hb.on {
+  opacity: 1;
+}
+#vd-hero .hshade {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  background: linear-gradient(0deg, rgba(var(--night-rgb), 1) 26%, rgba(var(--night-rgb), 0) 58%),
+    linear-gradient(90deg, rgba(var(--night-rgb), 1) 25%, rgba(var(--night-rgb), 0.7) 46%, rgba(var(--night-rgb), 0) 72%);
+}
+/* the focused title: name, facts, what it is about */
+#vd-info {
+  position: absolute;
+  left: 96px;
+  top: 176px;
+  width: 980px;
+  z-index: 2;
+}
+#vd-info h1 {
+  font-size: 66px;
+  line-height: 1.08;
+  font-weight: 700;
+  max-height: 144px;
+  overflow: hidden;
+}
+#vd-info .im {
+  margin-top: 16px;
+  font-size: 27px;
+  color: var(--ink2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#vd-info .im b {
+  color: #ffcc4d;
+  font-weight: 600;
+}
+#vd-info .is {
+  margin-top: 10px;
+  font-size: 27px;
+  font-weight: 600;
+  color: #ffcc4d;
+}
+#vd-info .io {
+  margin-top: 18px;
+  max-width: 900px;
+  font-size: 27px;
+  line-height: 1.42;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+#vd.srch #vd-hero,
+#vd.srch #vd-info {
+  display: none;
 }
 #vd-top .vtab {
   height: 64px;
@@ -85,8 +162,9 @@
 #vd-rows {
   position: absolute;
   left: 0;
-  top: 190px;
+  top: 600px;
   width: 1920px;
+  z-index: 1;
 }
 /* one tab's rows */
 .vbox {
@@ -94,8 +172,9 @@
 }
 .vrow {
   position: relative;
-  height: 430px;
+  height: 400px;
   padding-left: 96px;
+  transition: opacity calc(0.2s * var(--spd)) linear;
 }
 .vrow h2 {
   font-size: 30px;
@@ -113,6 +192,7 @@
   transition: transform calc(0.18s * var(--spd)) ease-out;
 }
 .vrow .vlabel {
+  display: none; /* the focused title's name is in the details above the rows */
   height: 50px;
   padding-top: 12px;
   font-size: 26px;
@@ -255,6 +335,12 @@
   font-size: 60px;
   line-height: 1.1;
   margin-bottom: 14px;
+}
+#vd-det .tagline {
+  font-size: 28px;
+  font-style: italic;
+  color: var(--ink2);
+  margin: -4px 0 14px;
 }
 #vd-det .facts {
   font-size: 28px;
