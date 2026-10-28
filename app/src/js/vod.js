@@ -1732,6 +1732,7 @@ var VOD = (function () {
           lib = l;
           HOME = {};
           BEC = {};
+          CARDS = { films: {}, series: {} }; /* asked again each visit: the curator learns more about titles over time */
           if (!l.home) return;
           /* both tabs' rows at once (a few hundred kB): switching tabs is then instant */
           return Promise.all(
