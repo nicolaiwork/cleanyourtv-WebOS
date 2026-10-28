@@ -5651,7 +5651,8 @@ var VOD = (function () {
       d.className += ' hs';
       var sb = document.createElement('div');
       sb.className = 'vsub';
-      sb.textContent = it.sub;
+      sb.textContent =
+        it.sub.indexOf('·') > 0 ? it.sub.replace(/ left$/, '') : it.sub; /* the card is narrow; the details above say it in full */
       d.appendChild(sb);
     }
     var mine = itemOf(kind, it.id),
