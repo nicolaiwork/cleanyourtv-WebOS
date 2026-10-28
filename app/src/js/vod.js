@@ -40,7 +40,7 @@ var VOD = (function () {
     FIND = 3;
   /* the My list tab: films and series together, newest first, as a grid */
   var L = { items: [], fi: 0, els: [] };
-  /* kept in the browser between visits and boots: the tab, where each tab's rows were left, each tab's sort */
+  /* kept in the browser between visits and boots: the tab and each tab's sort (the rows open at the top) */
   var MEM = (function () {
     try {
       var m = JSON.parse(localStorage.getItem('vod.mem') || '{}');
@@ -56,6 +56,8 @@ var VOD = (function () {
   }
   if (MEM.tab === 1 || MEM.tab === LIST) tab = MEM.tab;
   if (!MEM.sort) MEM.sort = {};
+  delete MEM.films; /* where the rows were left, kept by older versions */
+  delete MEM.series;
   /* the sorts the curator offers for a category (library.json "sorts"), none from an older curator */
   function sortsOffered() {
     return (lib && lib.sorts) || [];
@@ -130,13 +132,13 @@ var VOD = (function () {
     if (k === 13) {
       var kind = KINDS[tab];
       MEM.sort[kind] = VL.nextSort(sortOf(kind) || 'added', sortsOffered());
-      MEM[kind] = { row: rows[ri] ? VL.rowKey(rows[ri]) : '', fi: {} };
+      var keep = { row: rows[ri] ? VL.rowKey(rows[ri]) : '', fi: {} };
       keepMem();
       /* the category rows again in the new order; Continue watching, My list and Recently added stay as they are */
       var t = T[kind];
       t.box.parentNode.removeChild(t.box);
       delete T[kind];
-      showRows();
+      showRows(keep);
       drawTabs();
     } else if (k === 40) {
       if (!rows.length) return;
@@ -325,9 +327,10 @@ var VOD = (function () {
       function () {}
     );
   }
-  function showRows() {
+  /* keep: the row to stay on when the rows are made again in a new sort, else the top */
+  function showRows(keep) {
     var kind = KINDS[tab];
-    if (!T[kind]) buildRows(kind);
+    if (!T[kind]) buildRows(kind, keep);
     for (var k in T) T[k].box.style.display = k === kind ? '' : 'none';
     rows = T[kind].rows;
     ri = T[kind].ri;
@@ -335,7 +338,7 @@ var VOD = (function () {
     else msg('');
     drawRows();
   }
-  function buildRows(kind) {
+  function buildRows(kind, keep) {
     var list = personalRows(kind);
     if (HOME[kind])
       HOME[kind].forEach(function (r) {
@@ -357,8 +360,8 @@ var VOD = (function () {
     t.rows.forEach(function (rw) {
       t.box.appendChild(rowEl(rw));
     });
-    /* back where this tab was left on the last visit (a row loads far enough to reach its title, at most 12 pages) */
-    t.ri = VL.recall(MEM[kind], t.rows);
+    /* the same row after a new sort (a row loads far enough to reach its title, at most 12 pages) */
+    t.ri = VL.recall(keep, t.rows);
     t.rows.forEach(function (rw) {
       rw.want = Math.min(rw.want || 0, PAGE * 12);
     });
@@ -1962,9 +1965,7 @@ var VOD = (function () {
   };
   o.exit = function () {
     o.on = false;
-    /* where each tab was left, for the next visit */
-    if (tab < 2 && T[KINDS[tab]]) T[KINDS[tab]].ri = ri;
-    for (var kd in T) MEM[kd] = VL.remember(T[kd].rows, T[kd].ri);
+    /* the tab for the next visit; its rows open at the top again */
     if (tab !== FIND) MEM.tab = tab;
     keepMem();
     if (P) {

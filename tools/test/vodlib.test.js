@@ -99,14 +99,8 @@ run(async () => {
     'my list: one kind, newest first'
   );
 
-  // where the rows were left
-  const rws = [
-    { src: 'continue', fi: 3 },
-    { src: 'recent', fi: 0 },
-    { src: 'cat', cid: '100', fi: 57 },
-  ];
-  const mem = VL.remember(rws, 2);
-  ok(mem.row === 'cat:100' && mem.fi['cat:100'] === 57 && !mem.fi['continue:'], 'remember: the row and the position, not in Continue');
+  // the row to stay on after a new sort
+  const mem = { row: 'cat:100', fi: { 'cat:100': 57 } };
   const back = [{ src: 'recent' }, { src: 'cat', cid: '101' }, { src: 'cat', cid: '100' }];
   ok(VL.recall(mem, back) === 2 && back[2].want === 57 && back[0].want === 0, 'recall: the same row, though a row went');
   ok(VL.recall(null, back) === 0 && VL.recall({ row: 'cat:9', fi: {} }, back) === 0, 'recall: the first row otherwise');

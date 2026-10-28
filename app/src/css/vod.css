@@ -561,14 +561,18 @@
 #vd-q.f {
   box-shadow: 0 0 0 var(--ring-w) var(--focus);
 }
+/* the clip reaches 24px past the posters on the left and top so the focused poster's scale and ring aren't cut off */
 #vd-results {
   position: relative;
-  margin-top: 40px;
-  height: 760px;
+  margin-top: 16px;
+  margin-left: -24px;
+  height: 784px;
   overflow: hidden;
 }
 #vd-grid {
   position: relative;
+  left: 24px;
+  top: 24px;
   transition: transform calc(0.2s * var(--spd)) ease-out;
 }
 /* messages, the player */

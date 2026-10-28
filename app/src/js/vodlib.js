@@ -116,16 +116,9 @@ var VL = (function () {
       if (all[i].ep.id === id) return i < all.length - 1 ? { season: all[i + 1].season, num: all[i + 1].ep.num || 0 } : null;
     return null;
   }
-  /* where a tab's rows were left (rows: [{src, cid, fi}], ri), to be found again on the next visit even if rows came or went */
+  /* a row's identity (rows: [{src, cid, fi}]), to find it again when the rows are made anew and rows came or went */
   function rowKey(rw) {
     return rw.src + ':' + (rw.cid || '');
-  }
-  function remember(rows, ri) {
-    var fi = {};
-    rows.forEach(function (rw) {
-      if (rw.fi > 0 && rw.src !== 'continue') fi[rowKey(rw)] = rw.fi;
-    });
-    return { row: rows[ri] ? rowKey(rows[ri]) : '', fi: fi };
   }
   /* the row index to return to; each row's fi is set from the memory (the page loads a row far enough to reach it) */
   function recall(mem, rows) {
@@ -202,7 +195,6 @@ var VL = (function () {
     continueProgress: continueProgress,
     nextOf: nextOf,
     rowKey: rowKey,
-    remember: remember,
     recall: recall,
     nextSort: nextSort,
     sortLabel: sortLabel,

@@ -27,7 +27,7 @@ curl -X POST localhost:8765/api/vod/settings -d '{"base":"http://<curator>:8000"
 The **Search** tab brings up the TV's keyboard; OK searches the names of every ticked film and series (the provider's, and TMDB's
 Danish and original titles).
 
-The screen opens where it was left: the same tab, row and title, also after a reboot (kept in the launcher's own storage).
+The screen opens on the tab it was left on (also after a reboot, kept in the launcher's own storage), at the top of its rows.
 
 ## Rows
 
