@@ -119,6 +119,19 @@ run(async () => {
       Math.abs(line.prog - 0.709) < 0.01,
     'channel card: programme, times, next and progress'
   );
+  // between two programmes the service has no programme now but the next one
+  const gap = HL.chanLine({ now: null, next: [d + 600, d + 1800, 'Debatten'] }, d);
+  ok(
+    gap.title === 'Debatten' && gap.times === 'From 21:35' && gap.next === '' && gap.prog === 0,
+    'channel card: in a gap, the next programme'
+  );
+  ok(HL.stale({ now: [d - 60, d + 60] }, d + 61) && !HL.stale({ now: [d - 60, d + 60] }, d + 59), 'stale: the programme on now ended');
+  ok(HL.stale({ now: null, next: [d + 10, d + 70] }, d + 11) && !HL.stale({ now: null, next: null }, d), 'stale: the next programme began');
+  // the hero slides on its own while nobody uses the remote, also with the focus resting on Play; never just after a key
+  ok(HL.maySlide({ inHero: true, moved: false, sinceKey: 60000 }), 'slide: Home untouched, the focus resting on Play');
+  ok(!HL.maySlide({ inHero: true, moved: true, sinceKey: 60000 }), 'slide: not while the viewer is on the hero buttons');
+  ok(!HL.maySlide({ inHero: false, moved: true, sinceKey: 2000 }), 'slide: not just after a key');
+  ok(HL.maySlide({ inHero: false, moved: true, sinceKey: 5000 }), 'slide: the focus elsewhere');
   const none = HL.chanLine({ now: null, next: null }, d);
   ok(none.title === 'No guide' && none.times === '' && none.next === '' && none.prog === -1, 'channel card: no guide');
 });

@@ -1281,7 +1281,7 @@ var VOD = (function () {
     $('vd-dmain').style.transform = '';
   }
   function backFromDetails() {
-    var from = D ? D.from : 'rows';
+    var from = D ? D.from : fromHome ? 'home' : 'rows'; /* no D yet: a title from Home still loading */
     if (D && D.prev) {
       /* back to the title this one was opened from */
       gen++;
@@ -1974,6 +1974,7 @@ var VOD = (function () {
       },
       function (e) {
         if (!o.on) return;
+        wantFind = false;
         area = 'tabs';
         drawTabs();
         msg('<b>The film library is not reachable</b>' + esc(e && e.message));
@@ -2006,6 +2007,8 @@ var VOD = (function () {
     HOME = {};
     clearHero();
     $('vd').classList.remove('on');
+    fromHome = false;
+    wantFind = false;
     if (o.onExit) o.onExit();
   };
   /* webOS repeats keydown while OK is held, not always with e.repeat: a held OK is one press, so it can't open a title and then
@@ -2053,6 +2056,7 @@ var VOD = (function () {
   /* ---------- what Home (home.js) asks of Films & Series ---------- */
   var autoNext = false,
     wantFind = false,
+    fromHome = false /* a title opened from Home: Back returns there, also while it loads */,
     homeRows = null,
     homeRowsAt = 0;
   o.onExit = null;
@@ -2091,9 +2095,10 @@ var VOD = (function () {
   o.open = function (kind, card, play) {
     if (o.on) return;
     o.on = true;
+    fromHome = true;
     $('vd').classList.add('on');
     area = 'details';
-    msg('');
+    msg('Loading…');
     var g = ++gen;
     Promise.all([
       api('/api/vod/status'),
@@ -2111,6 +2116,7 @@ var VOD = (function () {
         if (!o.on || g !== gen) return;
         base = r[0].base || base;
         autoNext = !!play;
+        msg('');
         openDetails(kind, card, 'home');
       },
       function () {

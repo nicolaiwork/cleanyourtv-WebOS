@@ -181,6 +181,13 @@ body {
 #htext.out {
   opacity: 0;
 }
+#htext {
+  height: 316px;
+  overflow: hidden;
+}
+#htext.two p {
+  -webkit-line-clamp: 1;
+}
 #htext .eb {
   font-size: calc(24px * var(--fs));
   font-weight: 600;
@@ -231,7 +238,9 @@ body {
   margin-top: 22px;
 }
 #hbtns {
-  margin-top: 30px;
+  position: absolute;
+  left: 0;
+  top: 326px;
   display: flex;
   align-items: center;
 }

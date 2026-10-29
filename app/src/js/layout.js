@@ -7,7 +7,6 @@ function load() {
         warned = true;
         toast('The service (' + x.version + ') is older than this launcher needs: update it in the CleanYourTV manager');
       }
-      homeData(); /* the hero, Continue watching and the channels change while the apps do not */
       slideLater();
       usage = x.usage || {};
       var rank = Object.keys(usage).sort(function (a, b) {
@@ -21,7 +20,7 @@ function load() {
         rank,
         VOD.ready,
       ]);
-      if (sig === lastSig) return;
+      if (sig === lastSig) return homeData(); /* the hero, Continue watching and the channels change while the apps do not */
       lastSig = sig;
       apps = x.apps.map(function (a) {
         return a.input ? { id: a.id, title: a.title, input: a.input, off: !!a.off } : { id: a.id, title: a.title };
@@ -32,6 +31,7 @@ function load() {
       if (VOD.ready) apps.push({ id: '__vod', title: 'Films & Series' }); /* fork */
       store();
       rebuild();
+      homeData(); /* after the settings: Live TV may have been switched on or off */
       if (!perfReady) {
         perfReady = true;
         perfMark('launcher ready ' + Math.round(performance.now()));

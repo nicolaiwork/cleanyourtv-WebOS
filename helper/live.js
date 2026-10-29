@@ -707,7 +707,6 @@ async function handle(req, res, u, body) {
   res.end();
 }
 
-// the id the page asks the guide with: the playlist's own, or the guide channel found by name
 // the programme on now (null between programmes) and the next one, or null when the guide has nothing for the channel
 function nowNext(id, now) {
   const list = epg && epg.byId[id];
@@ -715,6 +714,7 @@ function nowNext(id, now) {
   if (i < 0) return null;
   return { now: list[i][0] <= now ? list[i] : null, next: list[list[i][0] <= now ? i + 1 : i] || null };
 }
+// the id the page asks the guide with: the playlist's own, or the guide channel found by name
 const guideId = c => (epg && epg.byId && epg.byId[c.id] ? c.id : (epg && epg.map && epg.map[c.key]) || c.id);
 
 // refresh once shortly after start (low priority), then twice a day

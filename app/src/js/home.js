@@ -17,7 +17,6 @@ var H = { picks: [], hi: 0, cont: [], chans: [], last: '', items: {} },
   userMoved = false /* until the viewer moves the focus (and again after the Home key), it rests on Play */,
   slideT = 0,
   homeGen = 0,
-  picOn = -1,
   picUrl = '';
 
 function homeRestore() {
@@ -107,13 +106,27 @@ var STAR_SVG =
   '<svg class="star" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"/></svg>';
 var PLAY_SVG =
   '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>';
+/* the title gets smaller when it wraps, and a title on two lines leaves one line for the description, so the buttons (at a fixed
+   place above the band) never move */
 function heroText(h) {
   var el = $('htext');
-  if (el.innerHTML !== h) setHtml(el, h);
+  if (el.innerHTML !== h) el = setHtml(el, h);
+  var h1 = el.querySelector('h1');
+  el.classList.remove('two');
+  if (h1) {
+    h1.className = '';
+    if (h1.offsetHeight > 140) {
+      /* two lines at the full size: smaller, and still two lines there leaves one line for the description */
+      h1.className = 'long';
+      if (h1.offsetHeight > 100) el.classList.add('two');
+    }
+  }
+  return el;
 }
 function filmText(it) {
   var len = VL.fmtLength((it.runtime || 0) * 60),
     facts = [];
+  /* (the title's size is set by heroText, from its height) */
   if (it.year) facts.push('<span>' + esc(it.year) + '</span>');
   if (len) facts.push('<span>' + esc(len) + '</span>');
   if (it.genres && it.genres.length) facts.push('<span>' + esc(it.genres.slice(0, 2).join(', ')) + '</span>');
@@ -122,9 +135,7 @@ function filmText(it) {
   return (
     '<div class="eb">' +
     esc(t('Trending in Films & Series')) +
-    '</div><h1' +
-    (name.length > 22 ? ' class="long"' : '') +
-    '>' +
+    '</div><h1>' +
     esc(name) +
     '</h1><div class="facts">' +
     facts.join('') +
@@ -137,9 +148,7 @@ function chanText(ch) {
   return (
     '<div class="eb">' +
     esc(t('Last watched')) +
-    '</div><h1' +
-    (ch.name.length > 22 ? ' class="long"' : '') +
-    '>' +
+    '</div><h1>' +
     esc(ch.name) +
     '</h1><div class="facts"><b>' +
     esc(ch.num) +
@@ -183,11 +192,10 @@ function drawHero(fade) {
     heroEls.push(lb);
     showPic(it.pic);
     if (fade) {
-      var tx = $('htext');
-      tx.classList.add('out');
+      $('htext').classList.add('out');
       setTimeout(function () {
-        heroText(filmText(H.picks[H.hi]));
-        tx.classList.remove('out');
+        /* the element itself: on webOS 5 setHtml swaps it for a copy, which keeps the class */
+        heroText(filmText(H.picks[H.hi])).classList.remove('out');
       }, 260);
     } else heroText(filmText(it));
     var nx = H.picks[(H.hi + 1) % H.picks.length];
@@ -215,15 +223,20 @@ function drawHero(fade) {
 function showPic(url) {
   if (!url || url === picUrl) return;
   picUrl = url;
-  var nxt = picOn === 0 ? $('hb1') : $('hb0'),
-    cur = picOn === 0 ? $('hb0') : picOn === 1 ? $('hb1') : null;
+  /* always into the layer that is not shown, which then fades in once loaded; a picture that fails leaves the shown one */
+  var a = $('hb0'),
+    b = $('hb1'),
+    cur = a.classList.contains('on') ? a : b.classList.contains('on') ? b : null,
+    nxt = cur === a ? b : a;
   nxt.onload = function () {
     if (picUrl !== url) return;
     nxt.classList.add('on');
     if (cur) cur.classList.remove('on');
   };
+  nxt.onerror = function () {
+    if (picUrl === url) picUrl = '';
+  };
   nxt.src = url;
-  picOn = nxt.id === 'hb0' ? 0 : 1;
 }
 function slideLater() {
   clearTimeout(slideT);
@@ -232,7 +245,14 @@ function slideLater() {
 /* the next Trending title, but never while the focus is on the hero's buttons or something covers Home */
 function slide() {
   if (H.picks.length < 2 || HL.heroMode(H.picks, H.chans) !== 'film') return;
-  if (document.hidden || LIVE.on || VOD.on || stack.length || (heroRow && rows[r] === heroRow)) return slideLater();
+  if (
+    document.hidden ||
+    LIVE.on ||
+    VOD.on ||
+    stack.length ||
+    !HL.maySlide({ inHero: !!heroRow && rows[r] === heroRow, moved: userMoved, sinceKey: Date.now() - lastKey })
+  )
+    return slideLater();
   H.hi = (H.hi + 1) % H.picks.length;
   drawHero(true);
   buildRows();
@@ -283,7 +303,7 @@ function drawBand() {
   H.chans.slice(0, nCh).forEach(function (ch) {
     var l = HL.chanLine(ch, nowS),
       d = document.createElement('div');
-    d.className = 'ch card fo' + (ch.now ? '' : ' ng');
+    d.className = 'ch card fo' + (ch.now || ch.next ? '' : ' ng');
     d._k = 'ch:' + ch.key;
     d.innerHTML =
       '<div class="cn"><b></b><span></span></div><div class="pt"></div><div class="tm"></div><div class="bar"><i style="width:' +
@@ -312,11 +332,12 @@ function homeTick() {
     ended = false;
   bandEls.forEach(function (d) {
     var ch = d._ch;
-    if (!ch || !ch.now) return;
-    if (nowS >= ch.now[1]) ended = true;
-    d.querySelector('.bar i').style.width = Math.round(100 * HL.progress(nowS, ch.now)) + '%';
+    if (!ch) return;
+    if (HL.stale(ch, nowS)) ended = true;
+    if (ch.now) d.querySelector('.bar i').style.width = Math.round(100 * HL.progress(nowS, ch.now)) + '%';
   });
-  if (ended) homeData();
+  var hc = HL.heroMode(H.picks, H.chans) === 'channel' && heroChannel();
+  if (ended || (hc && HL.stale(hc, nowS))) homeData();
 }
 setInterval(homeTick, 15000);
 

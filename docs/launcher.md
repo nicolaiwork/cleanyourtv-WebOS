@@ -13,12 +13,15 @@ In this fork Home opens on something to watch (it replaced the dock and app grid
   any app) and **Customise**.
 - **A Trending title.** One film from [Films & Series](vod.md)' Trending row over its backdrop, with its year, length,
   genres, rating and description, and three buttons: **Play** (or **Resume** with the time left, when you started it),
-  **More info** (its page in Films & Series) and **+** (My list). After 15 seconds it slides to the next of the first ten
-  Trending titles, but never while the focus is on its buttons; the markers on the right show which one is shown.
+  **More info** (its page in Films & Series) and **+** (My list). Every 15 seconds it slides to the next of the first ten
+  Trending titles while nobody uses the remote, also with the focus resting on Play where Home puts it. Once you move to its
+  buttons it stays, and it never slides within four seconds of a key, so OK always plays the title you see. The markers on
+  the right show which one is shown.
 - **Continue watching.** The titles you started, as in Films & Series (a series once, with its episode), newest first, with
   the time left. OK continues where you stopped.
 - **On your channels now.** Your [Live TV](live-tv.md) favourites (marked with a star), then the channels you watched
-  last, each with the programme on now, its times, how far it is and what follows. OK tunes the channel.
+  last, each with the programme on now, its times, how far it is and what follows (between two programmes: the next one and when
+  it starts). OK tunes the channel.
 - **The strip.** Live TV and Films & Series, then up to six apps or inputs you put on Home, the other inputs on Home, and
   **All apps** (every app that is not hidden, in the order chosen in Customise).
 
@@ -79,8 +82,8 @@ switches to the input.
 
 Hold OK on an input in the Inputs list and choose **Add to Home**. The input then shows in the strip with the HDMI symbol, the
 name the TV gives it (for example the name of the connected console) and a dot when something is connected; with nothing
-connected it is dimmed and still switches to it. OK switches to the input; holding OK on it offers **Move left**, **Move right**
-and **Remove from Home**, which is also in the Inputs list.
+connected it is dimmed and still switches to it. OK switches to the input; holding OK on it offers **Remove from Home**, which is
+also in the Inputs list.
 
 In the [Inputs picker](input-key.md) of the Input key, holding OK on an HDMI input does the same: it is added to Home, or taken off
 when it already is. An input in the dock also shows in the picker's row of dock apps.

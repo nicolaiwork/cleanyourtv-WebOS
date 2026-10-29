@@ -82,6 +82,8 @@ var HL = (function () {
   /* a channel card's lines from the service's now and next (/api/live/home) */
   function chanLine(ch, nowSec) {
     var n = ch.now;
+    /* between two programmes: the next one */
+    if (!n && ch.next) return { title: ch.next[2], times: 'From ' + hm(ch.next[0]), next: '', prog: 0 };
     if (!n) return { title: 'No guide', times: '', next: '', prog: -1 };
     return {
       title: n[2],
@@ -90,7 +92,19 @@ var HL = (function () {
       prog: progress(nowSec, n),
     };
   }
+  /* a channel card to ask the service about again: the programme on now ended, or the next one began */
+  function stale(ch, nowSec) {
+    return !!((ch.now && nowSec >= ch.now[1]) || (!ch.now && ch.next && nowSec >= ch.next[0]));
+  }
+  /* the hero slides while nobody uses the remote (also with the focus resting on Play, where Home puts it), never while the viewer is
+     on its buttons, and never within a few seconds of a key, so OK never lands on a title that just changed */
+  function maySlide(o) {
+    if (o.sinceKey < 4000) return false;
+    return !(o.inHero && o.moved);
+  }
   return {
+    stale: stale,
+    maySlide: maySlide,
     heroPicks: heroPicks,
     continueCards: continueCards,
     heroPlay: heroPlay,

@@ -179,6 +179,10 @@ These answer the reviewer's questions; they override anything above that reads d
 7. **Row titles are not focusable.** Films & Series is reached from the strip, Search and More info; the guide from the strip's
    Live TV and the Guide key. This keeps one simple focus model (rows of focusable items).
 
+8. **The hero also slides while the focus rests on Play** (after the final review, Claude's call): until the viewer moves the
+   focus, and never within four seconds of a key. Without this, the focus on Play would stop the hero from ever sliding, which
+   was one of Nicolai's three asks. Once the viewer moves onto the hero's buttons it stays, as above.
+
 ## Left to the builder
 
 - Exact sizes, spacing, type scale and how the theme's font is used. The mockup uses Barlow and Barlow Condensed; the TV build
