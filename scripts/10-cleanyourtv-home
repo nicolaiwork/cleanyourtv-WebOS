@@ -55,20 +55,38 @@ if [ "$method" = standin ]; then
     fi
   ) </dev/null >/dev/null 2>&1 &
 else
-  echo "$(up) home: mounting the launcher over LG's Home, restarting sam" >> $LOG
+  # The restart closes the input the TV opened at power-on (an Apple TV turning it on over HDMI-CEC): open that again, not Home
+  back=$(luna-send -n 1 -w 5000 -f luna://com.webos.applicationManager/getForegroundAppInfo '{}' </dev/null | node $L/jtool.js backapp)
+  [ -n "$back" ] || back=com.webos.app.home
+  echo "$(up) home: mounting the launcher over LG's Home, restarting sam (then opening $back)" >> $LOG
   mount --bind $L/home-overlay $H && { (sleep 3; pkill -9 -f /usr/palm/applications/airplay/LunaExecutable) </dev/null >/dev/null 2>&1 & systemctl restart sam; }
   echo "$(up) home: sam restarted" >> $LOG
-  # After the sam restart nothing is in the foreground (black screen). Once sam is back, start Home again
-  # unless the user already went somewhere else (e.g. an HDMI input).
+  # After the sam restart nothing is in the foreground (black screen). Once sam is back, start Home again (or the input that was
+  # open) unless the user already went somewhere else (e.g. an HDMI input).
   (
     for i in $(seq 1 60); do systemctl is-active sam >/dev/null && break; sleep 2; done
-    sh $L/after-sam.sh   # webOS before 7 and the native Home: the services that keep talking to the old sam (issues 23 and 24)
+    front() { luna-send -n 1 -w 5000 -f luna://com.webos.applicationManager/getForegroundAppInfo '{}' </dev/null | grep '"appId"'; }
+    reopen() { luna-send -n 1 -w 10000 -f luna://com.webos.applicationManager/launch "{\"id\":\"$back\"}" </dev/null | grep -q '"returnValue": *true'; }
+    if [ "$back" != com.webos.app.home ]; then
+      # The input at once: when nothing is in front a few seconds after sam starts, sam opens Home by itself, which showed the
+      # launcher for seconds before the input came back. The old Home page goes, so the Home key opens the launcher.
+      pkill -f "[a]pp-id=com.webos.app.home"
+      for i in $(seq 1 40); do reopen && break; sleep 0.25; done
+      echo "$(up) home: $back opened again" >> $LOG
+      sh $L/after-sam.sh   # webOS before 7 and the native Home: the services that keep talking to the old sam (issues 23 and 24)
+      # if sam still opens Home during the boot, back to the input once
+      for i in $(seq 1 40); do
+        sleep 0.5
+        case "$(front)" in *com.webos.app.home*) reopen; echo "$(up) home: sam opened Home; back to $back" >> $LOG; break ;; esac
+      done
+      exit 0
+    fi
+    sh $L/after-sam.sh
     sleep 8
-    fg=$(luna-send -n 1 -w 5000 -f luna://com.webos.applicationManager/getForegroundAppInfo '{}' </dev/null | grep '"appId"')
-    case "$fg" in
+    case "$(front)" in
       *'"appId": ""'*|*com.webos.app.home*|"")
         pkill -f "[a]pp-id=com.webos.app.home"; sleep 2
-        luna-send -n 1 -w 10000 -f luna://com.webos.applicationManager/launch '{"id":"com.webos.app.home"}' </dev/null ;;
+        reopen ;;
     esac
   ) </dev/null >/dev/null 2>&1 &
 fi

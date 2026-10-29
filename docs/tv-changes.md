@@ -27,7 +27,9 @@ uninstall. Optional features contact other services only when you switch them on
 
     - **LG's Home is a flutter or web app** (webOS 24 and newer): a directory holding the launcher is **bind-mounted** over LG's Home
       app (`/usr/palm/applications/com.webos.app.home`). Its `appinfo.json` is derived from this TV's own stock Home, so nothing of
-      LG's is shipped. The system app manager (`sam`) is restarted so that it reads the new Home.
+      LG's is shipped. The system app manager (`sam`) is restarted so that it reads the new Home. That closes the app the TV
+      opened at power-on; when it was an input (an Apple TV turning the TV on over HDMI-CEC, or the last input), that input is
+      opened again as soon as the app manager is back, instead of Home.
     - **LG's Home is a native program** (webOS 5 to 23): `home-standin.sh` is **bind-mounted** over that program (its path comes from
       the stock Home's `appinfo.json`, usually `/usr/bin/com.webos.app.home`) and LG's running Home is stopped once. LG's Home
       manifest stays in place and the app manager is not restarted: it starts the stand-in whenever Home is launched. The stand-in

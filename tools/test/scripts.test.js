@@ -60,6 +60,27 @@ run(async () => {
       JSON.parse(qs.appDesc).folderPath === q.appDesc.folderPath,
     'jtool wamlaunch: webapp-mgr opens the launcher folder as com.webos.app.home (also with the description as a string)'
   );
+  // after the boot script's sam restart: the input the TV opened at power-on (an Apple TV turning it on over HDMI-CEC), else Home
+  const backapp = fg => cp.spawnSync(process.execPath, [jt, 'backapp'], { input: fg, encoding: 'utf8' }).stdout.trim();
+  ok(
+    backapp('{\n    "returnValue": true,\n    "appId": "com.webos.app.hdmi1"\n}') === 'com.webos.app.hdmi1' &&
+      backapp('{"appId":"com.webos.app.livetv"}') === 'com.webos.app.livetv',
+    'jtool backapp: an input in front before the sam restart is opened again afterwards'
+  );
+  ok(
+    backapp('{"appId":""}') === 'com.webos.app.home' &&
+      backapp('{"appId":"com.webos.app.home"}') === 'com.webos.app.home' &&
+      backapp('{"appId":"netflix"}') === 'com.webos.app.home' &&
+      backapp('') === 'com.webos.app.home',
+    'jtool backapp: nothing, Home, an app or no reply opens Home'
+  );
+  const homeBoot = fs.readFileSync(path.join(root, 'scripts', '10-cleanyourtv-home'), 'utf8');
+  ok(/jtool\.js backapp\)/.test(homeBoot), 'the boot script asks jtool backapp which app to open after the sam restart');
+  const inputPath = homeBoot.slice(homeBoot.indexOf('if [ "$back" != com.webos.app.home ]'));
+  ok(
+    inputPath.indexOf('reopen && break') >= 0 && inputPath.indexOf('reopen && break') < inputPath.indexOf('after-sam.sh'),
+    'an input is opened again as soon as sam is back, before anything waits, so sam does not show Home first'
+  );
   // bootstrap.sh run for real against a folder that stands in for the TV's root (CYTV_TEST_ROOT), with stand-ins for luna-send and systemctl
   const R = path.join(tmp, 'root'),
     S = path.join(tmp, 'pkg'),
