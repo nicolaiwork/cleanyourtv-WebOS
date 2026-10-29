@@ -7,7 +7,8 @@ a title through the curator's play address, which redirects to the provider.
 
 ## Setting it up
 
-The **Films & Series** tile shows on the home screen once the service knows the curator's address. When Live TV's playlist is the
+**Films & Series** shows on the home screen (in the strip, and with its Trending titles and Continue watching on top, see
+[the launcher](launcher.md)) once the service knows the curator's address. When Live TV's playlist is the
 curator's (`http://<curator>:8000/playlist.m3u`), that address is used. Otherwise, from a shell on the TV:
 
 ```sh

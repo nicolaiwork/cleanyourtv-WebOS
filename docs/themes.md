@@ -4,6 +4,12 @@ A theme changes how the home screen looks: colours, the size of tiles and text, 
 the speed of animations and a wallpaper. Themes apply to the launcher's home screen (dock, top shelf, grid, top buttons and menus).
 Live TV, the Inputs picker and the notification cards keep their own look.
 
+> [!NOTE]
+> **In this fork** Home has a fixed layout (a Trending title, Continue watching, the channels on now and a strip, see
+> [the launcher](launcher.md)). Of a theme it uses the colours (`colors.*`, the accent and focus), the font, the animation speed and the
+> wallpaper, which shows where there is no backdrop. The settings that place or size the old layout (`dock.*`, `grid.*`, `shelf.*`,
+> `clock.*` and `bar.*` positions, tile sizes) are still accepted, so every theme loads, but they do not change Home.
+
 In the manager app, **Theme** lists the themes with a screenshot and a description of the highlighted one. Choosing one applies it; the
 home screen shows it the next time you open Home. **Theme options** holds the **Accent colour** (the colour of the focus ring and of the
 highlighted button or menu row, on top of any theme) and **Go back to the previous theme**.

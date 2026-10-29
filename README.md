@@ -12,7 +12,9 @@ picture notifications, optional on-device voice recognition and an optional debl
 > data. Optional features contact the services you choose; [Security](https://lasharor.github.io/cleanyourtv-WebOS/security/) lists them.
 
 **CleanYourTV** replaces LG's Home with a launcher: a dock of four apps, a top shelf, an app grid sorted by use, an Inputs
-picker, a Settings shortcut and a clock. A small service runs on the TV as root and adds the rest. A manager app on the TV
+picker, a Settings shortcut and a clock. (In this fork Home opens on a Trending film from Films & Series with Play, Continue
+watching, your Live TV channels with what is on now and a strip of entries and apps; see the
+[launcher page](docs/launcher.md).) A small service runs on the TV as root and adds the rest. A manager app on the TV
 sets up, updates and removes everything.
 
 <p align="center"><img src="docs/screenshots/menu.gif" alt="The home screen, app options, Customise and Inputs menus" width="800"></p>

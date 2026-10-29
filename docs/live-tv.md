@@ -23,8 +23,8 @@ curl -X POST localhost:8765/api/live/settings -d '{"playlistUrl":"http://...","e
 
 ## Turning it off
 
-Live TV is optional. In the manager app, **Live TV** > **Show Live TV** switches it on and off. Off hides it everywhere: the Live TV button and tile in
-the launcher, **Live TV** in the Inputs list, and the Guide key takeover (below). LG's own player and guide are used as before.
+Live TV is optional. In the manager app, **Live TV** > **Show Live TV** switches it on and off. Off hides it everywhere: the Live TV button, the strip entry and the channel cards
+on Home, **Live TV** in the Inputs list, and the Guide key takeover (below). LG's own player and guide are used as before.
 The playlist and your favourites are kept, so switching it on again brings them back.
 
 ## Keys

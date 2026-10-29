@@ -7,25 +7,40 @@ same on every supported webOS version.
 
 ## The screen
 
-- **Dock.** Up to four apps, large, on the first row.
-- **Top shelf.** The name of the focused app and an ambient glow taken from its icon.
-- **Grid.** All other apps, sorted by how often you use each one (or A to Z).
-- **Top buttons.** Inputs, Live TV, Settings and Customise, and a clock. The buttons you see are yours to change.
+In this fork Home opens on something to watch (it replaced the dock and app grid):
+
+- **Top bar.** The clock and date, then **Search** (Films & Series' search), your top buttons (Inputs, Live TV, Settings or
+  any app) and **Customise**.
+- **A Trending title.** One film from [Films & Series](vod.md)' Trending row over its backdrop, with its year, length,
+  genres, rating and description, and three buttons: **Play** (or **Resume** with the time left, when you started it),
+  **More info** (its page in Films & Series) and **+** (My list). After 15 seconds it slides to the next of the first ten
+  Trending titles, but never while the focus is on its buttons; the markers on the right show which one is shown.
+- **Continue watching.** The titles you started, as in Films & Series (a series once, with its episode), newest first, with
+  the time left. OK continues where you stopped.
+- **On your channels now.** Your [Live TV](live-tv.md) favourites (marked with a star), then the channels you watched
+  last, each with the programme on now, its times, how far it is and what follows. OK tunes the channel.
+- **The strip.** Live TV and Films & Series, then up to six apps or inputs you put on Home, the other inputs on Home, and
+  **All apps** (every app that is not hidden, in the order chosen in Customise).
+
+When Films & Series is not set up or its server cannot be reached, the top shows the channel you watched last with a
+**Watch** button instead, and Continue watching is left out. With Live TV switched off there are no channel cards and
+Continue watching uses the whole width. Home appears at once from what it showed last and fills in when the service answers.
 
 ## Keys
 
 | Action | How |
 |---|---|
-| Open an app | OK |
-| App options (dock, hide) | Hold OK on an app |
+| Play the Trending title, continue a title, tune a channel, open an app | OK |
+| Back from a title opened on Home | Back (from the player to the title's page, then Home) |
+| App options (move, remove from Home, hide) | Hold OK on an app in the strip or in All apps |
 | Remove a top button | Hold OK on it |
 | Customise | The **Customise** button |
-| Live TV | The **Live TV** button or tile |
 | Switch input | The **Inputs** button |
 | Put an input on Home | Hold OK on it in the Inputs list |
 | Close running apps | Back on the home screen |
 
-The Magic Remote pointer works too: pointing and clicking, and holding the button on an app for its options.
+Up or Down into the Trending title always lands on Play. The Home key brings the focus back to Play. The Magic Remote pointer
+works too: pointing and clicking, and holding the button on an app for its options.
 
 ![App options](screenshots/options.jpg)
 
@@ -34,7 +49,7 @@ The Magic Remote pointer works too: pointing and clicking, and holding the butto
 Back on the home screen lists the apps that are open, as LG's Home does with its Recents on a second Back. OK closes an app,
 **Close all** closes every app in the list, and Back leaves it. Closing an app also removes it from LG's recent apps.
 
-It lists the apps the launcher knows, including the ones you hid from the grid; Home itself, CleanYourTV's own apps and the TV's
+It lists the apps the launcher knows, including the ones you hid from Home; Home itself, CleanYourTV's own apps and the TV's
 system apps are never in it. The list is read when it opens and closes when you leave Home. Suggested and first built by
 [Steefzar](https://github.com/lasharor/cleanyourtv-WebOS/issues/16).
 
@@ -52,7 +67,8 @@ system apps are never in it. The list is read when it opens and closes when you 
 - the **clock** format (automatic, 12 or 24 hour),
 - **Reset customisation**.
 
-The dock holds up to four apps. Hold OK on an app and choose **Add to dock**, **Move left**, **Move right** or **Remove from dock**.
+The strip holds up to six apps or inputs after Live TV and Films & Series. Hold OK on an app (in the strip or in **All apps**) and
+choose **Add to Home**, **Move left**, **Move right**, **Remove from Home** or **Hide app**.
 
 ## Inputs
 
@@ -61,10 +77,10 @@ switches to the input.
 
 ### An input on Home
 
-Hold OK on an input in the Inputs list and choose **Add to Home**. The input then shows as a tile, with the HDMI symbol, the name
-the TV gives it (for example the name of the connected console) and its port. It is a tile like an app: OK switches to the input,
-and holding OK on it offers **Add to dock**, **Move left**, **Move right** and **Remove from dock**. **Remove from Home** takes it
-off again; that is also in the Inputs list. A tile of an input with nothing connected is dimmed and still switches to it.
+Hold OK on an input in the Inputs list and choose **Add to Home**. The input then shows in the strip with the HDMI symbol, the
+name the TV gives it (for example the name of the connected console) and a dot when something is connected; with nothing
+connected it is dimmed and still switches to it. OK switches to the input; holding OK on it offers **Move left**, **Move right**
+and **Remove from Home**, which is also in the Inputs list.
 
 In the [Inputs picker](input-key.md) of the Input key, holding OK on an HDMI input does the same: it is added to Home, or taken off
 when it already is. An input in the dock also shows in the picker's row of dock apps.
@@ -75,20 +91,17 @@ Suggested and first built by [ibexes](https://github.com/lasharor/cleanyourtv-We
 
 ## Icons
 
-Each tile uses the app's own icon. The tile colour is taken from the icon's edge colour, so an icon that reaches its edges blends
-into the tile, and the ambient glow comes from the icon's most vivid colour. Colours are worked out once per app and remembered.
-
-An icon that is an opaque square with a transparent margin around it (many LG icons) is enlarged so it fills its tile, and a
-gradient icon in the dock gets a tile with the same gradient ([#3](https://github.com/lasharor/cleanyourtv-WebOS/issues/3)).
+The strip uses each app's own icon; Live TV and Films & Series have their own.
 
 ## Language
 
-Menus follow the TV's language: English, Dutch, German, French and Spanish.
+Menus follow the TV's language: English, Dutch, German, French and Spanish. Home's new texts and Films & Series are in English.
 
 ## Themes
 
-The look of the home screen (colours, tile and text size, columns, clock, glow, animation speed, wallpaper) is a [theme](themes.md),
-chosen in the manager app.
+The colours, font, animation speed and wallpaper of the home screen come from the [theme](themes.md) chosen in the manager app.
+In this fork Home's layout is fixed, so a theme's layout settings (dock, grid, shelf, clock and button positions, tile sizes)
+do not change it; the wallpaper shows where there is no backdrop.
 
 ## Settings file
 
@@ -96,7 +109,7 @@ Settings are stored on the TV in `/media/developer/cleanyourtv/config.json`:
 
 | Key | Meaning |
 |---|---|
-| `dock` | App ids in the dock (up to four). |
+| `dock` | App and input ids in Home's strip after Live TV and Films & Series (up to six). |
 | `topbar` | The buttons at the top. |
 | `hidden` | App ids you hid. |
 | `pinnedInputs` | The inputs on Home: `{id, label, port}`, `id` being the input's app (for example `com.webos.app.hdmi2`). |
