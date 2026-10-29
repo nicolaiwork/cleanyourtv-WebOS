@@ -103,7 +103,24 @@ if (cmd === 'kind') {
 } else if (cmd === 'backapp') {
   // backapp < getForegroundAppInfo reply  ->  the app to open after the boot script restarted sam: the input the TV opened at
   // power-on (an HDMI-CEC device such as an Apple TV turned it on, or it was the last input), which the restart closed, else Home
-  var fg = String((rj('/dev/stdin', {}) || {}).appId || '');
+  // read fd 0, not /dev/stdin: opening that fails on Linux when stdin is a socket (how node hands input to a child)
+  var got = [],
+    buf = Buffer.alloc(65536),
+    n,
+    fg = '';
+  for (;;) {
+    try {
+      n = fs.readSync(0, buf, 0, buf.length, null);
+    } catch (e) {
+      if (e.code === 'EAGAIN') continue;
+      n = 0;
+    }
+    if (!n) break;
+    got.push(Buffer.from(buf.slice(0, n)));
+  }
+  try {
+    fg = String(JSON.parse(Buffer.concat(got).toString('utf8')).appId || '');
+  } catch (e) {}
   console.log(/^com\.webos\.app\.(hdmi\d+|livetv|externalinput\..+)$/.test(fg) ? fg : 'com.webos.app.home');
 } else if (cmd === 'rmbind') {
   // rmbind  ->  drop our Input-key bind from the inputhook's keybinds.json
