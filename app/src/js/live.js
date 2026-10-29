@@ -1141,7 +1141,9 @@ var LIVE = (function () {
               )
               .then(function () {
                 layer('lv-msg', false);
-                play(byNum[last] ? last : chans[0].num);
+                var want = byKey[wantKey];
+                wantKey = '';
+                play(want ? want.num : byNum[last] ? last : chans[0].num);
                 if (guideNext) {
                   guideNext = false;
                   openList();
@@ -1162,13 +1164,18 @@ var LIVE = (function () {
     i = (i + d + chans.length) % chans.length;
     play(chans[i].num, false, 180);
   }
-  var guideNext = false;
-  o.enter = function (guide) {
+  var guideNext = false,
+    wantKey = '';
+  /* key: a channel to start with (a channel card on Home) instead of the last one */
+  o.enter = function (guide, key) {
     o.on = true;
     guideNext = !!guide;
+    wantKey = key || '';
     $('lv').classList.add('on');
     if (loaded && byNum[cur]) {
-      play(cur);
+      var want = byKey[wantKey];
+      wantKey = '';
+      play(want ? want.num : cur);
       if (guideNext) {
         guideNext = false;
         openList();
@@ -1203,7 +1210,9 @@ var LIVE = (function () {
     layer('lv-tune', false);
     layer('lv-toast', false);
     $('lv').classList.remove('on');
+    if (o.onExit) o.onExit();
   };
+  o.onExit = null;
   o.key = function (e) {
     var k = e.keyCode;
     if (searching) {

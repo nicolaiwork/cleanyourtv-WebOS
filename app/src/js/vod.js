@@ -812,7 +812,9 @@ var VOD = (function () {
       sim: [],
       from: prev ? prev.from : from,
       prev: prev,
+      auto: !prev && autoNext /* Home's Play: press the first button once the details are there */,
     };
+    autoNext = false;
     $('vd-dmain').style.transform = '';
     area = 'details';
     var det = $('vd-det');
@@ -838,6 +840,11 @@ var VOD = (function () {
         }
         toNext();
         drawDetails();
+        if (D.auto) {
+          D.auto = false;
+          var b = D.btns[0];
+          if (b && b.play) playFrom(b.play);
+        }
       },
       function (e) {
         if (g !== gen || !D) return;
@@ -1286,6 +1293,7 @@ var VOD = (function () {
       return changed();
     }
     closeDetails();
+    if (from === 'home') return o.exit(); /* opened from Home: back there */
     area = from;
     if (from === 'results') drawSearch();
     else refreshContinue();
@@ -1944,6 +1952,15 @@ var VOD = (function () {
         if (!o.on) return;
         base = r[0].base || base;
         msg('');
+        if (wantFind) {
+          wantFind = false;
+          setTab(FIND);
+          area = 'search';
+          drawTabs();
+          drawSearch();
+          $('vd-q').focus();
+          return;
+        }
         setTab(tab === FIND ? (MEM.tab === 1 || MEM.tab === LIST ? MEM.tab : 0) : tab);
         if (tab === LIST) {
           area = L.items.length ? 'list' : 'tabs';
@@ -1989,6 +2006,7 @@ var VOD = (function () {
     HOME = {};
     clearHero();
     $('vd').classList.remove('on');
+    if (o.onExit) o.onExit();
   };
   /* webOS repeats keydown while OK is held, not always with e.repeat: a held OK is one press, so it can't open a title and then
      press Play (a stream) on its own */
@@ -2031,5 +2049,98 @@ var VOD = (function () {
     );
   };
   o.check();
+
+  /* ---------- what Home (home.js) asks of Films & Series ---------- */
+  var autoNext = false,
+    wantFind = false,
+    homeRows = null,
+    homeRowsAt = 0;
+  o.onExit = null;
+  o.img = function (p) {
+    return img(p);
+  };
+  /* the address, the viewer's state and the films rows (kept 30 minutes); never rejects: what is missing is empty */
+  o.home = function () {
+    return api('/api/vod/status')
+      .then(function (s) {
+        base = s.base || '';
+        if (!s.configured) return null;
+        var rowsP =
+          homeRows && Date.now() - homeRowsAt < 30 * 60 * 1000
+            ? Promise.resolve(homeRows)
+            : vget('/vod/home/films.json').then(
+                function (h) {
+                  homeRows = h && h.rows && h.rows.length ? h.rows : null;
+                  homeRowsAt = Date.now();
+                  return homeRows;
+                },
+                function () {
+                  return null;
+                }
+              );
+        return Promise.all([rowsP, loadState()]).then(function (r) {
+          return { base: base, st: ST, rows: r[0] };
+        });
+      })
+      .catch(function () {
+        return null;
+      });
+  };
+  /* a title's page straight from Home (kind films | series, card {id, label, poster}); play: press its first button (Play, Resume,
+     Continue) once the details are there. Back from the page returns to Home. */
+  o.open = function (kind, card, play) {
+    if (o.on) return;
+    o.on = true;
+    $('vd').classList.add('on');
+    area = 'details';
+    msg('');
+    var g = ++gen;
+    Promise.all([
+      api('/api/vod/status'),
+      loadState(),
+      lib
+        ? null
+        : vget('/vod/library.json').then(
+            function (l) {
+              lib = l;
+            },
+            function () {}
+          ),
+    ]).then(
+      function (r) {
+        if (!o.on || g !== gen) return;
+        base = r[0].base || base;
+        autoNext = !!play;
+        openDetails(kind, card, 'home');
+      },
+      function () {
+        if (o.on) o.exit();
+      }
+    );
+  };
+  o.search = function () {
+    wantFind = true;
+    o.enter();
+  };
+  /* My list from Home's hero */
+  o.toggleList = function (kind, card) {
+    var key = (kind === 'films' ? 'film:' : 'show:') + card.id,
+      on = !ST.list[key];
+    return api('/api/vod/state', {
+      op: 'list',
+      kind: kind === 'films' ? 'film' : 'show',
+      id: card.id,
+      on: on,
+      name: String(card.label || card.name || '').slice(0, 200),
+      poster: card.poster || '',
+    }).then(function () {
+      return loadState().then(function () {
+        return !!ST.list[key];
+      });
+    });
+  };
+  o.listed = function (kind, id) {
+    return !!ST.list[(kind === 'films' ? 'film:' : 'show:') + id];
+  };
   return o;
 })();
