@@ -35,7 +35,14 @@ const ask = async (u, method, body) => {
 
 run(async () => {
   // pairing end to end: code, form post, playlist fetch
-  const pl = await serve((q, r) => r.end('#EXTM3U\n#EXTINF:-1 group-title="G",Chan A\nhttp://127.0.0.1:1/live/u/p/1.m3u8\n'));
+  const pl = await serve((q, r) =>
+    r.end(
+      '#EXTM3U\n' +
+        ['A', 'B', 'C']
+          .map((x, i) => '#EXTINF:-1 group-title="G",Chan ' + x + '\nhttp://127.0.0.1:1/live/u/p/' + (i + 1) + '.m3u8\n')
+          .join('')
+    )
+  );
   const pairInfo = (await ask('/api/live/pair', 'POST')).j;
   ok(/^\d{6}$/.test(String(pairInfo.code)) && /^http:\/\//.test(pairInfo.url), 'live pairing gives a 6 digit code and an address');
   const pairPort = new nc.URL(pairInfo.url).port;
@@ -50,7 +57,7 @@ run(async () => {
     await sleep(150);
     n = ((await ask('/api/live/channels')).j.channels || []).length;
   }
-  ok(n === 1, 'the playlist is fetched and parsed');
+  ok(n === 3, 'the playlist is fetched and parsed');
   pl.server.close();
 
   // playlist details: quality, country, language, flags, categories, merged streams
@@ -127,6 +134,29 @@ run(async () => {
     JSON.parse(fs.readFileSync(path.join(process.env.CYTV_LIVE_DIR, 'state.json'), 'utf8')).fav.join() === k2,
     'state: written to the live folder'
   );
+
+  // Home's channels: favourites, then recent ones, only those the playlist has, without stream addresses
+  const keyOf = {};
+  (await ask('/api/live/channels')).j.channels.forEach(r => (keyOf[r[2]] = r[6]));
+  for (const b of [
+    { op: 'fav', key: keyOf['Chan C'], on: true },
+    { op: 'recent', key: keyOf['Chan A'] },
+    { op: 'recent', key: 'ffffffffff' },
+    { op: 'recent', key: keyOf['Chan B'] },
+    { op: 'recent', key: keyOf['Chan C'] },
+  ])
+    await st(b);
+  const home = (await ask('/api/live/home')).j;
+  ok(
+    home && home.channels.map(c => c.name).join() === 'Chan C,Chan B,Chan A',
+    'home channels: the favourite first, then the recent ones, unknown keys left out'
+  );
+  ok(
+    home && home.channels[0].fav === true && home.channels[1].fav === false && home.channels[1].num === 2,
+    'home channels: favourite mark and number'
+  );
+  ok(home && home.channels[0].now === null && home.channels[0].next === null, 'home channels: no guide, no programme');
+  ok(JSON.stringify(home).indexOf('http') < 0, 'home channels: no stream addresses');
 
   // why a stream does not play
   const big = Buffer.alloc(9000, 1);
@@ -270,6 +300,19 @@ run(async () => {
         'guide, ' + label + ': a channel without tvg-id is found by name; a programme on one line works'
       );
       ok(!g.epg.Other && !g.epg['Nobody watches this'], 'guide, ' + label + ': channels nobody lists are left out');
+    }
+    {
+      // Home's channels carry the guide's programme now and next
+      const ch = (await lcall('/api/live/channels')).channels,
+        key = n => ch.filter(c => c[2] === n)[0][6];
+      await lcall('/api/live/state', 'POST', { op: 'recent', key: key('No guide for this') });
+      await lcall('/api/live/state', 'POST', { op: 'recent', key: key('PL: TVP 1 FHD') });
+      const h = (await lcall('/api/live/home')).channels;
+      ok(
+        h[0].name === 'PL: TVP 1 FHD' && h[0].now[2] === 'Wiadomosci' && h[0].next[2] === 'Pogoda' && h[0].id === 'TVP 1',
+        'home channels: the programme now and next from the guide'
+      );
+      ok(h[1].name === 'No guide for this' && h[1].now === null, 'home channels: a channel without a guide has no programme');
     }
     {
       // text cut between two chunks, entities, a description with a line break, a programme without content, a channel on its own

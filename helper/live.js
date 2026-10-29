@@ -635,13 +635,29 @@ async function handle(req, res, u, body) {
       now = Math.floor(Date.now() / 1000);
     for (const id of (q.get('ids') || '').split(',').filter(Boolean).slice(0, 60)) {
       const list = epg && epg.byId[id];
-      if (!list) continue;
-      const i = list.findIndex(p => p[1] > now);
+      const i = list ? list.findIndex(p => p[1] > now) : -1;
       if (i < 0) continue;
-      if (q.get('full')) out[id] = { list: list.slice(i, i + 8) };
-      else out[id] = { now: list[i][0] <= now ? list[i] : null, next: list[list[i][0] <= now ? i + 1 : i] || null };
+      out[id] = q.get('full') ? { list: list.slice(i, i + 8) } : nowNext(id, now);
     }
     return json(out);
+  }
+  // the channels Home shows: favourites, then the recent ones, that the playlist still has; no stream addresses
+  if (u === '/api/live/home') {
+    pruneState();
+    const byKey = {},
+      now = Math.floor(Date.now() / 1000),
+      seen = {},
+      out = [];
+    for (const c of (playlist && playlist.channels) || []) if (c.key) byKey[c.key] = c;
+    for (const k of state.fav.concat(state.recent)) {
+      const c = byKey[k];
+      if (!c || seen[k] || out.length >= 8) continue;
+      seen[k] = true;
+      const id = guideId(c),
+        g = nowNext(id, now) || { now: null, next: null };
+      out.push({ key: k, num: c.num, name: c.name, logo: c.logo || '', id, fav: state.fav.indexOf(k) >= 0, now: g.now, next: g.next });
+    }
+    return json({ channels: out });
   }
   if (u === '/api/live/state' && req.method === 'GET') {
     pruneState();
@@ -690,6 +706,13 @@ async function handle(req, res, u, body) {
 }
 
 // the id the page asks the guide with: the playlist's own, or the guide channel found by name
+// the programme on now (null between programmes) and the next one, or null when the guide has nothing for the channel
+function nowNext(id, now) {
+  const list = epg && epg.byId[id];
+  const i = list ? list.findIndex(p => p[1] > now) : -1;
+  if (i < 0) return null;
+  return { now: list[i][0] <= now ? list[i] : null, next: list[list[i][0] <= now ? i + 1 : i] || null };
+}
 const guideId = c => (epg && epg.byId && epg.byId[c.id] ? c.id : (epg && epg.map && epg.map[c.key]) || c.id);
 
 // refresh once shortly after start (low priority), then twice a day

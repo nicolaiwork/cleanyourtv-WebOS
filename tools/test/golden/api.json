@@ -653,6 +653,14 @@
   "status": 200,
   "type": "application/json"
  },
+ "live home channels": {
+  "body": {
+   "channels": []
+  },
+  "cors": "null",
+  "status": 200,
+  "type": "application/json"
+ },
  "themes": {
   "body": {
    "accents": [

@@ -194,6 +194,7 @@ const CALLS = [
   ['live status', 'GET', '/api/live/status'],
   ['live channels', 'GET', '/api/live/channels'],
   ['live state', 'GET', '/api/live/state'],
+  ['live home channels', 'GET', '/api/live/home'],
   ['themes', 'GET', '/api/theme/list'],
   ['voice', 'GET', '/api/voice/status'],
   ['icon', 'GET', '/icon/netflix'],
