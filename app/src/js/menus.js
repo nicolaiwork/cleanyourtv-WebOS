@@ -198,7 +198,7 @@ function inputsMenu() {
           fn: function () {
             launch(d.appId);
           },
-          /* hold OK: pin the input to Home, where it is a tile like an app */
+          /* hold OK: pin the input to Home, where it is in the strip */
           hold: function () {
             inputMenu(d.appId, d.label || port);
           },
@@ -244,6 +244,7 @@ function pinInput(id, name, on) {
   );
 }
 
+/* hold OK on an app or input in the strip or in All apps: where it is on Home */
 function appMenu(a) {
   var di = dockIds(),
     pos = di.indexOf(a.id),
@@ -255,29 +256,44 @@ function appMenu(a) {
         },
       },
     ];
+  function move(d) {
+    var n = di.slice();
+    n.splice(pos, 1);
+    n.splice(pos + d, 0, a.id);
+    setDock(n);
+  }
   if (pos >= 0) {
     if (pos > 0)
       items.push({
-        label: t('Move left in dock'),
+        label: t('Move left'),
         fn: function () {
-          var d = di.slice();
-          d.splice(pos, 1);
-          d.splice(pos - 1, 0, a.id);
-          setDock(d);
+          move(-1);
         },
       });
     if (pos < di.length - 1)
       items.push({
-        label: t('Move right in dock'),
+        label: t('Move right'),
         fn: function () {
-          var d = di.slice();
-          d.splice(pos, 1);
-          d.splice(pos + 1, 0, a.id);
-          setDock(d);
+          move(1);
         },
       });
+  }
+  if (a.input)
     items.push({
-      label: t('Remove from dock'),
+      label: t('Remove from Home'),
+      fn: function () {
+        if (pos >= 0)
+          setDock(
+            di.filter(function (i) {
+              return i !== a.id;
+            })
+          );
+        pinInput(a.id, a.title, false);
+      },
+    });
+  else if (pos >= 0)
+    items.push({
+      label: t('Remove from Home'),
       fn: function () {
         setDock(
           di.filter(function (i) {
@@ -286,16 +302,16 @@ function appMenu(a) {
         );
       },
     });
-  } else if (di.length < TH.dockN)
+  else if (di.length < HOME_DOCK)
     items.push({
-      label: t('Add to dock'),
+      label: t('Add to Home'),
       fn: function () {
         setDock(di.concat(a.id));
       },
     });
   else
     items.push({
-      label: t('Add to dock...'),
+      label: t('Add to Home...'),
       stay: true,
       fn: function () {
         openMenu(
@@ -313,14 +329,7 @@ function appMenu(a) {
         );
       },
     });
-  if (a.input)
-    items.push({
-      label: t('Remove from Home'),
-      fn: function () {
-        pinInput(a.id, a.title, false);
-      },
-    });
-  else
+  if (!a.input)
     items.push({
       label: t('Hide app'),
       fn: function () {
@@ -328,6 +337,30 @@ function appMenu(a) {
       },
     });
   openMenu(a.title, items);
+}
+/* every app that is not hidden, in the chosen order; hold OK on one for its options */
+function allAppsMenu() {
+  var di = dockIds();
+  openMenu(
+    t('All apps'),
+    apps
+      .filter(function (a) {
+        return !a.input && a.id !== '__live' && a.id !== '__vod' && !isHidden(a.id);
+      })
+      .sort(byOrder)
+      .map(function (a) {
+        return {
+          label: a.title,
+          sub: di.indexOf(a.id) >= 0 ? t('On Home') : '',
+          fn: function () {
+            launch(a.id);
+          },
+          hold: function () {
+            appMenu(a);
+          },
+        };
+      })
+  );
 }
 
 function removeButton(o) {
@@ -350,11 +383,11 @@ function barMenu(o) {
 function customizeMenu() {
   openMenu(t('Customise'), [
     {
-      label: 'Dock',
+      label: t('Apps on Home'),
       sub: t('hold OK on an app'),
       stay: true,
       fn: function () {
-        toast(t('Hold OK on any app to change the dock'));
+        toast(t('Hold OK on an app in the strip or in All apps to change Home'));
       },
     },
     { label: t('Top buttons'), stay: true, fn: topButtonsMenu },

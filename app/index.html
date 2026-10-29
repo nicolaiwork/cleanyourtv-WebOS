@@ -3,8 +3,9 @@
 <html><head><meta charset="utf-8"><title>Home</title>
 <meta name="viewport" content="width=1920">
 <style>
-/* Built for a weak TV GPU: only transform and opacity ever animate; no blur, masks or filters. Everything a theme changes (manager > Theme) is a
-   variable here; the service works the values out (helper/theme.js) and the defaults below are the original look. */
+/* Built for a weak TV GPU: only transform and opacity ever animate; no blur, masks or filters. The colours, font and wallpaper come from
+   the theme (manager > Theme) as variables; the service works the values out (helper/theme.js) and the defaults below are the original
+   look. Home's layout is fixed (fork): the theme's layout settings (dock, grid, shelf, positions) do not apply to it. */
 :root {
   --ink: #f5f6f8;
   --ink2: rgba(245, 246, 248, 0.62);
@@ -18,65 +19,14 @@
   --font: "LG Smart UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --fs: 1;
   --spd: 1;
-  --glow-op: 1;
   --wall: none;
   --pill-bg: rgba(255, 255, 255, 0.09);
   --pill-ring: rgba(255, 255, 255, 0.1);
-  --pill-r: 32px;
-  --pill-h: 64px;
-  --bar-gap: 16px;
   --menu-bg: rgba(5, 6, 9, 0.97);
   --row-r: 30px;
-  --clock-l: 96px;
-  --clock-r: auto;
-  --clock-t: 54px;
-  --clock-b: auto;
-  --clock-tx: none;
-  --clock-ai: flex-start;
-  --clock-s: 1;
-  --date-s: 1;
-  --clock-d: flex;
-  --date-d: block;
-  --bar-l: auto;
-  --bar-r: 96px;
-  --bar-t: 54px;
-  --bar-b: auto;
-  --bar-tx: none;
-  --bar-d: flex;
-  --name-d: block;
-  --name-x: 96px;
-  --name-y: 150px;
-  --name-a: left;
-  --name-s: 1;
-  --view-top: 300px;
-  --dock-l: 96px;
-  --dock-r: auto;
-  --dock-t: 60px;
-  --dock-b: auto;
-  --dock-tx: none;
-  --dock-w: 408px;
-  --dock-h: 230px;
-  --dock-gap: 32px;
-  --dock-rad: 36px;
-  --dock-panel: 0;
-  --dock-pad: 0px;
-  --dock-lift: -10px;
-  --dock-fs: 1.05;
-  --cols: 10;
-  --tile-w: 151px;
-  --tile-h: 151px;
-  --gap-x: 24px;
-  --gap-y: 26px;
-  --tile-r: 34px;
-  --grid-l: 96px;
-  --grid-w: 1728px;
-  --grid-t: 350px;
-  --grid-fs: 1.12;
-  --ov-dim: 0.95;
-  --gloss: 0;
-  --tile-border: 0;
   --ring-w: 4px;
   --ring-off: 4px;
+  --card: rgba(255, 255, 255, 0.06);
 }
 * {
   box-sizing: border-box;
@@ -98,406 +48,521 @@ body {
 ::selection {
   background: rgba(255, 255, 255, 0.25);
 }
+.snap .fo {
+  transition: none !important;
+} /* held arrow key: follow the focus without animating each step */
 
-.glow {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 1920px;
-  height: 720px;
-  opacity: 0;
-  transition: opacity calc(0.35s * var(--spd)) linear;
-  will-change: opacity;
-  background: radial-gradient(ellipse 1400px 640px at 26% -6%, rgba(var(--c), 0.45), transparent 70%);
-}
-.glow.on {
-  opacity: var(--glow-op);
-}
-
-#top {
+/* ---------- the hero's picture: two layers cross-fade; the fades keep the text readable ---------- */
+#hbd {
   position: absolute;
   left: 0;
   top: 0;
   width: 1920px;
   height: 1080px;
-  z-index: 5;
+  overflow: hidden;
   pointer-events: none;
 }
-#clock {
+.hb {
   position: absolute;
-  left: var(--clock-l);
-  right: var(--clock-r);
-  top: var(--clock-t);
-  bottom: var(--clock-b);
-  transform: var(--clock-tx);
-  display: var(--clock-d);
+  right: 0;
+  top: 0;
+  width: 1600px;
+  height: 900px;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity calc(0.9s * var(--spd)) linear;
+  will-change: opacity;
+}
+.hb.on {
+  opacity: 1;
+}
+.hfade {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  background: linear-gradient(180deg, rgba(var(--night-rgb), 0.8) 0, rgba(var(--night-rgb), 0) 220px),
+    linear-gradient(
+      180deg,
+      rgba(var(--night-rgb), 0) 0%,
+      rgba(var(--night-rgb), 0) 40%,
+      rgba(var(--night-rgb), 0.86) 58%,
+      rgb(var(--night-rgb)) 72%
+    ),
+    linear-gradient(
+      90deg,
+      rgb(var(--night-rgb)) 0%,
+      rgba(var(--night-rgb), 0.92) 20%,
+      rgba(var(--night-rgb), 0.4) 50%,
+      rgba(var(--night-rgb), 0) 70%
+    );
+}
+.no-pic #hbd {
+  display: none;
+}
+
+/* ---------- top bar ---------- */
+#top {
+  position: absolute;
+  left: 96px;
+  right: 96px;
+  top: 52px;
+  height: 64px;
+  display: flex;
   align-items: center;
-  height: 76px;
+  z-index: 5;
+}
+#clock {
+  display: flex;
+  align-items: baseline;
+  flex: 1;
+  min-width: 0;
 }
 #time {
-  font-size: calc(56px * var(--fs) * var(--clock-s));
+  font-size: calc(50px * var(--fs));
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 #date {
-  display: var(--date-d);
-  font-size: calc(28px * var(--fs) * var(--date-s));
-  color: rgba(245, 246, 248, 0.88);
-  margin-left: 22px;
-  padding-top: 14px;
-}
-[data-clock="stack"] #clock {
-  flex-direction: column;
-  align-items: var(--clock-ai);
-  height: auto;
-}
-[data-clock="stack"] #date {
-  margin: 8px 0 0 6px;
-  padding: 0;
+  font-size: calc(26px * var(--fs));
+  color: var(--ink2);
+  margin-left: 20px;
+  white-space: nowrap;
 }
 #bar {
-  pointer-events: auto;
-  position: absolute;
-  left: var(--bar-l);
-  right: var(--bar-r);
-  top: var(--bar-t);
-  bottom: var(--bar-b);
-  transform: var(--bar-tx);
-  display: var(--bar-d);
+  display: flex;
   align-items: center;
-  height: calc(var(--pill-h) + 12px);
 }
 #bar > * + * {
-  margin-left: var(--bar-gap);
+  margin-left: 14px;
 }
 .pill {
   display: flex;
   align-items: center;
-  height: var(--pill-h);
-  padding: 0 30px 0 24px;
-  border-radius: var(--pill-r);
-  font-size: calc(26px * var(--fs));
+  height: 56px;
+  padding: 0 26px 0 20px;
+  border-radius: 28px;
+  font-size: calc(24px * var(--fs));
   font-weight: 500;
   background: var(--pill-bg);
   box-shadow: inset 0 0 0 1px var(--pill-ring);
+  white-space: nowrap;
   transition: transform calc(0.12s * var(--spd)) cubic-bezier(0.3, 1.35, 0.5, 1);
   will-change: transform;
 }
 .pill > * + * {
-  margin-left: 14px;
+  margin-left: 12px;
 }
 .pill svg {
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   flex: none;
-}
-.pill span {
-  white-space: nowrap;
 }
 .pill.f {
   background: var(--acc);
   color: var(--acc-ink);
+  box-shadow: none;
   transform: scale(1.07);
 }
-[data-bar="round"] .pill {
-  width: var(--pill-h);
+
+/* ---------- the hero ---------- */
+#hero {
+  position: absolute;
+  left: 96px;
+  top: 186px;
+  width: 900px;
+  z-index: 4;
+}
+.no-hero #hero {
+  display: none;
+}
+#htext {
+  transition: opacity calc(0.25s * var(--spd)) linear;
+  will-change: opacity;
+}
+#htext.out {
+  opacity: 0;
+}
+#htext .eb {
+  font-size: calc(24px * var(--fs));
+  font-weight: 600;
+  color: var(--ink2);
+}
+#htext h1 {
+  margin-top: 14px;
+  font-size: calc(112px * var(--fs));
+  font-weight: 700;
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+  max-height: 2.1em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+#htext h1.long {
+  font-size: calc(84px * var(--fs));
+}
+#htext .facts {
+  margin-top: 18px;
+  display: flex;
+  font-size: calc(25px * var(--fs));
+  color: var(--ink2);
+  white-space: nowrap;
+}
+#htext .facts > * + * {
+  margin-left: 26px;
+}
+#htext .facts b {
+  color: var(--ink);
+  font-weight: 600;
+}
+#htext p {
+  margin-top: 16px;
+  width: 780px;
+  font-size: calc(26px * var(--fs));
+  line-height: 1.45;
+  color: var(--ink2);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+#htext .hbar {
+  width: 520px;
+  margin-top: 22px;
+}
+#hbtns {
+  margin-top: 30px;
+  display: flex;
+  align-items: center;
+}
+#hbtns > * + * {
+  margin-left: 18px;
+}
+.hbtn {
+  display: flex;
+  align-items: center;
+  height: 68px;
+  padding: 0 36px;
+  border-radius: 34px;
+  font-size: calc(27px * var(--fs));
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.14);
+  white-space: nowrap;
+  transition: transform calc(0.12s * var(--spd)) cubic-bezier(0.3, 1.35, 0.5, 1);
+  will-change: transform;
+}
+.hbtn svg {
+  width: 26px;
+  height: 26px;
+  margin-right: 12px;
+  flex: none;
+}
+.hbtn.sq {
+  width: 68px;
   padding: 0;
   justify-content: center;
 }
-[data-bar="flat"] .pill {
-  background: none;
-  box-shadow: none;
+.hbtn.sq svg {
+  margin: 0;
 }
-[data-labels="hide"] .pill span {
+.hbtn.f {
+  background: var(--acc);
+  color: var(--acc-ink);
+  transform: scale(1.06);
+}
+.hbtn .left {
+  margin-left: 14px;
+  font-weight: 500;
+  opacity: 0.7;
+}
+#hdots {
+  position: absolute;
+  right: 96px;
+  top: 548px;
+  display: flex;
+  z-index: 4;
+}
+#hdots i {
+  width: 22px;
+  height: 6px;
+  border-radius: 3px;
+  margin-left: 10px;
+  background: var(--ink);
+  opacity: 0.28;
+  transition: opacity calc(0.3s * var(--spd)) linear;
+}
+#hdots i.on {
+  opacity: 1;
+}
+.no-hero #hdots {
   display: none;
 }
 
-#shelf {
+/* ---------- the band: Continue watching and the channels on now ---------- */
+#band {
+  position: absolute;
+  left: 96px;
+  top: 614px;
+  display: flex;
+  z-index: 4;
+}
+.no-hero #band {
+  top: 190px;
+}
+.grp + .grp {
+  margin-left: 60px;
+}
+.grp h2 {
+  font-size: calc(26px * var(--fs));
+  font-weight: 600;
+  margin-bottom: 16px;
+  white-space: nowrap;
+}
+.cards {
+  display: flex;
+}
+.cards > * + * {
+  margin-left: 20px;
+}
+.cw {
+  width: 156px;
+}
+.cw .pic {
+  position: relative;
+  width: 156px;
+  height: 234px;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+}
+.cw .pic img {
   position: absolute;
   left: 0;
-  right: 0;
-  top: var(--name-y);
-  height: 120px;
-  padding: 0 var(--name-x);
-  text-align: var(--name-a);
-  display: var(--name-d);
-  z-index: 5;
+  top: 0;
+  width: 156px;
+  height: 234px;
+  object-fit: cover;
 }
-#name {
-  font-size: calc(92px * var(--fs) * var(--name-s));
-  font-weight: 700;
-  letter-spacing: -0.028em;
-  line-height: 1.05;
+.cw .pic .nm {
+  padding: 12px;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.15;
+}
+.bar {
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+}
+.bar i {
+  display: block;
+  height: 5px;
+  background: var(--ink);
+}
+.cw .bar {
+  margin-top: 10px;
+}
+.cw .bar.none {
+  visibility: hidden;
+}
+.cw .sub {
+  margin-top: 8px;
+  font-size: 20px;
+  color: var(--ink2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-/* the view clips rows as they scroll up under the shelf */
-#view {
-  position: absolute;
-  left: 0;
-  top: var(--view-top);
-  width: 1920px;
-  height: calc(1080px - var(--view-top));
-  overflow: hidden;
-  z-index: 2;
-}
-#scroll {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 1920px;
-  height: calc(1080px - var(--view-top));
-  transition: transform calc(0.3s * var(--spd)) ease-out;
-  will-change: transform;
-}
-#dock {
-  position: absolute;
-  left: var(--dock-l);
-  right: var(--dock-r);
-  top: var(--dock-t);
-  bottom: var(--dock-b);
-  transform: var(--dock-tx);
+.ch {
+  width: 262px;
+  height: 234px;
+  padding: 20px 22px;
+  border-radius: 14px;
+  background: var(--card);
   display: flex;
-  z-index: 4;
-  padding: var(--dock-pad);
-  border-radius: calc(var(--dock-rad) + var(--dock-pad));
-  background: rgba(255, 255, 255, var(--dock-panel));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, calc(var(--dock-panel) * 1.4));
+  flex-direction: column;
 }
-#dock > * + * {
-  margin-left: var(--dock-gap);
+.ch > * + * {
+  margin-top: 6px;
 }
-#grid {
-  position: absolute;
-  left: var(--grid-l);
-  top: var(--grid-t);
-  width: var(--grid-w);
-  display: grid;
-  grid-template-columns: repeat(var(--cols), 1fr);
-  gap: var(--gap-y) var(--gap-x);
-}
-/* an overlay grid: hidden until the focus moves down into it, then dark layer + grid over the screen above the dock */
-[data-grid="overlay"] #grid {
-  z-index: 3;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity calc(0.22s * var(--spd)) linear;
-}
-[data-grid="overlay"].grid-open #grid {
-  opacity: 1;
-  pointer-events: auto;
-}
-[data-grid="overlay"] #scroll::before,
-[data-grid="push"] #scroll::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: -1600px;
-  width: 1920px;
-  height: 4400px;
-  z-index: 2;
-  opacity: 0;
-  pointer-events: none;
-  background: rgba(var(--night-rgb), var(--ov-dim));
-  transition: opacity calc(0.22s * var(--spd)) linear;
-}
-[data-grid="overlay"].grid-open #scroll::before,
-[data-grid="push"].grid-open #scroll::before {
-  opacity: 1;
-}
-/* push: the grid sits under the dock; focusing it scrolls the dock up and fades the grid in */
-[data-grid="push"] #grid {
-  z-index: 3;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity calc(0.25s * var(--spd)) linear;
-}
-[data-grid="push"].grid-open #grid {
-  opacity: 1;
-  pointer-events: auto;
-}
-/* every row of tiles centred, also a last row that is not full */
-[data-galign="center"] #grid {
+.ch .cn {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-[data-galign="center"] #grid .tile {
-  width: var(--tile-w);
-}
-.tile::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  opacity: var(--gloss);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0) 46%, rgba(0, 0, 0, 0.24));
-}
-
-.tile {
-  --c: 74, 84, 112;
-  --b: 20, 22, 27;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  will-change: transform;
-  background: rgb(var(--b));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, var(--tile-border));
-  transition: transform calc(0.12s * var(--spd)) cubic-bezier(0.3, 1.35, 0.5, 1);
-}
-.snap .tile,
-.snap .pill {
-  transition: none;
-} /* held arrow key: follow the focus without animating each step */
-.tile.fill {
-  overflow: hidden;
-}
-.tile.fill img {
-  object-fit: fill;
-}
-.tile.press {
-  transform: scale(0.96) !important;
-  transition-duration: calc(0.06s * var(--spd));
-}
-.tile.launching {
-  opacity: 0.82;
-}
-.tile img {
-  object-fit: contain;
-}
-.tile svg {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  opacity: 0.9;
-}
-.tile .t {
-  font-size: calc(26px * var(--fs));
+  align-items: baseline;
+  font-size: 21px;
   font-weight: 600;
-  padding: 12px;
-  text-align: center;
-  line-height: 1.15;
-  opacity: 0.9;
+  color: var(--ink2);
+  white-space: nowrap;
+  overflow: hidden;
 }
-/* The focus ring is a pseudo-element with its own radius: Chromium before 94 draws an outline as a rectangle, not around rounded corners. */
-.tile.f {
+.ch .cn b {
+  font-weight: 700;
+  color: var(--ink);
+  margin-right: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.ch .cn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ch .star {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  margin-left: 8px;
+  align-self: center;
+  color: #f2c94c;
+}
+.ch .pt {
+  font-size: 31px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.ch .tm {
+  font-size: 20px;
+  color: var(--ink2);
+}
+.ch .bar {
+  margin-top: auto;
+}
+.ch .nx {
+  font-size: 19px;
+  color: var(--ink2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ch.ng .pt {
+  color: var(--ink2);
+}
+/* the focus ring is a pseudo-element with its own radius: Chromium before 94 draws an outline as a rectangle */
+.card {
+  position: relative;
+  transition: transform calc(0.12s * var(--spd)) cubic-bezier(0.3, 1.35, 0.5, 1);
+  will-change: transform;
+}
+.card.f {
+  transform: scale(1.06);
   z-index: 3;
-  box-shadow: 0 24px 36px rgba(0, 0, 0, 0.6);
 }
-.tile.f::before {
+.card.f::before {
   content: "";
   position: absolute;
   pointer-events: none;
   left: calc(-1 * (var(--ring-off) + var(--ring-w)));
   top: calc(-1 * (var(--ring-off) + var(--ring-w)));
   right: calc(-1 * (var(--ring-off) + var(--ring-w)));
-  bottom: calc(-1 * (var(--ring-off) + var(--ring-w)));
+  height: calc(234px + 2 * (var(--ring-off) + var(--ring-w)));
   border: var(--ring-w) solid var(--focus);
-  border-radius: calc(var(--tile-r) + var(--ring-off) + var(--ring-w));
+  border-radius: calc(14px + var(--ring-off) + var(--ring-w));
 }
-#dock .tile.f::before {
-  border-radius: calc(var(--dock-rad) + var(--ring-off) + var(--ring-w));
+.cw.f::before {
+  border-radius: calc(12px + var(--ring-off) + var(--ring-w));
 }
-/* a tile that crops its picture (overflow: hidden) would cut the ring off: it gets a ring that sits against the tile */
-.tile.fill.f::before {
-  display: none;
+
+/* ---------- the strip: Live TV, Films & Series, the apps and inputs on Home, All apps ---------- */
+#strip {
+  position: absolute;
+  left: 96px;
+  top: 970px;
+  width: 1728px;
+  height: 80px;
+  z-index: 4;
 }
-.tile.fill.f {
-  box-shadow:
-    0 0 0 var(--ring-w) var(--focus),
-    0 24px 36px rgba(0, 0, 0, 0.6);
+.no-band #strip {
+  top: 880px;
 }
-#dock .tile {
-  width: var(--dock-w);
-  height: var(--dock-h);
-  border-radius: var(--dock-rad);
+.no-hero.no-band #strip {
+  top: 190px;
 }
-#dock .tile img {
-  height: 56%;
-  max-width: 46%;
+.no-hero #strip {
+  top: 580px;
 }
-#dock .tile svg {
-  width: 96px;
-  height: 96px;
+#strow {
+  display: flex;
+  align-items: center;
+  height: 80px;
+  transition: transform calc(0.25s * var(--spd)) ease-out;
+  will-change: transform;
 }
-#dock .tile.f {
-  transform: translateY(var(--dock-lift)) scale(var(--dock-fs));
+#strow > * + * {
+  margin-left: 16px;
 }
-#grid .tile {
-  height: var(--tile-h);
-  border-radius: var(--tile-r);
-}
-#grid .tile img {
-  width: 64%;
-  height: 64%;
-}
-#grid .tile svg {
-  width: 64px;
+.si {
+  display: flex;
+  align-items: center;
+  flex: none;
   height: 64px;
-}
-#grid .tile.f {
-  transform: scale(var(--grid-fs));
-}
-#grid .tile.sys {
-  flex-direction: column;
-}
-#grid .tile.sys > * + * {
-  margin-top: 8px;
-}
-.slab {
-  font-size: 22px;
-  font-weight: 600;
-  color: var(--ink2);
-}
-#grid .tile.sys {
-  background: rgba(255, 255, 255, 0.05);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-}
-/* an input pinned to Home: the HDMI symbol over its name, the port under a name; dimmed while nothing is connected */
-.tile.inp {
-  flex-direction: column;
-}
-.tile.inp > * + * {
-  margin-top: 6px;
-}
-.tile.inp .slab {
-  color: var(--ink);
-  max-width: 90%;
-  overflow: hidden;
+  padding: 0 28px 0 8px;
+  border-radius: 32px;
+  background: var(--pill-bg);
+  font-size: calc(23px * var(--fs));
+  font-weight: 500;
   white-space: nowrap;
-  text-overflow: ellipsis;
+  transition: transform calc(0.12s * var(--spd)) cubic-bezier(0.3, 1.35, 0.5, 1);
+  will-change: transform;
 }
-.tile.inp .slab.sub {
-  font-size: 18px;
-  color: var(--ink2);
+.si > * + * {
+  margin-left: 14px;
 }
-.tile.inp .slab:empty {
-  display: none;
+.si .ic {
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  flex: none;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.tile.inp.off {
-  opacity: 0.55;
+.si .ic svg {
+  width: 28px;
+  height: 28px;
 }
-/* in the dock the symbol and the name follow the tile's height, so a small square dock (Horizon) fits them too */
-#dock .tile.inp svg {
-  width: calc(var(--dock-h) * 0.3);
-  height: calc(var(--dock-h) * 0.3);
+.si .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 6px;
+  background: #8fd18a;
+  flex: none;
 }
-#dock .tile.inp .slab {
-  font-size: calc(var(--dock-h) * 0.11);
+.si.off {
+  opacity: 0.5;
 }
-#dock .tile.inp .slab.sub {
-  font-size: calc(var(--dock-h) * 0.085);
+.si.off .dot {
+  background: none;
+  box-shadow: inset 0 0 0 2px var(--ink2);
+}
+.si.ap {
+  padding: 0 28px 0 22px;
+  background: none;
+  box-shadow: inset 0 0 0 2px var(--pill-ring);
+}
+.si.f {
+  background: var(--acc);
+  color: var(--acc-ink);
+  box-shadow: none;
+  transform: scale(1.07);
+}
+.si.launching,
+.card.launching {
+  opacity: 0.82;
+}
+.fo.press {
+  transform: scale(0.96) !important;
+  transition-duration: calc(0.06s * var(--spd));
 }
 
 #toast {
@@ -1979,10 +2044,11 @@ svg.st {
   transition: transform calc(0.2s * var(--spd)) ease-out;
 }
 </style></head><body>
-<div class="glow" id="gA"></div><div class="glow" id="gB"></div>
+<div id="hbd"><img id="hb0" class="hb" alt=""><img id="hb1" class="hb" alt=""><div class="hfade"></div></div>
 <div id="top"><div id="clock"><div id="time"></div><div id="date"></div></div><div id="bar"></div></div>
-<div id="shelf"><div id="name"></div></div>
-<div id="view"><div id="scroll"><div id="dock"></div><div id="grid"></div></div></div>
+<div id="hero"><div id="htext"></div><div id="hbtns"></div></div><div id="hdots"></div>
+<div id="band"></div>
+<div id="strip"><div id="strow"></div></div>
 <div id="lv"><div id="lv-stage"></div><div id="lv-spin" class="layer"></div><div id="lv-osd" class="layer"><img class="logo" id="lv-ologo" alt=""><div class="num" id="lv-onum"></div><div class="info"><div class="name" id="lv-oname"></div><div class="now" id="lv-onow"></div><div class="next" id="lv-onext"></div><div class="facts" id="lv-ofacts"></div><div class="pbar"><i id="lv-obar"></i></div></div></div><div id="lv-numin" class="layer"></div><div id="lv-guide" class="layer"><div id="lv-glow"></div><div id="lv-gtop"><div id="lv-gtitle"></div><div id="lv-gtabs"></div><input id="lv-search" type="text" autocomplete="off"><div id="lv-gclock"></div></div><div id="lv-rows"></div><div id="lv-detail"></div></div><div id="lv-filter" class="layer"></div><div id="lv-menu" class="layer"></div><div id="lv-msg" class="layer"></div><div id="lv-tune" class="layer"></div><div id="lv-toast" class="layer"></div><div id="lv-stats" class="layer"></div></div>
 <div id="vd"><div id="vd-hero"><img id="vd-hb0" class="hb" alt=""><img id="vd-hb1" class="hb" alt=""><div class="hshade"></div></div><div id="vd-info"></div><div id="vd-top"></div><div id="vd-rows"></div><div id="vd-list"><div id="vd-lgrid"></div></div><div id="vd-search"><input id="vd-q" type="text" autocomplete="off" placeholder="Search films and series"><div id="vd-results"><div id="vd-grid"></div></div></div><div id="vd-det" class="vlayer"><img id="vd-bd" alt=""><div class="shade"></div><div class="dwrap" id="vd-dmain"></div></div><div id="vd-trailer" class="vlayer"><div id="vd-tframe"></div><div id="vd-tspin"></div><div id="vd-thint"></div></div><div id="vd-msg"></div><div id="vd-play" class="vlayer"><div id="vd-stage"></div><div id="vd-load" class="vpl"><img id="vd-limg" alt=""><div id="vd-ltitle"></div></div><div id="vd-spin" class="vpl"></div><div id="vd-bar" class="vpl"><div id="vd-btitle"></div><div class="track"><i id="vd-bfill"></i></div><div id="vd-btime"></div></div><div id="vd-pmsg" class="vpl"></div><div id="vd-next" class="vpl"></div><div id="vd-early" class="vpl"></div><div id="vd-menu" class="vpl"></div></div></div>
 <div id="toast"></div>
@@ -2011,6 +2077,9 @@ var ICONS = {
   grid: '<path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/>',
   hdmi: '<path d="M4 8h16v7l-3 3H7l-3-3z"/><path d="M9 11v3M12 11v3M15 11v3"/>',
   restore: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
 };
 function svg(name) {
   return (
@@ -2504,13 +2573,7 @@ var apps = [],
   rows = [],
   r = 1,
   c = 0,
-  colors = {},
-  tiles = {},
-  lastSig = '',
-  gSide = 0,
-  gColor = '',
-  gT = 0,
-  saveT = 0;
+  lastSig = '';
 function $(id) {
   return document.getElementById(id);
 }
@@ -2558,14 +2621,10 @@ function launch(id, params) {
 }
 function store() {
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ apps: apps, cfg: cfg, usage: usage, colors: colors }));
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ apps: apps, cfg: cfg, usage: usage }));
   } catch (e) {}
 }
-function storeSoon() {
-  clearTimeout(saveT);
-  saveT = setTimeout(store, 1500);
-}
-/* ---------- colour (extracted once per app, then remembered) ---------- */
+/* ---------- colour: a steady colour for something without a picture (a channel without a logo, a poster not loaded yet) ---------- */
 function hsl2rgb(h, s, l) {
   var a = s * Math.min(l, 1 - l);
   function f(n) {
@@ -2574,351 +2633,20 @@ function hsl2rgb(h, s, l) {
   }
   return [f(0), f(8), f(4)];
 }
-function rgb2hsl(R, G, B) {
-  R /= 255;
-  G /= 255;
-  B /= 255;
-  var mx = Math.max(R, G, B),
-    mn = Math.min(R, G, B),
-    l = (mx + mn) / 2,
-    h = 0,
-    s = 0,
-    d = mx - mn;
-  if (d) {
-    s = d / (1 - Math.abs(2 * l - 1));
-    h = mx === R ? (G - B) / d + (G < B ? 6 : 0) : mx === G ? (B - R) / d + 2 : (R - G) / d + 4;
-    h *= 60;
-  }
-  return [h, s, l];
-}
 function hashHue(id) {
   var h = 0;
   for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360;
   return h;
 }
-/* What the icon looks like, from its alpha: 'full' (art reaches the edges), 'pad' (an opaque, roughly square picture with a transparent
-   margin around it, as many LG icons are) or 'logo' (transparent gaps inside). box is the visible picture, as fractions of the image. */
-function analyse(img) {
-  try {
-    var N = 64,
-      cv = document.createElement('canvas');
-    cv.width = cv.height = N;
-    var x = cv.getContext('2d');
-    x.drawImage(img, 0, 0, N, N);
-    var d = x.getImageData(0, 0, N, N).data,
-      x0 = N,
-      y0 = N,
-      x1 = -1,
-      y1 = -1,
-      xx,
-      yy;
-    for (yy = 0; yy < N; yy++)
-      for (xx = 0; xx < N; xx++)
-        if (d[(yy * N + xx) * 4 + 3] > 128) {
-          if (xx < x0) x0 = xx;
-          if (xx > x1) x1 = xx;
-          if (yy < y0) y0 = yy;
-          if (yy > y1) y1 = yy;
-        }
-    if (x1 < 0) return { k: 'logo' };
-    var bw = x1 - x0 + 1,
-      bh = y1 - y0 + 1,
-      solid = 0;
-    for (yy = y0; yy <= y1; yy++) for (xx = x0; xx <= x1; xx++) if (d[(yy * N + xx) * 4 + 3] >= 230) solid++;
-    function strip(ya, yb) {
-      var R = 0,
-        G = 0,
-        B = 0,
-        n = 0,
-        i;
-      for (var y = ya; y <= yb; y++)
-        for (var x = x0; x <= x1; x++) {
-          i = (y * N + x) * 4;
-          if (d[i + 3] >= 230) {
-            R += d[i];
-            G += d[i + 1];
-            B += d[i + 2];
-            n++;
-          }
-        }
-      return n ? [Math.round(R / n), Math.round(G / n), Math.round(B / n)] : null;
-    }
-    var margin = Math.max(x0, y0, N - 1 - x1, N - 1 - y1) / N,
-      ratio = bw / bh;
-    var k = solid / (bw * bh) < 0.85 || ratio < 0.8 || ratio > 1.25 ? 'logo' : margin < 0.03 ? 'full' : 'pad',
-      edge = null;
-    if (k === 'full') {
-      // art to the edges, but not one flat colour there (a gradient): the tile cannot match it, so the picture fills the tile
-      var sr = 0,
-        sg = 0,
-        sb = 0,
-        n0 = 0,
-        q = 0,
-        ring = [];
-      for (yy = 0; yy < N; yy++)
-        for (xx = 0; xx < N; xx++) {
-          if (yy && yy < N - 1 && xx && xx < N - 1) continue;
-          var j = (yy * N + xx) * 4;
-          if (d[j + 3] >= 230) {
-            ring.push(d[j], d[j + 1], d[j + 2]);
-            sr += d[j];
-            sg += d[j + 1];
-            sb += d[j + 2];
-            n0++;
-          }
-        }
-      if (n0 > 0) {
-        var mr = sr / n0,
-          mg = sg / n0,
-          mb = sb / n0;
-        for (var t0 = 0; t0 < ring.length; t0 += 3)
-          q += Math.abs(ring[t0] - mr) + Math.abs(ring[t0 + 1] - mg) + Math.abs(ring[t0 + 2] - mb);
-        var st = strip(0, 1),
-          sbot = strip(N - 2, N - 1),
-          vert = st && sbot ? Math.abs(st[0] - sbot[0]) + Math.abs(st[1] - sbot[1]) + Math.abs(st[2] - sbot[2]) : 0;
-        if (q / n0 / 3 > 14 || vert > 40) {
-          x0 = 0;
-          x1 = N - 1;
-          return {
-            k: 'pad',
-            box: [0, 0, 1, 1],
-            edge: [Math.round(mr), Math.round(mg), Math.round(mb)],
-            top: strip(0, 1),
-            bot: strip(N - 2, N - 1),
-          };
-        }
-      }
-    }
-    if (k === 'pad') {
-      // the picture's own border colour, from the outer two pixels of the visible box
-      var R = 0,
-        G = 0,
-        B = 0,
-        n = 0;
-      for (yy = y0; yy <= y1; yy++)
-        for (xx = x0; xx <= x1; xx++) {
-          if (yy - y0 > 1 && y1 - yy > 1 && xx - x0 > 1 && x1 - xx > 1) continue;
-          var i = (yy * N + xx) * 4;
-          if (d[i + 3] >= 230) {
-            R += d[i];
-            G += d[i + 1];
-            B += d[i + 2];
-            n++;
-          }
-        }
-      if (n) edge = [Math.round(R / n), Math.round(G / n), Math.round(B / n)];
-      else k = 'logo';
-    }
-    return { k: k, box: [x0 / N, y0 / N, (x1 + 1) / N, (y1 + 1) / N], edge: edge, top: strip(y0, y0 + 1), bot: strip(y1 - 1, y1) };
-  } catch (e) {
-    return null;
-  }
-} // null: the canvas could not be read
-/* returns {c: vibrant colour for the glow, b: tile background (the icon's own edge colour), k and box from analyse}; t is set when the image could not be read */
-function iconColor(img, id) {
-  var glow = null,
-    edge = null,
-    N = 16,
-    tainted = false;
-  try {
-    var cv = document.createElement('canvas');
-    cv.width = cv.height = N;
-    var x = cv.getContext('2d');
-    x.drawImage(img, 0, 0, N, N);
-    var d = x.getImageData(0, 0, N, N).data,
-      R = 0,
-      G = 0,
-      B = 0,
-      W = 0,
-      eR = 0,
-      eG = 0,
-      eB = 0,
-      eN = 0,
-      ring = 0;
-    for (var y = 0; y < N; y++)
-      for (var xx = 0; xx < N; xx++) {
-        var i = (y * N + xx) * 4,
-          a = d[i + 3] / 255;
-        if (y === 0 || y === N - 1 || xx === 0 || xx === N - 1) {
-          ring++;
-          if (a > 0.8) {
-            eR += d[i];
-            eG += d[i + 1];
-            eB += d[i + 2];
-            eN++;
-          }
-        }
-        if (a < 0.4) continue;
-        var hs = rgb2hsl(d[i], d[i + 1], d[i + 2]);
-        var w = a * (0.15 + hs[1] * hs[1]);
-        R += d[i] * w;
-        G += d[i + 1] * w;
-        B += d[i + 2] * w;
-        W += w;
-      }
-    if (eN > ring * 0.5) edge = [Math.round(eR / eN), Math.round(eG / eN), Math.round(eB / eN)];
-    if (W > 0.5) {
-      var h = rgb2hsl(R / W, G / W, B / W);
-      if (h[1] > 0.22) glow = hsl2rgb(h[0], Math.max(0.5, Math.min(h[1], 0.8)), Math.max(0.36, Math.min(h[2], 0.52)));
-    }
-  } catch (e) {
-    tainted = true;
-  }
-  var an = tainted ? null : analyse(img);
-  if (an && an.k === 'pad' && an.edge) edge = an.edge;
-  var fb = hsl2rgb(hashHue(id), 0.42, 0.42);
-  glow = glow || (edge && rgb2hsl(edge[0], edge[1], edge[2])[1] > 0.3 ? edge : fb);
-  var col = { c: glow, b: edge || hsl2rgb(rgb2hsl(glow[0], glow[1], glow[2])[0], 0.4, 0.2) };
-  if (an) {
-    col.k = an.k;
-    if (an.box) col.box = an.box;
-    if (an.top && an.bot) {
-      col.gt = an.top;
-      col.gb = an.bot;
-    }
-  }
-  if (tainted) col.t = 1;
-  return col;
-}
-/* a picture with a transparent margin fills a grid tile (cropped to its visible part); in the wide dock tiles it keeps its size on a tile of its own colour */
-function fit(d, dock) {
-  var i = d._i,
-    c = d._col;
-  if (!i) return;
-  i.removeAttribute('style');
-  d.classList.remove('fill');
-  d.style.background = '';
-  if (!c || c.k !== 'pad' || !c.box) return;
-  var bx = c.box,
-    bw = bx[2] - bx[0],
-    bh = bx[3] - bx[1],
-    s = i.style;
-  if (dock) {
-    s.height = 56 / bh + '%';
-    s.maxWidth = 'none';
-    s.width = 'auto';
-    // a gradient picture: the tile takes the same gradient between the picture's top and bottom edges, so no square shows
-    if (c.gt && c.gb && Math.abs(c.gt[0] - c.gb[0]) + Math.abs(c.gt[1] - c.gb[1]) + Math.abs(c.gt[2] - c.gb[2]) > 40)
-      d.style.background = 'linear-gradient(rgb(' + c.gt.join(',') + ') 22%,rgb(' + c.gb.join(',') + ') 78%)';
-    return;
-  }
-  d.classList.add('fill');
-  s.position = 'absolute';
-  s.maxWidth = 'none';
-  s.width = 100 / bw + '%';
-  s.height = 100 / bh + '%';
-  s.left = (-bx[0] / bw) * 100 + '%';
-  s.top = (-bx[1] / bh) * 100 + '%';
-}
-function paint(d, col) {
-  d.style.setProperty('--c', col.c.join(','));
-  d.style.setProperty('--b', col.b.join(','));
-}
-/* ---------- tiles (built once per app, reused across rebuilds) ---------- */
-function tile(a) {
-  if (tiles[a.id]) return a.input ? inputTile(tiles[a.id], a) : tiles[a.id];
-  var d = document.createElement('div');
-  d.className = 'tile' + (a.sys ? ' sys' : '');
-  d._a = a;
-  tiles[a.id] = d;
-  hit(d);
-  if (a.sys) {
-    d.innerHTML = svg(a.icon) + '<div class="slab">' + 'LG Home' + '</div>';
-    return d;
-  }
-  if (a.input) {
-    d.innerHTML = svg('hdmi') + '<div class="slab"></div><div class="slab sub"></div>';
-    var f = hsl2rgb(hashHue(a.id), 0.3, 0.3);
-    paint(d, { c: f, b: hsl2rgb(hashHue(a.id), 0.3, 0.16) });
-    return inputTile(d, a);
-  }
-  var known = colors[a.id];
-  if (known) {
-    paint(d, known);
-    d._col = known;
-  }
-  var i = new Image();
-  i.alt = '';
-  i.decoding = 'async';
-  d._i = i;
-  if (!known) i.crossOrigin = 'anonymous';
-  i.onload = function () {
-    if (!colors[a.id]) {
-      var col = iconColor(i, a.id);
-      d._col = col;
-      paint(d, col);
-      fit(d, !!(d.parentNode && d.parentNode.id === 'dock'));
-      if (!col.t) {
-        colors[a.id] = col;
-        storeSoon();
-      }
-      if (rows[r] && rows[r][c] === d) glowNow(d);
-    }
-  };
-  i.onerror = function () {
-    i.remove();
-    var t = document.createElement('div');
-    t.className = 't';
-    t.textContent = a.title;
-    d.appendChild(t);
-    if (!colors[a.id]) {
-      var f = hsl2rgb(hashHue(a.id), 0.42, 0.42);
-      paint(d, { c: f, b: hsl2rgb(hashHue(a.id), 0.4, 0.2) });
-    }
-  }; /* not remembered: a failed load must not pin a made-up colour */
-  i.src = a.id === '__live' ? LIVE_ICON : a.id === '__vod' ? VOD_ICON : API + '/icon/' + encodeURIComponent(a.id);
-  d.appendChild(i);
-  if (i.decode) i.decode().catch(function () {});
-  return d;
-}
-
-/* ---------- ambient glow: two layers cross-fade, updated only once focus settles ---------- */
-function glowNow(e) {
-  var col = TH.glow || e.style.getPropertyValue('--c') || '74,84,112';
-  if (col === gColor) return;
-  gColor = col;
-  var on = gSide ? $('gB') : $('gA'),
-    off = gSide ? $('gA') : $('gB');
-  gSide ^= 1;
-  on.style.setProperty('--c', col);
-  on.classList.add('on');
-  off.classList.remove('on');
-}
-function glowSoon(e) {
-  clearTimeout(gT);
-  gT = setTimeout(function () {
-    glowNow(e);
-  }, 110);
-}
-
-/* a pinned input: its name (or the port), the port under a name, dimmed while nothing is connected. Its name and state can change
-   while the tile is kept, so they are written each time it is drawn. */
-function inputTile(d, a) {
-  var port = 'HDMI ' + a.input,
-    named = a.title && a.title !== port;
-  d._a = a;
-  d.className = d.className.replace(/ ?\binp\b| ?\boff\b/g, '') + ' inp' + (a.off ? ' off' : '');
-  d.children[1].textContent = named ? a.title : port;
-  d.children[2].textContent = named ? port : '';
-  return d;
-}
-/* ---------- theme: the service resolves the chosen theme (manager > Theme) into CSS variables and a few numbers ---------- */
-var TH0 = { cols: 10, tileH: 151, gapY: 26, gt: 350, viewH: 780, dockN: 4, overlay: false, push: null, overlayH: 510, glow: '' },
-  TH = TH0,
-  themeKeys = [],
-  themeAttrs = ['data-bar', 'data-labels', 'data-clock', 'data-grid', 'data-galign'];
+/* ---------- theme: the service resolves the chosen theme (manager > Theme) into CSS variables and a wallpaper. Home's layout is fixed
+   (fork): of a theme only the colours, the font, the speed and the wallpaper apply. ---------- */
+var themeKeys = [];
 function applyTheme(t) {
   var st = document.documentElement.style,
-    b = document.body,
     k;
   for (k = 0; k < themeKeys.length; k++) st.removeProperty(themeKeys[k]);
   themeKeys = [];
-  for (k = 0; k < themeAttrs.length; k++) b.removeAttribute(themeAttrs[k]);
-  b.classList.remove('grid-open');
-  if (!t || !t.vars) {
-    TH = TH0;
-    return;
-  }
+  if (!t || !t.vars) return;
   for (k in t.vars) {
     st.setProperty(k, t.vars[k]);
     themeKeys.push(k);
@@ -2929,74 +2657,6 @@ function applyTheme(t) {
     st.setProperty('--wall', 'linear-gradient(' + d + ',' + d + '),url("' + API + '/api/theme/wallpaper/' + w.id + '/' + w.file + '")');
     themeKeys.push('--wall');
   }
-  for (k in t.attrs) b.setAttribute('data-' + k, t.attrs[k]);
-  TH = {
-    cols: t.cols || 10,
-    tileH: t.tileH || 151,
-    gapY: t.gapY || 26,
-    gt: t.gt || 350,
-    viewH: t.viewH || 780,
-    dockN: t.dockN || 4,
-    overlay: !!t.overlay,
-    push: t.push || null,
-    overlayH: t.overlayH || 510,
-    glow: t.glowRgb || '',
-  };
-}
-
-function setFocus(nr, nc, first) {
-  var old = rows[r] && rows[r][c];
-  if (old) old.classList.remove('f');
-  r = nr;
-  c = Math.min(nc, rows[r].length - 1);
-  var e = rows[r][c];
-  e.classList.add('f');
-  var a = e._a,
-    nm = a ? a.title : e._o ? barLabel(e._o) : '',
-    n = $('name');
-  if (n.textContent !== nm) n.textContent = nm;
-  if (first) glowNow(e);
-  else glowSoon(e);
-  var sh = 0;
-  if (TH.push) {
-    /* the grid sits under the dock: focusing it scrolls everything up (the dock stops at its 'up' position) and the grid fades in */
-    document.body.classList.toggle('grid-open', r >= 2);
-    var ps = 0;
-    if (r >= 2) {
-      var bot = TH.push.gridTop - TH.push.up + (r - 2) * (TH.tileH + TH.gapY) + TH.tileH,
-        ex = Math.max(0, bot - (1080 - 60));
-      ps = -(TH.push.up + ex);
-    }
-    $('scroll').style.transform = ps ? 'translateY(' + ps + 'px)' : '';
-    $('grid').style.transform = '';
-    return;
-  }
-  if (TH.overlay) {
-    /* the grid is an overlay above the dock: it opens when the focus goes down into it and scrolls on its own */
-    document.body.classList.toggle('grid-open', r >= 2);
-    var gs = 0;
-    if (r >= 2) gs = Math.min(0, TH.overlayH - ((r - 2) * (TH.tileH + TH.gapY) + TH.tileH + 24));
-    $('grid').style.transform = gs ? 'translateY(' + gs + 'px)' : '';
-    $('scroll').style.transform = '';
-    return;
-  }
-  $('grid').style.transform = '';
-  if (r >= 2) {
-    var gr = rows.length - 2,
-      gt = TH.gt;
-    sh = Math.min(0, Math.max(50 - (gt + (r - 2) * (TH.tileH + TH.gapY)), TH.viewH - 54 - (gt + gr * TH.tileH + (gr - 1) * TH.gapY)));
-  } /* row height + gap from the theme: no layout reads */
-  $('scroll').style.transform = sh ? 'translateY(' + sh + 'px)' : '';
-}
-function mapCol(from, to, col) {
-  return from > 1 ? Math.round((col * (to - 1)) / (from - 1)) : 0;
-}
-function posOf(e) {
-  for (var i = 0; i < rows.length; i++) {
-    var j = rows[i].indexOf(e);
-    if (j >= 0) return [i, j];
-  }
-  return null;
 }
 /* ---------- config (edited in the launcher, saved through the helper) ---------- */
 function saveCfg() {
@@ -3009,6 +2669,8 @@ function saveCfg() {
 function isHidden(id) {
   return (cfg.hidden || []).indexOf(id) >= 0;
 }
+/* the apps and inputs on Home's strip after Live TV and Films & Series, which are always there (fork) */
+var HOME_DOCK = 6;
 function dockIds() {
   var by = {};
   apps.forEach(function (a) {
@@ -3017,12 +2679,12 @@ function dockIds() {
   var ids = cfg.dock && cfg.dock.length ? cfg.dock : DEFAULTS.dock;
   return ids
     .filter(function (i) {
-      return by[i] && !isHidden(i);
+      return by[i] && !isHidden(i) && i !== '__live' && i !== '__vod';
     })
-    .slice(0, TH.dockN);
+    .slice(0, HOME_DOCK);
 }
 function setDock(ids) {
-  cfg.dock = ids.slice(0, TH.dockN);
+  cfg.dock = ids.slice(0, HOME_DOCK);
   saveCfg();
 }
 function hideApp(id) {
@@ -3066,6 +2728,7 @@ function title(id) {
 
 /* ---------- actions ---------- */
 function act(e) {
+  if (e._run) return e._run(); /* Home's buttons and cards */
   var a = e._a;
   if (a) {
     if (!a.sys) {
@@ -3282,7 +2945,7 @@ function inputsMenu() {
           fn: function () {
             launch(d.appId);
           },
-          /* hold OK: pin the input to Home, where it is a tile like an app */
+          /* hold OK: pin the input to Home, where it is in the strip */
           hold: function () {
             inputMenu(d.appId, d.label || port);
           },
@@ -3328,6 +2991,7 @@ function pinInput(id, name, on) {
   );
 }
 
+/* hold OK on an app or input in the strip or in All apps: where it is on Home */
 function appMenu(a) {
   var di = dockIds(),
     pos = di.indexOf(a.id),
@@ -3339,29 +3003,44 @@ function appMenu(a) {
         },
       },
     ];
+  function move(d) {
+    var n = di.slice();
+    n.splice(pos, 1);
+    n.splice(pos + d, 0, a.id);
+    setDock(n);
+  }
   if (pos >= 0) {
     if (pos > 0)
       items.push({
-        label: t('Move left in dock'),
+        label: t('Move left'),
         fn: function () {
-          var d = di.slice();
-          d.splice(pos, 1);
-          d.splice(pos - 1, 0, a.id);
-          setDock(d);
+          move(-1);
         },
       });
     if (pos < di.length - 1)
       items.push({
-        label: t('Move right in dock'),
+        label: t('Move right'),
         fn: function () {
-          var d = di.slice();
-          d.splice(pos, 1);
-          d.splice(pos + 1, 0, a.id);
-          setDock(d);
+          move(1);
         },
       });
+  }
+  if (a.input)
     items.push({
-      label: t('Remove from dock'),
+      label: t('Remove from Home'),
+      fn: function () {
+        if (pos >= 0)
+          setDock(
+            di.filter(function (i) {
+              return i !== a.id;
+            })
+          );
+        pinInput(a.id, a.title, false);
+      },
+    });
+  else if (pos >= 0)
+    items.push({
+      label: t('Remove from Home'),
       fn: function () {
         setDock(
           di.filter(function (i) {
@@ -3370,16 +3049,16 @@ function appMenu(a) {
         );
       },
     });
-  } else if (di.length < TH.dockN)
+  else if (di.length < HOME_DOCK)
     items.push({
-      label: t('Add to dock'),
+      label: t('Add to Home'),
       fn: function () {
         setDock(di.concat(a.id));
       },
     });
   else
     items.push({
-      label: t('Add to dock...'),
+      label: t('Add to Home...'),
       stay: true,
       fn: function () {
         openMenu(
@@ -3397,14 +3076,7 @@ function appMenu(a) {
         );
       },
     });
-  if (a.input)
-    items.push({
-      label: t('Remove from Home'),
-      fn: function () {
-        pinInput(a.id, a.title, false);
-      },
-    });
-  else
+  if (!a.input)
     items.push({
       label: t('Hide app'),
       fn: function () {
@@ -3412,6 +3084,30 @@ function appMenu(a) {
       },
     });
   openMenu(a.title, items);
+}
+/* every app that is not hidden, in the chosen order; hold OK on one for its options */
+function allAppsMenu() {
+  var di = dockIds();
+  openMenu(
+    t('All apps'),
+    apps
+      .filter(function (a) {
+        return !a.input && a.id !== '__live' && a.id !== '__vod' && !isHidden(a.id);
+      })
+      .sort(byOrder)
+      .map(function (a) {
+        return {
+          label: a.title,
+          sub: di.indexOf(a.id) >= 0 ? t('On Home') : '',
+          fn: function () {
+            launch(a.id);
+          },
+          hold: function () {
+            appMenu(a);
+          },
+        };
+      })
+  );
 }
 
 function removeButton(o) {
@@ -3434,11 +3130,11 @@ function barMenu(o) {
 function customizeMenu() {
   openMenu(t('Customise'), [
     {
-      label: 'Dock',
+      label: t('Apps on Home'),
       sub: t('hold OK on an app'),
       stay: true,
       fn: function () {
-        toast(t('Hold OK on any app to change the dock'));
+        toast(t('Hold OK on an app in the strip or in All apps to change Home'));
       },
     },
     { label: t('Top buttons'), stay: true, fn: topButtonsMenu },
@@ -3539,68 +3235,7 @@ function hiddenMenu() {
     })
   );
 }
-/* ---------- layout ---------- */
-function rebuild() {
-  var by = {};
-  apps.forEach(function (a) {
-    by[a.id] = a;
-  });
-  var di = dockIds(),
-    dock = di.map(function (i) {
-      return by[i];
-    });
-  var rest = apps
-    .filter(function (a) {
-      return !isHidden(a.id) && di.indexOf(a.id) < 0;
-    })
-    .sort(byOrder);
-  var oldE = rows[r] && rows[r][c],
-    keep = oldE && oldE._a ? oldE._a.id : null;
-  if (oldE) oldE.classList.remove('f');
-  var dk = $('dock'),
-    gd = $('grid'),
-    bar = $('bar');
-  dk.textContent = '';
-  gd.textContent = '';
-  bar.textContent = '';
-  var d = dock.map(function (a) {
-    var t = tile(a);
-    dk.appendChild(t);
-    fit(t, true);
-    return t;
-  });
-  var g = rest.map(function (a) {
-    var t = tile(a);
-    gd.appendChild(t);
-    fit(t, false);
-    return t;
-  });
-  var tb = shownBar()
-    .concat([{ label: 'Customise', icon: 'edit', action: 'customize', fixed: true }])
-    .map(function (o) {
-      var p = document.createElement('div');
-      p.className = 'pill';
-      p._o = o;
-      p.innerHTML = svg(o.icon) + '<span></span>';
-      p.lastChild.textContent = barLabel(o);
-      hit(p);
-      bar.appendChild(p);
-      return p;
-    });
-  rows = [tb, d.length ? d : tb];
-  for (var i = 0; i < g.length; i += TH.cols) rows.push(g.slice(i, i + TH.cols));
-  var nr = Math.min(r, rows.length - 1),
-    nc = c;
-  if (keep && tiles[keep]) {
-    var p = posOf(tiles[keep]);
-    if (p) {
-      nr = p[0];
-      nc = p[1];
-    }
-  }
-  setFocus(nr, nc, true);
-}
-
+/* ---------- loading: the apps and settings from the service, then what Home shows (home.js) ---------- */
 function load() {
   api('/api/apps')
     .then(function (x) {
@@ -3609,6 +3244,8 @@ function load() {
         warned = true;
         toast('The service (' + x.version + ') is older than this launcher needs: update it in the CleanYourTV manager');
       }
+      homeData(); /* the hero, Continue watching and the channels change while the apps do not */
+      slideLater();
       usage = x.usage || {};
       var rank = Object.keys(usage).sort(function (a, b) {
         return usage[b] - usage[a];
@@ -3619,6 +3256,7 @@ function load() {
         }),
         x.config,
         rank,
+        VOD.ready,
       ]);
       if (sig === lastSig) return;
       lastSig = sig;
@@ -3640,6 +3278,458 @@ function load() {
       toast(t('Helper not reachable, retrying...'));
       setTimeout(load, 3000);
     });
+}
+/* ---------- Home (fork): the top bar, a Trending title over its backdrop with Play, Continue watching and the channels on now, and a
+   strip with Live TV, Films & Series, the apps and inputs on Home and All apps. docs/launcher.md ---------- */
+/* Focus: rows of focusable elements (rows[r][c]): the top bar, the hero's buttons, the band of cards, the strip; a row with nothing
+   in it is left out. Each element has a key (_k) so the focus stays on the same thing when the rows are made again, and one of _a (an
+   app), _o (a top button) or _run (what OK does). */
+var HOME_CACHE = 'cytv.home.v1',
+  SLIDE_MS = 15000,
+  HERO_N = 10;
+var H = { picks: [], hi: 0, cont: [], chans: [], last: '', items: {} },
+  barEls = [],
+  heroEls = [],
+  bandEls = [],
+  stripEls = [],
+  heroRow = null,
+  stripRow = null,
+  focusKey = '',
+  userMoved = false /* until the viewer moves the focus (and again after the Home key), it rests on Play */,
+  slideT = 0,
+  homeGen = 0,
+  picOn = -1,
+  picUrl = '';
+
+function homeRestore() {
+  try {
+    var hc = JSON.parse(localStorage.getItem(HOME_CACHE) || 'null');
+    if (hc && hc.picks) {
+      H.picks = hc.picks;
+      H.cont = hc.cont || [];
+      H.chans = hc.chans || [];
+      H.last = hc.last || '';
+    }
+  } catch (e) {}
+}
+function homeStore() {
+  try {
+    localStorage.setItem(HOME_CACHE, JSON.stringify({ picks: H.picks, cont: H.cont, chans: H.chans, last: H.last }));
+  } catch (e) {}
+}
+
+/* what Home shows from Films & Series and Live TV; asked each time Home is shown, never blocking the first paint */
+function homeData() {
+  var g = ++homeGen;
+  Promise.all([
+    VOD.home(),
+    liveOn()
+      ? api('/api/live/home').catch(function () {
+          return null;
+        })
+      : null,
+  ]).then(function (r) {
+    if (g !== homeGen) return;
+    var v = r[0] && r[0].rows ? r[0] : null /* the curator not reachable: no films, and nothing to resume either */,
+      lv = r[1],
+      cur = H.picks[H.hi];
+    H.items = v ? v.st.items : {};
+    H.cont = v ? HL.continueCards(v.st, Date.now(), lv && lv.channels && lv.channels.length ? 3 : 9) : [];
+    H.picks = v
+      ? HL.heroPicks(
+          v.rows,
+          H.cont
+            .filter(function (x) {
+              return x.kind === 'films';
+            })
+            .map(function (x) {
+              return x.id;
+            }),
+          HERO_N
+        )
+      : [];
+    H.cont.forEach(function (x) {
+      x.pic = x.poster ? VOD.img(x.poster) : '';
+    });
+    H.picks.forEach(function (p) {
+      p.pic = VOD.img(p.backdrop);
+    });
+    /* the title on screen stays when it is still a pick */
+    H.hi = 0;
+    for (var i = 0; cur && i < H.picks.length; i++) if (H.picks[i].id === cur.id) H.hi = i;
+    H.chans = (lv && lv.channels) || [];
+    H.last = (lv && lv.last) || '';
+    homeStore();
+    drawHome();
+  });
+}
+
+function drawHome() {
+  drawHero(false);
+  drawBand();
+  buildRows();
+}
+
+/* ---------- the hero ---------- */
+function heroChannel() {
+  for (var i = 0; i < H.chans.length; i++) if (H.chans[i].key === H.last) return H.chans[i];
+  return H.chans[0];
+}
+function heroButton(k, html, cls, run) {
+  var b = document.createElement('div');
+  b.className = 'hbtn fo' + (cls ? ' ' + cls : '');
+  b.innerHTML = html;
+  b._k = 'hero:' + k;
+  b._run = run;
+  hit(b);
+  return b;
+}
+var STAR_SVG =
+  '<svg class="star" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"/></svg>';
+var PLAY_SVG =
+  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>';
+function heroText(h) {
+  var el = $('htext');
+  if (el.innerHTML !== h) setHtml(el, h);
+}
+function filmText(it) {
+  var len = VL.fmtLength((it.runtime || 0) * 60),
+    facts = [];
+  if (it.year) facts.push('<span>' + esc(it.year) + '</span>');
+  if (len) facts.push('<span>' + esc(len) + '</span>');
+  if (it.genres && it.genres.length) facts.push('<span>' + esc(it.genres.slice(0, 2).join(', ')) + '</span>');
+  if (it.rating) facts.push('<b>' + esc(it.rating) + '</b>');
+  var name = it.label || it.name || '';
+  return (
+    '<div class="eb">' +
+    esc(t('Trending in Films & Series')) +
+    '</div><h1' +
+    (name.length > 22 ? ' class="long"' : '') +
+    '>' +
+    esc(name) +
+    '</h1><div class="facts">' +
+    facts.join('') +
+    '</div>' +
+    (it.overview ? '<p>' + esc(it.overview) + '</p>' : '')
+  );
+}
+function chanText(ch) {
+  var l = HL.chanLine(ch, Date.now() / 1000);
+  return (
+    '<div class="eb">' +
+    esc(t('Last watched')) +
+    '</div><h1' +
+    (ch.name.length > 22 ? ' class="long"' : '') +
+    '>' +
+    esc(ch.name) +
+    '</h1><div class="facts"><b>' +
+    esc(ch.num) +
+    '</b><span>' +
+    esc(l.title === 'No guide' ? t('No guide') : l.title) +
+    '</span>' +
+    (l.times ? '<span>' + esc(l.times) + '</span>' : '') +
+    '</div>' +
+    (l.prog >= 0 ? '<div class="bar hbar"><i style="width:' + Math.round(100 * l.prog) + '%"></i></div>' : '') +
+    (l.next ? '<p>' + esc(l.next) + '</p>' : '')
+  );
+}
+/* fade: a slide to the next title (the text fades out and in, the backdrop cross-fades) */
+function drawHero(fade) {
+  var mode = HL.heroMode(H.picks, H.chans),
+    b = document.body;
+  b.classList.toggle('no-hero', mode === 'none');
+  b.classList.toggle('no-pic', mode !== 'film');
+  heroEls = [];
+  if (mode === 'film') {
+    var it = H.picks[H.hi] || H.picks[0],
+      pl = HL.heroPlay(it, H.items),
+      mine = VOD.listed('films', it.id);
+    heroEls.push(
+      heroButton('play', PLAY_SVG + esc(t(pl.label)) + (pl.left ? '<span class="left">' + esc(pl.left) + '</span>' : ''), '', function () {
+        VOD.open('films', H.picks[H.hi], true);
+      })
+    );
+    heroEls.push(
+      heroButton('info', esc(t('More info')), '', function () {
+        VOD.open('films', H.picks[H.hi], false);
+      })
+    );
+    var lb = heroButton('list', svg(mine ? 'check' : 'plus'), 'sq', function () {
+      var p = H.picks[H.hi];
+      VOD.toggleList('films', p).then(function (on) {
+        lb.innerHTML = svg(on ? 'check' : 'plus');
+        toast((on ? t('%s added to My list') : t('%s removed from My list')).replace('%s', p.label || p.name));
+      });
+    });
+    heroEls.push(lb);
+    showPic(it.pic);
+    if (fade) {
+      var tx = $('htext');
+      tx.classList.add('out');
+      setTimeout(function () {
+        heroText(filmText(H.picks[H.hi]));
+        tx.classList.remove('out');
+      }, 260);
+    } else heroText(filmText(it));
+    var nx = H.picks[(H.hi + 1) % H.picks.length];
+    if (nx && nx.pic) new Image().src = nx.pic; /* the next backdrop is in the cache before it slides in */
+  } else if (mode === 'channel') {
+    var ch = heroChannel();
+    heroText(chanText(ch));
+    heroEls.push(
+      heroButton('watch', PLAY_SVG + esc(t('Watch')), '', function () {
+        LIVE.enter(false, ch.key);
+      })
+    );
+  }
+  var bt = $('hbtns');
+  bt.textContent = '';
+  heroEls.forEach(function (e) {
+    bt.appendChild(e);
+  });
+  var dots = '';
+  if (mode === 'film' && H.picks.length > 1)
+    for (var i = 0; i < H.picks.length; i++) dots += '<i' + (i === H.hi ? ' class="on"' : '') + '></i>';
+  setHtml($('hdots'), dots);
+}
+/* the backdrop: the hidden layer loads the picture and fades in over the other */
+function showPic(url) {
+  if (!url || url === picUrl) return;
+  picUrl = url;
+  var nxt = picOn === 0 ? $('hb1') : $('hb0'),
+    cur = picOn === 0 ? $('hb0') : picOn === 1 ? $('hb1') : null;
+  nxt.onload = function () {
+    if (picUrl !== url) return;
+    nxt.classList.add('on');
+    if (cur) cur.classList.remove('on');
+  };
+  nxt.src = url;
+  picOn = nxt.id === 'hb0' ? 0 : 1;
+}
+function slideLater() {
+  clearTimeout(slideT);
+  slideT = setTimeout(slide, SLIDE_MS);
+}
+/* the next Trending title, but never while the focus is on the hero's buttons or something covers Home */
+function slide() {
+  if (H.picks.length < 2 || HL.heroMode(H.picks, H.chans) !== 'film') return;
+  if (document.hidden || LIVE.on || VOD.on || stack.length || (heroRow && rows[r] === heroRow)) return slideLater();
+  H.hi = (H.hi + 1) % H.picks.length;
+  drawHero(true);
+  buildRows();
+  slideLater();
+}
+
+/* ---------- the band: Continue watching and the channels on now ---------- */
+function drawBand() {
+  var band = $('band'),
+    h = '';
+  bandEls = [];
+  var nCh = H.cont.length ? 4 : 6;
+  if (H.cont.length) h += '<div class="grp"><h2>' + esc(t('Continue watching')) + '</h2><div class="cards" id="bcw"></div></div>';
+  if (H.chans.length) h += '<div class="grp"><h2>' + esc(t('On your channels now')) + '</h2><div class="cards" id="bch"></div></div>';
+  band = setHtml(band, h);
+  document.body.classList.toggle('no-band', !h);
+  H.cont.forEach(function (x) {
+    var d = document.createElement('div');
+    d.className = 'cw card fo';
+    d._k = 'cw:' + x.kind + ':' + x.id;
+    d.innerHTML =
+      '<div class="pic" style="background:hsl(' +
+      hashHue(String(x.id)) +
+      ',30%,24%)"><div class="nm"></div></div><div class="bar' +
+      (x.prog >= 0 ? '' : ' none') +
+      '"><i style="width:' +
+      Math.round(100 * Math.max(0, x.prog)) +
+      '%"></i></div><div class="sub"></div>';
+    d.querySelector('.nm').textContent = x.label;
+    d.querySelector('.sub').textContent = x.sub;
+    if (x.pic) {
+      var i = new Image();
+      i.alt = '';
+      i.onerror = function () {
+        if (i.parentNode) i.parentNode.removeChild(i);
+      };
+      i.src = x.pic;
+      d.firstChild.appendChild(i);
+    }
+    d._run = function () {
+      VOD.open(x.kind, { id: x.id, label: x.label, poster: x.poster }, true);
+    };
+    hit(d);
+    $('bcw').appendChild(d);
+    bandEls.push(d);
+  });
+  var nowS = Date.now() / 1000;
+  H.chans.slice(0, nCh).forEach(function (ch) {
+    var l = HL.chanLine(ch, nowS),
+      d = document.createElement('div');
+    d.className = 'ch card fo' + (ch.now ? '' : ' ng');
+    d._k = 'ch:' + ch.key;
+    d.innerHTML =
+      '<div class="cn"><b></b><span></span></div><div class="pt"></div><div class="tm"></div><div class="bar"><i style="width:' +
+      Math.round(100 * Math.max(0, l.prog)) +
+      '%"></i></div><div class="nx"></div>';
+    d.querySelector('.cn b').textContent = ch.num;
+    d.querySelector('.cn span').textContent = ch.name;
+    if (ch.fav) d.querySelector('.cn').insertAdjacentHTML('beforeend', STAR_SVG);
+    d.querySelector('.pt').textContent = l.title === 'No guide' ? t('No guide') : l.title;
+    d.querySelector('.tm').textContent = l.times;
+    d.querySelector('.nx').textContent = l.next;
+    if (!ch.now) d.querySelector('.bar').style.visibility = 'hidden';
+    d._ch = ch;
+    d._run = function () {
+      LIVE.enter(false, ch.key);
+    };
+    hit(d);
+    $('bch').appendChild(d);
+    bandEls.push(d);
+  });
+}
+/* every 15 seconds: the channels' progress; a programme that ended asks the service for the next */
+function homeTick() {
+  if (document.hidden || LIVE.on || VOD.on) return;
+  var nowS = Date.now() / 1000,
+    ended = false;
+  bandEls.forEach(function (d) {
+    var ch = d._ch;
+    if (!ch || !ch.now) return;
+    if (nowS >= ch.now[1]) ended = true;
+    d.querySelector('.bar i').style.width = Math.round(100 * HL.progress(nowS, ch.now)) + '%';
+  });
+  if (ended) homeData();
+}
+setInterval(homeTick, 15000);
+
+/* ---------- the top bar and the strip, from the apps and settings ---------- */
+function rebuild() {
+  var by = {};
+  apps.forEach(function (a) {
+    by[a.id] = a;
+  });
+  var bar = $('bar');
+  bar.textContent = '';
+  barEls = [];
+  var btns = (VOD.ready ? [{ label: 'Search', icon: 'search', search: true, fixed: true }] : [])
+    .concat(shownBar())
+    .concat([{ label: 'Customise', icon: 'edit', action: 'customize', fixed: true }]);
+  btns.forEach(function (o, i) {
+    var p = document.createElement('div');
+    p.className = 'pill fo';
+    p._o = o;
+    p._k = 'bar:' + (o.search ? 'search' : o.action || o.app || i);
+    p.innerHTML = svg(o.icon) + '<span></span>';
+    p.lastChild.textContent = o.search ? t('Search') : barLabel(o);
+    if (o.search) p._run = VOD.search;
+    hit(p);
+    bar.appendChild(p);
+    barEls.push(p);
+  });
+  var ids = HL.stripIds({
+    dock: dockIds(),
+    live: liveOn() && !!by.__live,
+    vod: !!by.__vod,
+    pinned: apps
+      .filter(function (a) {
+        return a.input;
+      })
+      .map(function (a) {
+        return a.id;
+      }),
+    has: function (id) {
+      return !!by[id] && !isHidden(id);
+    },
+    max: HOME_DOCK,
+  });
+  var row = $('strow');
+  row.textContent = '';
+  stripEls = ids.map(function (id) {
+    var d = stripItem(by[id]);
+    row.appendChild(d);
+    return d;
+  });
+  var all = document.createElement('div');
+  all.className = 'si ap fo';
+  all._k = 'strip:all';
+  all.innerHTML = svg('grid') + '<span></span>';
+  all.lastChild.textContent = t('All apps');
+  all._run = allAppsMenu;
+  hit(all);
+  row.appendChild(all);
+  stripEls.push(all);
+  buildRows();
+}
+function stripItem(a) {
+  var d = document.createElement('div');
+  d.className = 'si fo' + (a.input && a.off ? ' off' : '');
+  d._a = a;
+  d._k = 'app:' + a.id;
+  if (a.input) d.innerHTML = '<span class="ic">' + svg('hdmi') + '</span><span></span><span class="dot"></span>';
+  else {
+    d.innerHTML = '<img class="ic" alt=""><span></span>';
+    var i = d.firstChild;
+    i.onerror = function () {
+      var s = document.createElement('span');
+      s.className = 'ic';
+      s.innerHTML = svg('grid');
+      if (i.parentNode) i.parentNode.replaceChild(s, i);
+    };
+    i.src = a.id === '__live' ? LIVE_ICON : a.id === '__vod' ? VOD_ICON : API + '/icon/' + encodeURIComponent(a.id);
+  }
+  d.children[1].textContent = a.title;
+  hit(d);
+  return d;
+}
+
+/* ---------- focus ---------- */
+function buildRows() {
+  var old = rows[r] && rows[r][c];
+  if (old) old.classList.remove('f');
+  heroRow = heroEls.length ? heroEls : null;
+  stripRow = stripEls;
+  var keepR = r;
+  rows = [barEls, heroEls, bandEls, stripEls].filter(function (x) {
+    return x.length;
+  });
+  if (!userMoved) return setFocus(rows.indexOf(heroRow || stripRow), 0, true);
+  for (var i = 0; i < rows.length; i++)
+    for (var j = 0; j < rows[i].length; j++) if (rows[i][j]._k === focusKey) return setFocus(i, j, true);
+  /* what had the focus is gone: the same row number, as near as there is */
+  setFocus(Math.min(keepR, rows.length - 1), c, true);
+}
+/* auto: placed by Home itself, not moved by the viewer */
+function setFocus(nr, nc, auto) {
+  if (!auto) userMoved = true;
+  var old = rows[r] && rows[r][c],
+    oldRow = rows[r];
+  if (old) old.classList.remove('f');
+  r = Math.max(0, Math.min(nr, rows.length - 1));
+  c = Math.max(0, Math.min(nc, rows[r].length - 1));
+  var e = rows[r][c];
+  e.classList.add('f');
+  focusKey = e._k;
+  if (oldRow === heroRow && rows[r] !== heroRow) slideLater(); /* the hero waits a whole turn after the focus left it */
+  if (rows[r] === stripRow) {
+    /* the strip moves left when the focus would leave the screen */
+    var right = e.offsetLeft + e.offsetWidth,
+      x = right > 1728 - 40 ? right - (1728 - 40) : 0;
+    $('strow').style.transform = x ? 'translateX(' + -x + 'px)' : '';
+  }
+}
+function mapCol(from, to, col) {
+  return from > 1 ? Math.round((col * (to - 1)) / (from - 1)) : 0;
+}
+function posOf(e) {
+  for (var i = 0; i < rows.length; i++) {
+    var j = rows[i].indexOf(e);
+    if (j >= 0) return [i, j];
+  }
+  return null;
+}
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, function (ch) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch];
+  });
 }
 /* ---------- input: tap OK to open, hold OK for options ---------- */
 var lastMove = 0,
@@ -3675,7 +3765,8 @@ function hit(e) {
   });
 }
 function options(e) {
-  if (e._a && !e._a.sys) appMenu(e._a);
+  if (e._run) return;
+  if (e._a && e._a.id !== '__live' && e._a.id !== '__vod') appMenu(e._a);
   else if (e._o && !e._o.fixed) barMenu(e._o);
 }
 
@@ -3691,7 +3782,7 @@ document.addEventListener('mousemove', function (ev) {
   if (Math.abs(ev.clientX - lastMX) + Math.abs(ev.clientY - lastMY) < 24) return;
   lastMX = ev.clientX;
   lastMY = ev.clientY;
-  var el = ev.target.closest ? ev.target.closest('.tile,.pill') : null,
+  var el = ev.target.closest ? ev.target.closest('.fo') : null,
     p = el && posOf(el);
   if (p && !(p[0] === r && p[1] === c)) setFocus(p[0], p[1]);
 });
@@ -3735,11 +3826,6 @@ document.addEventListener('keydown', function (e) {
     if (menuKey(k)) e.preventDefault();
     return;
   }
-  if ((TH.overlay || TH.push) && r >= 2 && (k === 461 || k === 27 || k === 8)) {
-    setFocus(1, Math.min(c, rows[1].length - 1));
-    e.preventDefault();
-    return;
-  } /* Back closes the grid overlay */
   if (k === 461 || k === 27 || k === 8) {
     runningMenu();
     e.preventDefault();
@@ -3759,8 +3845,9 @@ document.addEventListener('keydown', function (e) {
   }
   if (k === 37 && c > 0) setFocus(r, c - 1);
   else if (k === 39 && c < len - 1) setFocus(r, c + 1);
-  else if (k === 38 && r > 0) setFocus(r - 1, mapCol(len, rows[r - 1].length, c));
-  else if (k === 40 && r < rows.length - 1) setFocus(r + 1, mapCol(len, rows[r + 1].length, c));
+  /* up or down into the hero: always on its first button, Play */ else if (k === 38 && r > 0)
+    setFocus(r - 1, rows[r - 1] === heroRow ? 0 : mapCol(len, rows[r - 1].length, c));
+  else if (k === 40 && r < rows.length - 1) setFocus(r + 1, rows[r + 1] === heroRow ? 0 : mapCol(len, rows[r + 1].length, c));
   else if (k === 13) {
     /* webOS repeats keydown while OK is held, sometimes without e.repeat: only the first one starts the hold timer */
     if (!downEnter || Date.now() - lastEnter > 1500) {
@@ -3828,6 +3915,7 @@ document.addEventListener('webOSRelaunch', function () {
   } /* the Guide button while Live TV is open */
   if (LIVE.on) LIVE.exit();
   if (VOD.on) VOD.exit();
+  userMoved = false; /* the Home key: back to Play */
   load();
   wantInputs();
 });
@@ -4235,8 +4323,8 @@ var HL = (function () {
       })
       .slice(0, max);
   }
-  /* Films & Series' own Continue watching lists (a card per series, removed titles left out), newest first, the first three */
-  function continueCards(st, now) {
+  /* Films & Series' own Continue watching lists (a card per series, removed titles left out), newest first, the first three (or max) */
+  function continueCards(st, now, max) {
     var films = VL.continueFilms(st.items || {}, st.hidden).map(function (x) {
         return { kind: 'films', x: x };
       }),
@@ -4248,7 +4336,7 @@ var HL = (function () {
       .sort(function (a, b) {
         return b.x.at - a.x.at;
       })
-      .slice(0, 3)
+      .slice(0, max || 3)
       .map(function (c) {
         return {
           kind: c.kind,
@@ -7790,7 +7878,12 @@ var VOD = (function () {
   };
   return o;
 })();
-/* first paint straight from the last known layout, then refresh from the helper */
+/* first paint straight from the last known layout and Home's last data, then refresh from the helper */
+homeRestore();
+LIVE.onExit = VOD.onExit = function () {
+  homeData();
+  slideLater();
+};
 try {
   var cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
   if (cached && cached.apps && cached.apps.length) {
@@ -7798,8 +7891,8 @@ try {
     cfg = cached.cfg || {};
     applyTheme(cfg.theme);
     usage = cached.usage || {};
-    colors = cached.colors || {};
     rebuild();
+    drawHome();
     perfMark('launcher cached ' + Math.round(performance.now()));
   }
 } catch (e) {}

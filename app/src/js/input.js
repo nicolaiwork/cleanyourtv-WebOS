@@ -32,7 +32,8 @@ function hit(e) {
   });
 }
 function options(e) {
-  if (e._a && !e._a.sys) appMenu(e._a);
+  if (e._run) return;
+  if (e._a && e._a.id !== '__live' && e._a.id !== '__vod') appMenu(e._a);
   else if (e._o && !e._o.fixed) barMenu(e._o);
 }
 
@@ -48,7 +49,7 @@ document.addEventListener('mousemove', function (ev) {
   if (Math.abs(ev.clientX - lastMX) + Math.abs(ev.clientY - lastMY) < 24) return;
   lastMX = ev.clientX;
   lastMY = ev.clientY;
-  var el = ev.target.closest ? ev.target.closest('.tile,.pill') : null,
+  var el = ev.target.closest ? ev.target.closest('.fo') : null,
     p = el && posOf(el);
   if (p && !(p[0] === r && p[1] === c)) setFocus(p[0], p[1]);
 });
@@ -92,11 +93,6 @@ document.addEventListener('keydown', function (e) {
     if (menuKey(k)) e.preventDefault();
     return;
   }
-  if ((TH.overlay || TH.push) && r >= 2 && (k === 461 || k === 27 || k === 8)) {
-    setFocus(1, Math.min(c, rows[1].length - 1));
-    e.preventDefault();
-    return;
-  } /* Back closes the grid overlay */
   if (k === 461 || k === 27 || k === 8) {
     runningMenu();
     e.preventDefault();
@@ -116,8 +112,9 @@ document.addEventListener('keydown', function (e) {
   }
   if (k === 37 && c > 0) setFocus(r, c - 1);
   else if (k === 39 && c < len - 1) setFocus(r, c + 1);
-  else if (k === 38 && r > 0) setFocus(r - 1, mapCol(len, rows[r - 1].length, c));
-  else if (k === 40 && r < rows.length - 1) setFocus(r + 1, mapCol(len, rows[r + 1].length, c));
+  /* up or down into the hero: always on its first button, Play */ else if (k === 38 && r > 0)
+    setFocus(r - 1, rows[r - 1] === heroRow ? 0 : mapCol(len, rows[r - 1].length, c));
+  else if (k === 40 && r < rows.length - 1) setFocus(r + 1, rows[r + 1] === heroRow ? 0 : mapCol(len, rows[r + 1].length, c));
   else if (k === 13) {
     /* webOS repeats keydown while OK is held, sometimes without e.repeat: only the first one starts the hold timer */
     if (!downEnter || Date.now() - lastEnter > 1500) {
@@ -185,6 +182,7 @@ document.addEventListener('webOSRelaunch', function () {
   } /* the Guide button while Live TV is open */
   if (LIVE.on) LIVE.exit();
   if (VOD.on) VOD.exit();
+  userMoved = false; /* the Home key: back to Play */
   load();
   wantInputs();
 });

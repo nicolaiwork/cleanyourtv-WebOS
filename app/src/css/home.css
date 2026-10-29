@@ -1,5 +1,6 @@
-/* Built for a weak TV GPU: only transform and opacity ever animate; no blur, masks or filters. Everything a theme changes (manager > Theme) is a
-   variable here; the service works the values out (helper/theme.js) and the defaults below are the original look. */
+/* Built for a weak TV GPU: only transform and opacity ever animate; no blur, masks or filters. The colours, font and wallpaper come from
+   the theme (manager > Theme) as variables; the service works the values out (helper/theme.js) and the defaults below are the original
+   look. Home's layout is fixed (fork): the theme's layout settings (dock, grid, shelf, positions) do not apply to it. */
 :root {
   --ink: #f5f6f8;
   --ink2: rgba(245, 246, 248, 0.62);
@@ -13,65 +14,14 @@
   --font: "LG Smart UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --fs: 1;
   --spd: 1;
-  --glow-op: 1;
   --wall: none;
   --pill-bg: rgba(255, 255, 255, 0.09);
   --pill-ring: rgba(255, 255, 255, 0.1);
-  --pill-r: 32px;
-  --pill-h: 64px;
-  --bar-gap: 16px;
   --menu-bg: rgba(5, 6, 9, 0.97);
   --row-r: 30px;
-  --clock-l: 96px;
-  --clock-r: auto;
-  --clock-t: 54px;
-  --clock-b: auto;
-  --clock-tx: none;
-  --clock-ai: flex-start;
-  --clock-s: 1;
-  --date-s: 1;
-  --clock-d: flex;
-  --date-d: block;
-  --bar-l: auto;
-  --bar-r: 96px;
-  --bar-t: 54px;
-  --bar-b: auto;
-  --bar-tx: none;
-  --bar-d: flex;
-  --name-d: block;
-  --name-x: 96px;
-  --name-y: 150px;
-  --name-a: left;
-  --name-s: 1;
-  --view-top: 300px;
-  --dock-l: 96px;
-  --dock-r: auto;
-  --dock-t: 60px;
-  --dock-b: auto;
-  --dock-tx: none;
-  --dock-w: 408px;
-  --dock-h: 230px;
-  --dock-gap: 32px;
-  --dock-rad: 36px;
-  --dock-panel: 0;
-  --dock-pad: 0px;
-  --dock-lift: -10px;
-  --dock-fs: 1.05;
-  --cols: 10;
-  --tile-w: 151px;
-  --tile-h: 151px;
-  --gap-x: 24px;
-  --gap-y: 26px;
-  --tile-r: 34px;
-  --grid-l: 96px;
-  --grid-w: 1728px;
-  --grid-t: 350px;
-  --grid-fs: 1.12;
-  --ov-dim: 0.95;
-  --gloss: 0;
-  --tile-border: 0;
   --ring-w: 4px;
   --ring-off: 4px;
+  --card: rgba(255, 255, 255, 0.06);
 }
 * {
   box-sizing: border-box;
@@ -93,406 +43,521 @@ body {
 ::selection {
   background: rgba(255, 255, 255, 0.25);
 }
+.snap .fo {
+  transition: none !important;
+} /* held arrow key: follow the focus without animating each step */
 
-.glow {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 1920px;
-  height: 720px;
-  opacity: 0;
-  transition: opacity calc(0.35s * var(--spd)) linear;
-  will-change: opacity;
-  background: radial-gradient(ellipse 1400px 640px at 26% -6%, rgba(var(--c), 0.45), transparent 70%);
-}
-.glow.on {
-  opacity: var(--glow-op);
-}
-
-#top {
+/* ---------- the hero's picture: two layers cross-fade; the fades keep the text readable ---------- */
+#hbd {
   position: absolute;
   left: 0;
   top: 0;
   width: 1920px;
   height: 1080px;
-  z-index: 5;
+  overflow: hidden;
   pointer-events: none;
 }
-#clock {
+.hb {
   position: absolute;
-  left: var(--clock-l);
-  right: var(--clock-r);
-  top: var(--clock-t);
-  bottom: var(--clock-b);
-  transform: var(--clock-tx);
-  display: var(--clock-d);
+  right: 0;
+  top: 0;
+  width: 1600px;
+  height: 900px;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity calc(0.9s * var(--spd)) linear;
+  will-change: opacity;
+}
+.hb.on {
+  opacity: 1;
+}
+.hfade {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  background: linear-gradient(180deg, rgba(var(--night-rgb), 0.8) 0, rgba(var(--night-rgb), 0) 220px),
+    linear-gradient(
+      180deg,
+      rgba(var(--night-rgb), 0) 0%,
+      rgba(var(--night-rgb), 0) 40%,
+      rgba(var(--night-rgb), 0.86) 58%,
+      rgb(var(--night-rgb)) 72%
+    ),
+    linear-gradient(
+      90deg,
+      rgb(var(--night-rgb)) 0%,
+      rgba(var(--night-rgb), 0.92) 20%,
+      rgba(var(--night-rgb), 0.4) 50%,
+      rgba(var(--night-rgb), 0) 70%
+    );
+}
+.no-pic #hbd {
+  display: none;
+}
+
+/* ---------- top bar ---------- */
+#top {
+  position: absolute;
+  left: 96px;
+  right: 96px;
+  top: 52px;
+  height: 64px;
+  display: flex;
   align-items: center;
-  height: 76px;
+  z-index: 5;
+}
+#clock {
+  display: flex;
+  align-items: baseline;
+  flex: 1;
+  min-width: 0;
 }
 #time {
-  font-size: calc(56px * var(--fs) * var(--clock-s));
+  font-size: calc(50px * var(--fs));
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 #date {
-  display: var(--date-d);
-  font-size: calc(28px * var(--fs) * var(--date-s));
-  color: rgba(245, 246, 248, 0.88);
-  margin-left: 22px;
-  padding-top: 14px;
-}
-[data-clock="stack"] #clock {
-  flex-direction: column;
-  align-items: var(--clock-ai);
-  height: auto;
-}
-[data-clock="stack"] #date {
-  margin: 8px 0 0 6px;
-  padding: 0;
+  font-size: calc(26px * var(--fs));
+  color: var(--ink2);
+  margin-left: 20px;
+  white-space: nowrap;
 }
 #bar {
-  pointer-events: auto;
-  position: absolute;
-  left: var(--bar-l);
-  right: var(--bar-r);
-  top: var(--bar-t);
-  bottom: var(--bar-b);
-  transform: var(--bar-tx);
-  display: var(--bar-d);
+  display: flex;
   align-items: center;
-  height: calc(var(--pill-h) + 12px);
 }
 #bar > * + * {
-  margin-left: var(--bar-gap);
+  margin-left: 14px;
 }
 .pill {
   display: flex;
   align-items: center;
-  height: var(--pill-h);
-  padding: 0 30px 0 24px;
-  border-radius: var(--pill-r);
-  font-size: calc(26px * var(--fs));
+  height: 56px;
+  padding: 0 26px 0 20px;
+  border-radius: 28px;
+  font-size: calc(24px * var(--fs));
   font-weight: 500;
   background: var(--pill-bg);
   box-shadow: inset 0 0 0 1px var(--pill-ring);
+  white-space: nowrap;
   transition: transform calc(0.12s * var(--spd)) cubic-bezier(0.3, 1.35, 0.5, 1);
   will-change: transform;
 }
 .pill > * + * {
-  margin-left: 14px;
+  margin-left: 12px;
 }
 .pill svg {
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   flex: none;
-}
-.pill span {
-  white-space: nowrap;
 }
 .pill.f {
   background: var(--acc);
   color: var(--acc-ink);
+  box-shadow: none;
   transform: scale(1.07);
 }
-[data-bar="round"] .pill {
-  width: var(--pill-h);
+
+/* ---------- the hero ---------- */
+#hero {
+  position: absolute;
+  left: 96px;
+  top: 186px;
+  width: 900px;
+  z-index: 4;
+}
+.no-hero #hero {
+  display: none;
+}
+#htext {
+  transition: opacity calc(0.25s * var(--spd)) linear;
+  will-change: opacity;
+}
+#htext.out {
+  opacity: 0;
+}
+#htext .eb {
+  font-size: calc(24px * var(--fs));
+  font-weight: 600;
+  color: var(--ink2);
+}
+#htext h1 {
+  margin-top: 14px;
+  font-size: calc(112px * var(--fs));
+  font-weight: 700;
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+  max-height: 2.1em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+#htext h1.long {
+  font-size: calc(84px * var(--fs));
+}
+#htext .facts {
+  margin-top: 18px;
+  display: flex;
+  font-size: calc(25px * var(--fs));
+  color: var(--ink2);
+  white-space: nowrap;
+}
+#htext .facts > * + * {
+  margin-left: 26px;
+}
+#htext .facts b {
+  color: var(--ink);
+  font-weight: 600;
+}
+#htext p {
+  margin-top: 16px;
+  width: 780px;
+  font-size: calc(26px * var(--fs));
+  line-height: 1.45;
+  color: var(--ink2);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+#htext .hbar {
+  width: 520px;
+  margin-top: 22px;
+}
+#hbtns {
+  margin-top: 30px;
+  display: flex;
+  align-items: center;
+}
+#hbtns > * + * {
+  margin-left: 18px;
+}
+.hbtn {
+  display: flex;
+  align-items: center;
+  height: 68px;
+  padding: 0 36px;
+  border-radius: 34px;
+  font-size: calc(27px * var(--fs));
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.14);
+  white-space: nowrap;
+  transition: transform calc(0.12s * var(--spd)) cubic-bezier(0.3, 1.35, 0.5, 1);
+  will-change: transform;
+}
+.hbtn svg {
+  width: 26px;
+  height: 26px;
+  margin-right: 12px;
+  flex: none;
+}
+.hbtn.sq {
+  width: 68px;
   padding: 0;
   justify-content: center;
 }
-[data-bar="flat"] .pill {
-  background: none;
-  box-shadow: none;
+.hbtn.sq svg {
+  margin: 0;
 }
-[data-labels="hide"] .pill span {
+.hbtn.f {
+  background: var(--acc);
+  color: var(--acc-ink);
+  transform: scale(1.06);
+}
+.hbtn .left {
+  margin-left: 14px;
+  font-weight: 500;
+  opacity: 0.7;
+}
+#hdots {
+  position: absolute;
+  right: 96px;
+  top: 548px;
+  display: flex;
+  z-index: 4;
+}
+#hdots i {
+  width: 22px;
+  height: 6px;
+  border-radius: 3px;
+  margin-left: 10px;
+  background: var(--ink);
+  opacity: 0.28;
+  transition: opacity calc(0.3s * var(--spd)) linear;
+}
+#hdots i.on {
+  opacity: 1;
+}
+.no-hero #hdots {
   display: none;
 }
 
-#shelf {
+/* ---------- the band: Continue watching and the channels on now ---------- */
+#band {
+  position: absolute;
+  left: 96px;
+  top: 614px;
+  display: flex;
+  z-index: 4;
+}
+.no-hero #band {
+  top: 190px;
+}
+.grp + .grp {
+  margin-left: 60px;
+}
+.grp h2 {
+  font-size: calc(26px * var(--fs));
+  font-weight: 600;
+  margin-bottom: 16px;
+  white-space: nowrap;
+}
+.cards {
+  display: flex;
+}
+.cards > * + * {
+  margin-left: 20px;
+}
+.cw {
+  width: 156px;
+}
+.cw .pic {
+  position: relative;
+  width: 156px;
+  height: 234px;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+}
+.cw .pic img {
   position: absolute;
   left: 0;
-  right: 0;
-  top: var(--name-y);
-  height: 120px;
-  padding: 0 var(--name-x);
-  text-align: var(--name-a);
-  display: var(--name-d);
-  z-index: 5;
+  top: 0;
+  width: 156px;
+  height: 234px;
+  object-fit: cover;
 }
-#name {
-  font-size: calc(92px * var(--fs) * var(--name-s));
-  font-weight: 700;
-  letter-spacing: -0.028em;
-  line-height: 1.05;
+.cw .pic .nm {
+  padding: 12px;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.15;
+}
+.bar {
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+}
+.bar i {
+  display: block;
+  height: 5px;
+  background: var(--ink);
+}
+.cw .bar {
+  margin-top: 10px;
+}
+.cw .bar.none {
+  visibility: hidden;
+}
+.cw .sub {
+  margin-top: 8px;
+  font-size: 20px;
+  color: var(--ink2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-/* the view clips rows as they scroll up under the shelf */
-#view {
-  position: absolute;
-  left: 0;
-  top: var(--view-top);
-  width: 1920px;
-  height: calc(1080px - var(--view-top));
-  overflow: hidden;
-  z-index: 2;
-}
-#scroll {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 1920px;
-  height: calc(1080px - var(--view-top));
-  transition: transform calc(0.3s * var(--spd)) ease-out;
-  will-change: transform;
-}
-#dock {
-  position: absolute;
-  left: var(--dock-l);
-  right: var(--dock-r);
-  top: var(--dock-t);
-  bottom: var(--dock-b);
-  transform: var(--dock-tx);
+.ch {
+  width: 262px;
+  height: 234px;
+  padding: 20px 22px;
+  border-radius: 14px;
+  background: var(--card);
   display: flex;
-  z-index: 4;
-  padding: var(--dock-pad);
-  border-radius: calc(var(--dock-rad) + var(--dock-pad));
-  background: rgba(255, 255, 255, var(--dock-panel));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, calc(var(--dock-panel) * 1.4));
+  flex-direction: column;
 }
-#dock > * + * {
-  margin-left: var(--dock-gap);
+.ch > * + * {
+  margin-top: 6px;
 }
-#grid {
-  position: absolute;
-  left: var(--grid-l);
-  top: var(--grid-t);
-  width: var(--grid-w);
-  display: grid;
-  grid-template-columns: repeat(var(--cols), 1fr);
-  gap: var(--gap-y) var(--gap-x);
-}
-/* an overlay grid: hidden until the focus moves down into it, then dark layer + grid over the screen above the dock */
-[data-grid="overlay"] #grid {
-  z-index: 3;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity calc(0.22s * var(--spd)) linear;
-}
-[data-grid="overlay"].grid-open #grid {
-  opacity: 1;
-  pointer-events: auto;
-}
-[data-grid="overlay"] #scroll::before,
-[data-grid="push"] #scroll::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: -1600px;
-  width: 1920px;
-  height: 4400px;
-  z-index: 2;
-  opacity: 0;
-  pointer-events: none;
-  background: rgba(var(--night-rgb), var(--ov-dim));
-  transition: opacity calc(0.22s * var(--spd)) linear;
-}
-[data-grid="overlay"].grid-open #scroll::before,
-[data-grid="push"].grid-open #scroll::before {
-  opacity: 1;
-}
-/* push: the grid sits under the dock; focusing it scrolls the dock up and fades the grid in */
-[data-grid="push"] #grid {
-  z-index: 3;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity calc(0.25s * var(--spd)) linear;
-}
-[data-grid="push"].grid-open #grid {
-  opacity: 1;
-  pointer-events: auto;
-}
-/* every row of tiles centred, also a last row that is not full */
-[data-galign="center"] #grid {
+.ch .cn {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-[data-galign="center"] #grid .tile {
-  width: var(--tile-w);
-}
-.tile::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  opacity: var(--gloss);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0) 46%, rgba(0, 0, 0, 0.24));
-}
-
-.tile {
-  --c: 74, 84, 112;
-  --b: 20, 22, 27;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  will-change: transform;
-  background: rgb(var(--b));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, var(--tile-border));
-  transition: transform calc(0.12s * var(--spd)) cubic-bezier(0.3, 1.35, 0.5, 1);
-}
-.snap .tile,
-.snap .pill {
-  transition: none;
-} /* held arrow key: follow the focus without animating each step */
-.tile.fill {
-  overflow: hidden;
-}
-.tile.fill img {
-  object-fit: fill;
-}
-.tile.press {
-  transform: scale(0.96) !important;
-  transition-duration: calc(0.06s * var(--spd));
-}
-.tile.launching {
-  opacity: 0.82;
-}
-.tile img {
-  object-fit: contain;
-}
-.tile svg {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  opacity: 0.9;
-}
-.tile .t {
-  font-size: calc(26px * var(--fs));
+  align-items: baseline;
+  font-size: 21px;
   font-weight: 600;
-  padding: 12px;
-  text-align: center;
-  line-height: 1.15;
-  opacity: 0.9;
+  color: var(--ink2);
+  white-space: nowrap;
+  overflow: hidden;
 }
-/* The focus ring is a pseudo-element with its own radius: Chromium before 94 draws an outline as a rectangle, not around rounded corners. */
-.tile.f {
+.ch .cn b {
+  font-weight: 700;
+  color: var(--ink);
+  margin-right: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.ch .cn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ch .star {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  margin-left: 8px;
+  align-self: center;
+  color: #f2c94c;
+}
+.ch .pt {
+  font-size: 31px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.ch .tm {
+  font-size: 20px;
+  color: var(--ink2);
+}
+.ch .bar {
+  margin-top: auto;
+}
+.ch .nx {
+  font-size: 19px;
+  color: var(--ink2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ch.ng .pt {
+  color: var(--ink2);
+}
+/* the focus ring is a pseudo-element with its own radius: Chromium before 94 draws an outline as a rectangle */
+.card {
+  position: relative;
+  transition: transform calc(0.12s * var(--spd)) cubic-bezier(0.3, 1.35, 0.5, 1);
+  will-change: transform;
+}
+.card.f {
+  transform: scale(1.06);
   z-index: 3;
-  box-shadow: 0 24px 36px rgba(0, 0, 0, 0.6);
 }
-.tile.f::before {
+.card.f::before {
   content: "";
   position: absolute;
   pointer-events: none;
   left: calc(-1 * (var(--ring-off) + var(--ring-w)));
   top: calc(-1 * (var(--ring-off) + var(--ring-w)));
   right: calc(-1 * (var(--ring-off) + var(--ring-w)));
-  bottom: calc(-1 * (var(--ring-off) + var(--ring-w)));
+  height: calc(234px + 2 * (var(--ring-off) + var(--ring-w)));
   border: var(--ring-w) solid var(--focus);
-  border-radius: calc(var(--tile-r) + var(--ring-off) + var(--ring-w));
+  border-radius: calc(14px + var(--ring-off) + var(--ring-w));
 }
-#dock .tile.f::before {
-  border-radius: calc(var(--dock-rad) + var(--ring-off) + var(--ring-w));
+.cw.f::before {
+  border-radius: calc(12px + var(--ring-off) + var(--ring-w));
 }
-/* a tile that crops its picture (overflow: hidden) would cut the ring off: it gets a ring that sits against the tile */
-.tile.fill.f::before {
-  display: none;
+
+/* ---------- the strip: Live TV, Films & Series, the apps and inputs on Home, All apps ---------- */
+#strip {
+  position: absolute;
+  left: 96px;
+  top: 970px;
+  width: 1728px;
+  height: 80px;
+  z-index: 4;
 }
-.tile.fill.f {
-  box-shadow:
-    0 0 0 var(--ring-w) var(--focus),
-    0 24px 36px rgba(0, 0, 0, 0.6);
+.no-band #strip {
+  top: 880px;
 }
-#dock .tile {
-  width: var(--dock-w);
-  height: var(--dock-h);
-  border-radius: var(--dock-rad);
+.no-hero.no-band #strip {
+  top: 190px;
 }
-#dock .tile img {
-  height: 56%;
-  max-width: 46%;
+.no-hero #strip {
+  top: 580px;
 }
-#dock .tile svg {
-  width: 96px;
-  height: 96px;
+#strow {
+  display: flex;
+  align-items: center;
+  height: 80px;
+  transition: transform calc(0.25s * var(--spd)) ease-out;
+  will-change: transform;
 }
-#dock .tile.f {
-  transform: translateY(var(--dock-lift)) scale(var(--dock-fs));
+#strow > * + * {
+  margin-left: 16px;
 }
-#grid .tile {
-  height: var(--tile-h);
-  border-radius: var(--tile-r);
-}
-#grid .tile img {
-  width: 64%;
-  height: 64%;
-}
-#grid .tile svg {
-  width: 64px;
+.si {
+  display: flex;
+  align-items: center;
+  flex: none;
   height: 64px;
-}
-#grid .tile.f {
-  transform: scale(var(--grid-fs));
-}
-#grid .tile.sys {
-  flex-direction: column;
-}
-#grid .tile.sys > * + * {
-  margin-top: 8px;
-}
-.slab {
-  font-size: 22px;
-  font-weight: 600;
-  color: var(--ink2);
-}
-#grid .tile.sys {
-  background: rgba(255, 255, 255, 0.05);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-}
-/* an input pinned to Home: the HDMI symbol over its name, the port under a name; dimmed while nothing is connected */
-.tile.inp {
-  flex-direction: column;
-}
-.tile.inp > * + * {
-  margin-top: 6px;
-}
-.tile.inp .slab {
-  color: var(--ink);
-  max-width: 90%;
-  overflow: hidden;
+  padding: 0 28px 0 8px;
+  border-radius: 32px;
+  background: var(--pill-bg);
+  font-size: calc(23px * var(--fs));
+  font-weight: 500;
   white-space: nowrap;
-  text-overflow: ellipsis;
+  transition: transform calc(0.12s * var(--spd)) cubic-bezier(0.3, 1.35, 0.5, 1);
+  will-change: transform;
 }
-.tile.inp .slab.sub {
-  font-size: 18px;
-  color: var(--ink2);
+.si > * + * {
+  margin-left: 14px;
 }
-.tile.inp .slab:empty {
-  display: none;
+.si .ic {
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  flex: none;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.tile.inp.off {
-  opacity: 0.55;
+.si .ic svg {
+  width: 28px;
+  height: 28px;
 }
-/* in the dock the symbol and the name follow the tile's height, so a small square dock (Horizon) fits them too */
-#dock .tile.inp svg {
-  width: calc(var(--dock-h) * 0.3);
-  height: calc(var(--dock-h) * 0.3);
+.si .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 6px;
+  background: #8fd18a;
+  flex: none;
 }
-#dock .tile.inp .slab {
-  font-size: calc(var(--dock-h) * 0.11);
+.si.off {
+  opacity: 0.5;
 }
-#dock .tile.inp .slab.sub {
-  font-size: calc(var(--dock-h) * 0.085);
+.si.off .dot {
+  background: none;
+  box-shadow: inset 0 0 0 2px var(--ink2);
+}
+.si.ap {
+  padding: 0 28px 0 22px;
+  background: none;
+  box-shadow: inset 0 0 0 2px var(--pill-ring);
+}
+.si.f {
+  background: var(--acc);
+  color: var(--acc-ink);
+  box-shadow: none;
+  transform: scale(1.07);
+}
+.si.launching,
+.card.launching {
+  opacity: 0.82;
+}
+.fo.press {
+  transform: scale(0.96) !important;
+  transition-duration: calc(0.06s * var(--spd));
 }
 
 #toast {

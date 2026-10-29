@@ -483,13 +483,7 @@ var apps = [],
   rows = [],
   r = 1,
   c = 0,
-  colors = {},
-  tiles = {},
-  lastSig = '',
-  gSide = 0,
-  gColor = '',
-  gT = 0,
-  saveT = 0;
+  lastSig = '';
 function $(id) {
   return document.getElementById(id);
 }
@@ -537,10 +531,6 @@ function launch(id, params) {
 }
 function store() {
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ apps: apps, cfg: cfg, usage: usage, colors: colors }));
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ apps: apps, cfg: cfg, usage: usage }));
   } catch (e) {}
-}
-function storeSoon() {
-  clearTimeout(saveT);
-  saveT = setTimeout(store, 1500);
 }

@@ -655,7 +655,8 @@
  },
  "live home channels": {
   "body": {
-   "channels": []
+   "channels": [],
+   "last": ""
   },
   "cors": "null",
   "status": 200,

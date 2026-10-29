@@ -157,6 +157,7 @@ run(async () => {
   );
   ok(home && home.channels[0].now === null && home.channels[0].next === null, 'home channels: no guide, no programme');
   ok(JSON.stringify(home).indexOf('http') < 0, 'home channels: no stream addresses');
+  ok(home && home.last === keyOf['Chan C'], 'home channels: the channel watched last');
 
   // why a stream does not play
   const big = Buffer.alloc(9000, 1);

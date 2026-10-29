@@ -641,7 +641,8 @@ async function handle(req, res, u, body) {
     }
     return json(out);
   }
-  // the channels Home shows: favourites, then the recent ones, that the playlist still has; no stream addresses
+  // the channels Home shows: favourites, then the recent ones, that the playlist still has, and the one watched last; no stream
+  // addresses
   if (u === '/api/live/home') {
     pruneState();
     const byKey = {},
@@ -657,7 +658,8 @@ async function handle(req, res, u, body) {
         g = nowNext(id, now) || { now: null, next: null };
       out.push({ key: k, num: c.num, name: c.name, logo: c.logo || '', id, fav: state.fav.indexOf(k) >= 0, now: g.now, next: g.next });
     }
-    return json({ channels: out });
+    const last = state.recent.filter(k => byKey[k])[0] || '';
+    return json({ channels: out, last });
   }
   if (u === '/api/live/state' && req.method === 'GET') {
     pruneState();

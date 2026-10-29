@@ -1,4 +1,9 @@
-/* first paint straight from the last known layout, then refresh from the helper */
+/* first paint straight from the last known layout and Home's last data, then refresh from the helper */
+homeRestore();
+LIVE.onExit = VOD.onExit = function () {
+  homeData();
+  slideLater();
+};
 try {
   var cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
   if (cached && cached.apps && cached.apps.length) {
@@ -6,8 +11,8 @@ try {
     cfg = cached.cfg || {};
     applyTheme(cfg.theme);
     usage = cached.usage || {};
-    colors = cached.colors || {};
     rebuild();
+    drawHome();
     perfMark('launcher cached ' + Math.round(performance.now()));
   }
 } catch (e) {}

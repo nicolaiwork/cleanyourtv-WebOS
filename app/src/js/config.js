@@ -9,6 +9,8 @@ function saveCfg() {
 function isHidden(id) {
   return (cfg.hidden || []).indexOf(id) >= 0;
 }
+/* the apps and inputs on Home's strip after Live TV and Films & Series, which are always there (fork) */
+var HOME_DOCK = 6;
 function dockIds() {
   var by = {};
   apps.forEach(function (a) {
@@ -17,12 +19,12 @@ function dockIds() {
   var ids = cfg.dock && cfg.dock.length ? cfg.dock : DEFAULTS.dock;
   return ids
     .filter(function (i) {
-      return by[i] && !isHidden(i);
+      return by[i] && !isHidden(i) && i !== '__live' && i !== '__vod';
     })
-    .slice(0, TH.dockN);
+    .slice(0, HOME_DOCK);
 }
 function setDock(ids) {
-  cfg.dock = ids.slice(0, TH.dockN);
+  cfg.dock = ids.slice(0, HOME_DOCK);
   saveCfg();
 }
 function hideApp(id) {
@@ -66,6 +68,7 @@ function title(id) {
 
 /* ---------- actions ---------- */
 function act(e) {
+  if (e._run) return e._run(); /* Home's buttons and cards */
   var a = e._a;
   if (a) {
     if (!a.sys) {

@@ -66,6 +66,15 @@ run(async () => {
   );
   ok(cards[1].sub === '1 h 46 min left' && cards[1].prog > 0.02 && cards[1].prog < 0.03, 'continue: a film card shows the time left');
   ok(HL.continueCards({ items: {}, hidden: {}, list: {} }, now).length === 0, 'continue: none without state');
+  const st4 = {
+    items: Object.assign({ 'film:5': { kind: 'film', id: 5, name: 'Five', pos: 50, dur: 6000, watched: false, at: 50 } }, st.items),
+    hidden: st.hidden,
+    list: {},
+  };
+  ok(
+    HL.continueCards(st4, now).length === 3 && HL.continueCards(st4, now, 8).length === 4,
+    'continue: three, or more when the band has room (no channels)'
+  );
 
   // Play or Resume
   const r = HL.heroPlay({ id: 1 }, st.items);

@@ -12,8 +12,8 @@ var HL = (function () {
       })
       .slice(0, max);
   }
-  /* Films & Series' own Continue watching lists (a card per series, removed titles left out), newest first, the first three */
-  function continueCards(st, now) {
+  /* Films & Series' own Continue watching lists (a card per series, removed titles left out), newest first, the first three (or max) */
+  function continueCards(st, now, max) {
     var films = VL.continueFilms(st.items || {}, st.hidden).map(function (x) {
         return { kind: 'films', x: x };
       }),
@@ -25,7 +25,7 @@ var HL = (function () {
       .sort(function (a, b) {
         return b.x.at - a.x.at;
       })
-      .slice(0, 3)
+      .slice(0, max || 3)
       .map(function (c) {
         return {
           kind: c.kind,
