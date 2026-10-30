@@ -57,6 +57,7 @@ load('live', () => require('./live').create(ctx));
 load('vod', () => require('./vod').create(ctx)); // fork: Films & Series (docs/vod.md)
 load('theme', () => require('./theme').create(ctx));
 const inputkey = load('inputkey', () => require('./inputkey').create(ctx));
+load('pointer', () => require('./pointer').create(ctx));
 if (notify) load('notifyapi', () => require('./notifyapi').create(ctx));
 const manager = load('manager', () => require('./manager').create(ctx));
 load('apps', () => require('./apps').create(ctx));

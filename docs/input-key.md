@@ -65,3 +65,18 @@ The Guide button can be bound the same way; that is part of [Live TV](live-tv.md
 
 !!! note "When the hook is not attached"
     On some firmware the hook cannot attach. The manager then shows the Input key as not available and LG's picker is used.
+
+## The pointer
+
+LG shows the Magic Remote pointer whenever the remote moves, and on every press of the Home button. To use the remote with
+the buttons only, switch on manager app > **Hide the Magic Remote pointer** (off by default). The pointer then never appears;
+the buttons, the Input key and a learned Home key work as before. Apps that can only be used with the pointer, such as the web
+browser, cannot be used while it is on.
+
+LG's input service (`lginput2`) shows the pointer by sending the screen its own "cursor on" key, taken from a small table in
+the program. With the option on, the service writes the "cursor off" key over that one entry in the running process, through
+`/proc/<pid>/mem`. Nothing on disk changes. LG restarts its input service now and then, and a restart undoes the change, so
+the service checks every 10 seconds and writes it again. Switching the option off puts the entry back at once.
+
+On firmware where the table is not found, or holds something else, nothing is written and the row says
+**not possible on this TV**. Tested on webOS 26 (an LG C5).

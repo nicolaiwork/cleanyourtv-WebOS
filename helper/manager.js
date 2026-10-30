@@ -65,6 +65,7 @@ function create(ctx) {
       notifyApi: napi ? { enabled: napi.info().enabled, port: napi.info().port } : { enabled: false },
       home: { enabled: !fs.existsSync(P.DISABLE), fullhome: fs.existsSync(P.FULLHOME_APP), ours },
       inputhook: inputhook.status(keys().input),
+      pointer: (p => (p ? p.status() : null))(ctx.feature('pointer')),
       keys: keys(),
       job: updates.job(),
       repo: updates.repo(),
@@ -75,7 +76,7 @@ function create(ctx) {
   async function setOptions(o) {
     const cur = config.options();
     const next = Object.assign({}, cur);
-    for (const k of ['debloat', 'inputKey', 'liveTv']) if (typeof o[k] === 'boolean') next[k] = o[k];
+    for (const k of ['debloat', 'inputKey', 'liveTv', 'hidePointer']) if (typeof o[k] === 'boolean') next[k] = o[k];
     config.update('manager', c => {
       if (typeof o.pickerPrewarm === 'boolean')
         c.picker = Object.assign(
@@ -94,6 +95,8 @@ function create(ctx) {
     });
     inputkey().syncMode();
     if (next.debloat !== cur.debloat) await debloat.apply(next.debloat);
+    const pointer = ctx.feature('pointer');
+    if (pointer && next.hidePointer !== cur.hidePointer) pointer.sync();
     ensureHook();
     return next;
   }

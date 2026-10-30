@@ -411,12 +411,17 @@
    },
    "options": {
     "debloat": false,
+    "hidePointer": false,
     "inputKey": false,
     "liveTv": true
    },
    "picker": {
     "mode": "overlay",
     "released": false
+   },
+   "pointer": {
+    "enabled": false,
+    "state": "off"
    },
    "release": {
     "build": "",
@@ -487,12 +492,17 @@
    },
    "options": {
     "debloat": false,
+    "hidePointer": false,
     "inputKey": false,
     "liveTv": true
    },
    "picker": {
     "mode": "overlay",
     "released": false
+   },
+   "pointer": {
+    "enabled": false,
+    "state": "off"
    },
    "release": {
     "build": "",
@@ -581,12 +591,17 @@
    },
    "options": {
     "debloat": false,
+    "hidePointer": false,
     "inputKey": false,
     "liveTv": false
    },
    "picker": {
     "mode": "overlay",
     "released": false
+   },
+   "pointer": {
+    "enabled": false,
+    "state": "off"
    },
    "release": {
     "build": "",
@@ -823,6 +838,7 @@
   },
   "options": {
    "debloat": false,
+   "hidePointer": false,
    "inputKey": false,
    "liveTv": false
   },

@@ -802,6 +802,16 @@ function build() {
       opt({ debloat: !st.options.debloat });
     },
   });
+  var ptr = st.pointer || {};
+  rows.push({
+    label: t('Hide the Magic Remote pointer'),
+    sub:
+      onoff(st.options.hidePointer) +
+      (st.options.hidePointer && (ptr.state === 'unsupported' || ptr.state === 'error') ? ' · ' + t('not possible on this TV') : ''),
+    fn: function () {
+      opt({ hidePointer: !st.options.hidePointer });
+    },
+  });
   rows.push({ sep: true });
   rows.push({ label: t('Share log'), sub: t('QR code for your phone'), fn: openShare });
   rows.push({
