@@ -4,3 +4,4 @@ site/
 .venv/
 node_modules/
 .lint-pages/
+.superpowers/
