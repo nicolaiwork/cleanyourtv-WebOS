@@ -1,11 +1,11 @@
 /* ---------- Films & Series (fork): the library of an iptv-curator server, Plex-style: rows of posters, details, search, a player ---------- */
 /* The page talks only to the service (helper/vod.js), which passes the curator's JSON through. Details are asked for only when a title is
    opened, never for a whole row; posters come from the curator's own image cache. docs/vod.md */
-/* a clapperboard: films and series */
+/* a clapperboard: films and series (a solid mark on a dark tile, like the apps' own icons) */
 var VOD_ICON =
   'data:image/svg+xml;utf8,' +
   encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 130"><rect width="130" height="130" fill="#3d6df2"/><rect x="26" y="58" width="78" height="46" rx="7" fill="none" stroke="#fff" stroke-width="8"/><g transform="rotate(-13 26 52)"><rect x="26" y="36" width="78" height="17" rx="4" fill="#fff"/><path d="M42 36 L50 53 M60 36 L68 53 M78 36 L86 53 M96 36 L102 48" stroke="#3d6df2" stroke-width="6"/></g><path d="M57 70 V92 L76 81 Z" fill="#fff"/></svg>'
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 130"><rect width="130" height="130" fill="#212326"/><g transform="translate(65 68) scale(1.22) translate(-65 -64)"><rect x="30" y="59" width="70" height="42" rx="6" fill="#4d8dff"/><g transform="rotate(-14 30 54)"><rect x="30" y="38" width="70" height="15" rx="3" fill="#4d8dff"/><path d="M47 38 L40 53 M63 38 L56 53 M79 38 L72 53 M95 38 L88 53" stroke="#212326" stroke-width="6.5"/></g><path d="M58 70 V90 L76 80 Z" fill="#212326"/></g></svg>'
   );
 var VOD = (function () {
   var o = { on: false, ready: false };
@@ -2063,6 +2063,35 @@ var VOD = (function () {
   o.img = function (p) {
     return img(p);
   };
+  /* the curator's cards of the titles in Home's Continue watching (their poster and title now, as the personal rows get them):
+     only the ones not known yet, so a Home shown again asks nothing; never rejects */
+  function homeCards() {
+    return Promise.all(
+      ['films', 'series'].map(function (kind) {
+        var list = kind === 'films' ? VL.continueFilms(ST.items, ST.hidden) : VL.continueShows(ST.items, Date.now(), ST.hidden),
+          want = list
+            .slice(0, 9)
+            .map(function (x) {
+              return x.id;
+            })
+            .filter(function (id) {
+              return !CARDS[kind][id];
+            });
+        if (!want.length) return null;
+        return vget('/vod/cards/' + kind + '.json', { ids: want.join(',') }).then(
+          function (list) {
+            (list || []).forEach(function (c) {
+              CARDS[kind][c.id] = c;
+            });
+            want.forEach(function (id) {
+              CARDS[kind][id] = CARDS[kind][id] || { none: true };
+            });
+          },
+          function () {}
+        );
+      })
+    );
+  }
   /* the address, the viewer's state and the films rows (kept 30 minutes); never rejects: what is missing is empty */
   o.home = function () {
     return api('/api/vod/status')
@@ -2082,8 +2111,8 @@ var VOD = (function () {
                   return null;
                 }
               );
-        return Promise.all([rowsP, loadState()]).then(function (r) {
-          return { base: base, st: ST, rows: r[0] };
+        return Promise.all([rowsP, loadState().then(homeCards)]).then(function (r) {
+          return { base: base, st: ST, rows: r[0], cards: CARDS };
         });
       })
       .catch(function () {

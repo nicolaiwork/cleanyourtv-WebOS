@@ -1,13 +1,18 @@
-/* ---------- Home (fork): the top bar, a Trending title over its backdrop with Play, Continue watching and the channels on now, and a
+/* ---------- Home (fork): the clock, a Trending title over its backdrop with Play, Continue watching and the channels on now, and a
    strip with Live TV, Films & Series, the apps and inputs on Home and All apps. docs/launcher.md ---------- */
-/* Focus: rows of focusable elements (rows[r][c]): the top bar, the hero's buttons, the band of cards, the strip; a row with nothing
+/* Focus: rows of focusable elements (rows[r][c]): the hero's buttons, the band of cards, the strip; a row with nothing
    in it is left out. Each element has a key (_k) so the focus stays on the same thing when the rows are made again, and one of _a (an
-   app), _o (a top button) or _run (what OK does). */
+   app) or _run (what OK does). */
+/* an HDMI input in the strip: a solid connector on a dark tile, like the apps' own icons */
+var INPUT_ICON =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 130"><rect width="130" height="130" fill="#212326"/><path d="M20 45 Q20 39 26 39 H104 Q110 39 110 45 V73 L95 91 H35 L20 73 Z" fill="#e8eaed"/><path d="M38 56 H92" stroke="#212326" stroke-width="8" stroke-linecap="round" stroke-dasharray="0 13.5"/></svg>'
+  );
 var HOME_CACHE = 'cytv.home.v1',
   SLIDE_MS = 15000,
   HERO_N = 10;
 var H = { picks: [], hi: 0, cont: [], chans: [], last: '', items: {} },
-  barEls = [],
   heroEls = [],
   bandEls = [],
   stripEls = [],
@@ -52,7 +57,7 @@ function homeData() {
       lv = r[1],
       cur = H.picks[H.hi];
     H.items = v ? v.st.items : {};
-    H.cont = v ? HL.continueCards(v.st, Date.now(), lv && lv.channels && lv.channels.length ? 3 : 9) : [];
+    H.cont = v ? HL.continueCards(v.st, Date.now(), lv && lv.channels && lv.channels.length ? 3 : 9, v.cards) : [];
     H.picks = v
       ? HL.heroPicks(
           v.rows,
@@ -341,29 +346,11 @@ function homeTick() {
 }
 setInterval(homeTick, 15000);
 
-/* ---------- the top bar and the strip, from the apps and settings ---------- */
+/* ---------- the strip, from the apps and settings ---------- */
 function rebuild() {
   var by = {};
   apps.forEach(function (a) {
     by[a.id] = a;
-  });
-  var bar = $('bar');
-  bar.textContent = '';
-  barEls = [];
-  var btns = (VOD.ready ? [{ label: 'Search', icon: 'search', search: true, fixed: true }] : [])
-    .concat(shownBar())
-    .concat([{ label: 'Customise', icon: 'edit', action: 'customize', fixed: true }]);
-  btns.forEach(function (o, i) {
-    var p = document.createElement('div');
-    p.className = 'pill fo';
-    p._o = o;
-    p._k = 'bar:' + (o.search ? 'search' : o.action || o.app || i);
-    p.innerHTML = svg(o.icon) + '<span></span>';
-    p.lastChild.textContent = o.search ? t('Search') : barLabel(o);
-    if (o.search) p._run = VOD.search;
-    hit(p);
-    bar.appendChild(p);
-    barEls.push(p);
   });
   var ids = HL.stripIds({
     dock: dockIds(),
@@ -404,7 +391,7 @@ function stripItem(a) {
   d.className = 'si fo' + (a.input && a.off ? ' off' : '');
   d._a = a;
   d._k = 'app:' + a.id;
-  if (a.input) d.innerHTML = '<span class="ic">' + svg('hdmi') + '</span><span></span><span class="dot"></span>';
+  if (a.input) d.innerHTML = '<img class="ic" alt="" src="' + INPUT_ICON + '"><span></span><span class="dot"></span>';
   else {
     d.innerHTML = '<img class="ic" alt=""><span></span>';
     var i = d.firstChild;
@@ -428,7 +415,7 @@ function buildRows() {
   heroRow = heroEls.length ? heroEls : null;
   stripRow = stripEls;
   var keepR = r;
-  rows = [barEls, heroEls, bandEls, stripEls].filter(function (x) {
+  rows = [heroEls, bandEls, stripEls].filter(function (x) {
     return x.length;
   });
   if (!userMoved) return setFocus(rows.indexOf(heroRow || stripRow), 0, true);

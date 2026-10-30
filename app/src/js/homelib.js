@@ -12,8 +12,10 @@ var HL = (function () {
       })
       .slice(0, max);
   }
-  /* Films & Series' own Continue watching lists (a card per series, removed titles left out), newest first, the first three (or max) */
-  function continueCards(st, now, max) {
+  /* Films & Series' own Continue watching lists (a card per series, removed titles left out), newest first, the first three (or max).
+     cards: the curator's cards by kind and id (/vod/cards), when known: their poster and title win over the ones saved when the title
+     was played, which the curator's image cache may no longer have */
+  function continueCards(st, now, max, cards) {
     var films = VL.continueFilms(st.items || {}, st.hidden).map(function (x) {
         return { kind: 'films', x: x };
       }),
@@ -27,11 +29,12 @@ var HL = (function () {
       })
       .slice(0, max || 3)
       .map(function (c) {
+        var k = (cards && cards[c.kind] && cards[c.kind][c.x.id]) || {};
         return {
           kind: c.kind,
           id: c.x.id,
-          label: c.x.name,
-          poster: c.x.poster || '',
+          label: k.label || c.x.name,
+          poster: k.poster || c.x.poster || '',
           sub: VL.continueSub(c.x),
           prog: VL.continueProgress(c.x),
           at: c.x.at,

@@ -34,7 +34,6 @@ function hit(e) {
 function options(e) {
   if (e._run) return;
   if (e._a && e._a.id !== '__live' && e._a.id !== '__vod') appMenu(e._a);
-  else if (e._o && !e._o.fixed) barMenu(e._o);
 }
 
 /* Pointer focus follows real pointer movement only: a tile sliding under a still cursor, a cursor jitter when

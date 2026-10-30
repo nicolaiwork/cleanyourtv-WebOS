@@ -40,19 +40,9 @@ function unhideApp(id) {
   });
   saveCfg();
 }
-function topbar() {
-  return cfg.topbar ? cfg.topbar : DEFAULTS.topbar;
-}
 /* Live TV is optional (manager > Live TV): off hides every entry, the saved layout is kept for when it is switched on again */
 function liveOn() {
   return !(cfg.options && cfg.options.liveTv === false);
-}
-function shownBar() {
-  return liveOn()
-    ? topbar()
-    : topbar().filter(function (o) {
-        return o.action !== 'live';
-      });
 }
 function byOrder(a, b) {
   if (cfg.sort !== 'alpha') {
@@ -79,9 +69,4 @@ function act(e) {
     }
     return launch(a.id);
   }
-  var o = e._o || {};
-  if (o.action === 'customize') return customizeMenu();
-  if (o.action === 'live') return LIVE.enter();
-  if (o.action === 'inputs') return inputsMenu();
-  if (o.app) launch(o.app, o.params);
 }

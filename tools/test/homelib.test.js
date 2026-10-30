@@ -75,6 +75,23 @@ run(async () => {
     HL.continueCards(st4, now).length === 3 && HL.continueCards(st4, now, 8).length === 4,
     'continue: three, or more when the band has room (no channels)'
   );
+  // the poster saved when a title was played can be gone from the curator's image cache (404): the curator's card for the title, as
+  // Films & Series uses, wins, and its (Danish) title with it; a title the curator does not know keeps what was saved
+  const fresh = HL.continueCards(st, now, 3, {
+    films: { 1: { id: 1, label: 'Zootropolis', poster: '/new1' }, 3: { id: 3, none: true } },
+    series: { 601: { id: 601, poster: '/s601new' } },
+  });
+  ok(
+    fresh[1].poster === '/new1' &&
+      fresh[1].label === 'Zootropolis' &&
+      fresh[0].poster === '/s601new' &&
+      fresh[0].label === 'Fars lille pige',
+    "continue: the curator's card gives the poster and title"
+  );
+  ok(
+    fresh[2].poster === (st.items['film:3'].poster || '') && fresh[2].label === st.items['film:3'].name,
+    'continue: without a card, what was saved'
+  );
 
   // Play or Resume
   const r = HL.heroPlay({ id: 1 }, st.items);

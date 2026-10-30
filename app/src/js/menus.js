@@ -338,7 +338,7 @@ function appMenu(a) {
     });
   openMenu(a.title, items);
 }
-/* every app that is not hidden, in the chosen order; hold OK on one for its options */
+/* every app that is not hidden, in the chosen order (hold OK on one for its options), then Customise */
 function allAppsMenu() {
   var di = dockIds();
   openMenu(
@@ -360,24 +360,8 @@ function allAppsMenu() {
           },
         };
       })
+      .concat([{ icon: 'edit', label: t('Customise'), stay: true, fn: customizeMenu }])
   );
-}
-
-function removeButton(o) {
-  cfg.topbar = topbar().filter(function (b) {
-    return b !== o;
-  });
-  saveCfg();
-}
-function barMenu(o) {
-  openMenu(barLabel(o), [
-    {
-      label: t('Remove this button'),
-      fn: function () {
-        removeButton(o);
-      },
-    },
-  ]);
 }
 
 function customizeMenu() {
@@ -390,7 +374,7 @@ function customizeMenu() {
         toast(t('Hold OK on an app in the strip or in All apps to change Home'));
       },
     },
-    { label: t('Top buttons'), stay: true, fn: topButtonsMenu },
+    { label: t('Inputs on Home'), stay: true, fn: inputsHomeMenu },
     { label: t('Hidden apps'), stay: true, fn: hiddenMenu },
     {
       label: t('App order'),
@@ -418,56 +402,40 @@ function customizeMenu() {
     },
   ]);
 }
-function topButtonsMenu() {
-  var items = shownBar().map(function (o) {
-    return {
-      label: barLabel(o),
-      sub: t('OK to remove'),
-      fn: function () {
-        removeButton(o);
-      },
-    };
-  });
-  items.push({ label: t('Add a button...'), stay: true, fn: addButtonMenu });
-  openMenu(t('Top buttons'), items);
-}
-function addButtonMenu() {
-  var items = PRESETS.filter(function (p) {
-    return liveOn() || p.action !== 'live';
-  }).map(function (p) {
-    return {
-      icon: p.icon,
-      label: barLabel(p),
-      fn: function () {
-        cfg.topbar = topbar().concat([p]);
-        saveCfg();
-      },
-    };
-  });
-  items.push({
-    label: t('An app...'),
-    stay: true,
-    fn: function () {
+/* the HDMI inputs, each on Home (in the strip, after the apps) or not: OK switches it */
+function inputsHomeMenu() {
+  api('/api/inputs').then(
+    function (x) {
+      var list = (x.devices || []).filter(function (d) {
+        return d.appId;
+      });
+      if (!list.length) return toast(t('No inputs'));
       openMenu(
-        t('Pick an app'),
-        apps
-          .slice()
-          .sort(function (a, b) {
-            return a.title.localeCompare(b.title);
-          })
-          .map(function (a) {
-            return {
-              label: a.title,
+        t('Inputs on Home'),
+        list.map(function (d) {
+          /* the row keeps its own state: the app list is read again only after the service answers */
+          var name = d.label || 'HDMI ' + d.port,
+            on = isPinned(d.appId),
+            it = {
+              icon: 'hdmi',
+              label: name,
+              sub: on ? t('On Home') : '',
+              stay: true,
               fn: function () {
-                cfg.topbar = topbar().concat([{ label: a.title, icon: 'grid', app: a.id }]);
-                saveCfg();
+                on = !on;
+                pinInput(d.appId, name, on);
+                it.sub = on ? t('On Home') : '';
+                drawMenu();
               },
             };
-          })
+          return it;
+        })
       );
     },
-  });
-  openMenu(t('Add a button'), items);
+    function () {
+      toast(t('Could not read the inputs'));
+    }
+  );
 }
 function hiddenMenu() {
   var h = (cfg.hidden || []).filter(function (id) {

@@ -9,8 +9,8 @@ same on every supported webOS version.
 
 In this fork Home opens on something to watch (it replaced the dock and app grid):
 
-- **Top bar.** The clock and date, then **Search** (Films & Series' search), your top buttons (Inputs, Live TV, Settings or
-  any app) and **Customise**.
+- **The clock** and date, top left. There are no buttons at the top: Search is in Films & Series, the Inputs list is on the
+  remote's Input key (the [Inputs picker](input-key.md)), and Customise is at the bottom of **All apps**.
 - **A Trending title.** One film from [Films & Series](vod.md)' Trending row over its backdrop, with its year, length,
   genres, rating and description, and three buttons: **Play** (or **Resume** with the time left, when you started it),
   **More info** (its page in Films & Series) and **+** (My list). Every 15 seconds it slides to the next of the first ten
@@ -23,7 +23,7 @@ In this fork Home opens on something to watch (it replaced the dock and app grid
   last, each with the programme on now, its times, how far it is and what follows (between two programmes: the next one and when
   it starts). OK tunes the channel.
 - **The strip.** Live TV and Films & Series, then up to six apps or inputs you put on Home, the other inputs on Home, and
-  **All apps** (every app that is not hidden, in the order chosen in Customise).
+  **All apps** (every app that is not hidden, in the order chosen in Customise, then **Customise**).
 
 When Films & Series is not set up or its server cannot be reached, the top shows the channel you watched last with a
 **Watch** button instead, and Continue watching is left out. With Live TV switched off there are no channel cards and
@@ -36,10 +36,9 @@ Continue watching uses the whole width. Home appears at once from what it showed
 | Play the Trending title, continue a title, tune a channel, open an app | OK |
 | Back from a title opened on Home | Back (from the player to the title's page, then Home) |
 | App options (move, remove from Home, hide) | Hold OK on an app in the strip or in All apps |
-| Remove a top button | Hold OK on it |
-| Customise | The **Customise** button |
-| Switch input | The **Inputs** button |
-| Put an input on Home | Hold OK on it in the Inputs list |
+| Customise | **All apps**, then **Customise** at the bottom |
+| Switch input | The remote's Input key |
+| Put an input on Home | Customise > **Inputs on Home**, or hold OK on it in the Inputs picker |
 | Close running apps | Back on the home screen |
 
 Up or Down into the Trending title always lands on Play. The Home key brings the focus back to Play. The Magic Remote pointer
@@ -62,9 +61,9 @@ system apps are never in it. The list is read when it opens and closes when you 
 
 ![Customise menu](screenshots/customise.jpg)
 
-**Customise** holds:
+**Customise** (at the bottom of **All apps**) holds:
 
-- the **top buttons** (add Inputs, Settings, Live TV or any app, or remove one),
+- **Inputs on Home**: every HDMI input, with **On Home** next to the ones in the strip; OK puts an input on Home or takes it off,
 - **hidden apps** (show them again),
 - the **app order** (most used first, or A to Z),
 - the **clock** format (automatic, 12 or 24 hour),
@@ -75,15 +74,15 @@ choose **Add to Home**, **Move left**, **Move right**, **Remove from Home** or *
 
 ## Inputs
 
-The **Inputs** button lists HDMI inputs by the names LG shows, with what is connected and a marker on the active one. OK
-switches to the input.
+The remote's Input key opens the [Inputs picker](input-key.md); when the picker cannot start, it opens Home's own Inputs list,
+which shows HDMI inputs by the names LG shows, with what is connected and a marker on the active one. OK switches to the input.
 
 ### An input on Home
 
-Hold OK on an input in the Inputs list and choose **Add to Home**. The input then shows in the strip with the HDMI symbol, the
-name the TV gives it (for example the name of the connected console) and a dot when something is connected; with nothing
-connected it is dimmed and still switches to it. OK switches to the input; holding OK on it offers **Remove from Home**, which is
-also in the Inputs list.
+In Customise, **Inputs on Home** lists every HDMI input; OK puts one on Home or takes it off again, and the menu stays open so
+you can choose several. The input then shows in the strip after the apps, with the HDMI symbol, the name the TV gives it (for
+example the name of the connected console) and a dot when something is connected; with nothing connected it is dimmed and still
+switches to it. OK switches to the input; holding OK on it offers **Remove from Home**, which is also in the Inputs list.
 
 In the [Inputs picker](input-key.md) of the Input key, holding OK on an HDMI input does the same: it is added to Home, or taken off
 when it already is. An input in the dock also shows in the picker's row of dock apps.
@@ -94,7 +93,8 @@ Suggested and first built by [ibexes](https://github.com/lasharor/cleanyourtv-We
 
 ## Icons
 
-The strip uses each app's own icon; Live TV and Films & Series have their own.
+The strip uses each app's own icon. Live TV (a broadcast mark), Films & Series (a clapperboard) and the inputs on Home (an HDMI
+connector) have their own, drawn like the apps' icons: one solid mark on a dark tile.
 
 ## Language
 
@@ -113,7 +113,7 @@ Settings are stored on the TV in `/media/developer/cleanyourtv/config.json`:
 | Key | Meaning |
 |---|---|
 | `dock` | App and input ids in Home's strip after Live TV and Films & Series (up to six). |
-| `topbar` | The buttons at the top. |
+| `topbar` | The buttons at the top of upstream's Home. This fork's Home has none; the key is kept so a setup from upstream loads. |
 | `hidden` | App ids you hid. |
 | `pinnedInputs` | The inputs on Home: `{id, label, port}`, `id` being the input's app (for example `com.webos.app.hdmi2`). |
 | `sort` | `usage` or `alpha`. |

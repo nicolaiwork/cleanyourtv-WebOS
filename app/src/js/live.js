@@ -1,8 +1,9 @@
 /* ---------- Live TV (plays the user's M3U playlist in the TV's own video player) ---------- */
+/* a broadcast mark: live TV (a solid mark on a dark tile, like the apps' own icons) */
 var LIVE_ICON =
   'data:image/svg+xml;utf8,' +
   encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 130"><rect width="130" height="130" fill="#ef4f5f"/><rect x="25" y="36" width="80" height="54" rx="13" fill="none" stroke="#fff" stroke-width="8"/><path d="M58 52 L58 74 L77 63 Z" fill="#fff"/><path d="M48 104 H82" stroke="#fff" stroke-width="8" stroke-linecap="round"/></svg>'
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 130"><rect width="130" height="130" fill="#212326"/><g transform="translate(65 65) scale(1.22) translate(-65 -65)"><circle cx="65" cy="65" r="9" fill="#ff4757"/><g fill="none" stroke="#ff4757" stroke-width="8.5" stroke-linecap="round"><path d="M78.4 51.6 A19 19 0 0 1 78.4 78.4 M51.6 51.6 A19 19 0 0 0 51.6 78.4"/><path d="M89 41 A34 34 0 0 1 89 89 M41 41 A34 34 0 0 0 41 89"/></g></g></svg>'
   );
 var LIVE = (function () {
   var chans = [],

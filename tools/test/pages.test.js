@@ -93,4 +93,25 @@ run(async () => {
     !/(^|\n)\s*\.st\s*\{/.test(launcher) && /svg\.st\s*\{\s*width:\s*26px/.test(launcher),
     "the favourite star is styled as svg.st, so the menu's .st text keeps its natural width"
   );
+  // Home has no buttons at the top (fork): Customise is the last row of All apps, and Customise puts HDMI inputs on Home
+  const src = n => fs.readFileSync(path.join(root, 'app', 'src', n), 'utf8'),
+    menus = src('js/menus.js'),
+    fnBody = n => (menus.match(new RegExp('\\nfunction ' + n + '\\(\\) \\{\\n([\\s\\S]*?)\\n\\}\\n')) || [])[1] || '';
+  ok(
+    !/id="bar"/.test(src('index.html')) && !/\btopbar\b|\bbarEls\b/.test(src('js/home.js') + src('js/config.js') + menus),
+    'Home has no top buttons'
+  );
+  ok(/\.concat\(\[\{[^}]*fn: customizeMenu \}\]\)\s*\);\s*$/.test(fnBody('allAppsMenu')), 'Customise is the last row of All apps');
+  ok(/t\('Inputs on Home'\)[^\n]*fn: inputsHomeMenu/.test(fnBody('customizeMenu')), 'Customise has Inputs on Home');
+  const vm = require('vm'),
+    sb = { window: {}, navigator: { language: 'en-GB' } };
+  vm.runInNewContext(src('js/clock.js') + '\nthis.TX = TX;', sb);
+  const words = ['Customise', 'Apps on Home', 'Inputs on Home', 'On Home', 'No inputs', 'Could not read the inputs'],
+    missing = [];
+  ['nl', 'de', 'fr', 'es'].forEach(l =>
+    words.forEach(w => {
+      if (!sb.TX[l][w]) missing.push(l + ': ' + w);
+    })
+  );
+  ok(!missing.length, 'the Customise and Inputs on Home texts are translated' + (missing.length ? ': ' + missing.join(', ') : ''));
 });
