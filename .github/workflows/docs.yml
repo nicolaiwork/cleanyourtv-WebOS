@@ -1,5 +1,5 @@
-# Builds the documentation (https://zensical.org) on every change to it, and publishes it to GitHub Pages from main.
-# GitHub Pages must be set to "GitHub Actions" as its source (repository Settings > Pages).
+# Builds the documentation (https://zensical.org) on every change to it, and publishes it to GitHub Pages from main of the
+# project's own repository (a fork only builds it). GitHub Pages must be set to "GitHub Actions" as its source (Settings > Pages).
 name: Documentation
 on:
   push:
@@ -27,7 +27,7 @@ jobs:
         with:
           path: site
   deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.repository == 'lasharor/cleanyourtv-WebOS' && github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: build
     runs-on: ubuntu-latest
     permissions:
