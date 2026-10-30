@@ -132,6 +132,19 @@ function draw() {
     $('sub').textContent = t('Input key');
     return;
   }
+  if (view === 'buttons') {
+    $('sub').textContent = t('The remote\u2019s other buttons: learn one, then choose what it does');
+    return;
+  }
+  if (view === 'button') {
+    var cb = btnOf(btn);
+    $('sub').textContent = cb ? cb.name || t('Button %s').replace('%s', cb.code) : '';
+    return;
+  }
+  if (view === 'buttonapp') {
+    $('sub').textContent = t('Choose what it opens');
+    return;
+  }
   if (view === 'confirm-home' || view === 'confirm-uninstall') {
     $('sub').textContent = view === 'confirm-uninstall' ? t('Remove CleanYourTV?') : t('Switch Home?');
     return;

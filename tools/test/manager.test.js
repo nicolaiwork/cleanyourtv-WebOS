@@ -102,6 +102,84 @@ run(async () => {
   r = await ask('options', 'GET');
   ok(r.code === 405, 'a change needs POST');
 
+  // the remote's other buttons (buttons.js): learned with LG's name for them, then given an action; LG's own until then
+  const bconf = config.memory({}, l => lines.push(l));
+  let learned = { state: 'got', name: 'button', code: '1037', keyid: '75' },
+    bEnsured = 0;
+  const bCalls = [];
+  const bm = req('manager').create({
+    version: '1.6.0',
+    config: bconf,
+    luna: async (uri, p) => {
+      bCalls.push(uri.replace(/.*\//, '') + ' ' + JSON.stringify(p));
+      if (/getForegroundAppInfo/.test(uri)) return { appId: 'com.webos.app.discovery' }; // LG's store, opened by the Netflix press
+      return /getButtonHistory/.test(uri)
+        ? {
+            returnValue: true,
+            historyArray: ['[10/30(14:08:39)] (LGE MR25GA) KEY_NETFLIX Release', '[10/30(14:08:38)] (LGE MR25GA) KEY_NETFLIX Press'],
+          }
+        : {};
+    },
+    feature: n =>
+      n === 'inputkey'
+        ? Object.assign({}, inputkey, { buttonBinds: () => req('buttons').binds(bconf.buttons(), '/d', a => a !== 'live') })
+        : null,
+    inputhook: {
+      status: () => ({}),
+      ensure() {
+        bEnsured++;
+      },
+      learnState: () => learned,
+      markSaved() {
+        learned = Object.assign({}, learned, { saved: true });
+      },
+      startLearn() {},
+    },
+  });
+  const bask = (act, method, body) => call(bm, '/api/manager/' + act, method, body);
+  r = await bask('learn-state', 'GET');
+  ok(
+    r.j.label === 'Netflix' && JSON.stringify(bconf.buttons()) === JSON.stringify({ 1037: { name: 'Netflix', action: '', app: '' } }),
+    "a learned button is saved with LG's name for it and no action: " + JSON.stringify(bconf.get())
+  );
+  ok(bconf.keys().input === '' && bconf.keys().guide === '', 'learning a button leaves the learned keys alone');
+  r = await bask('learn-state', 'GET');
+  ok(r.j.label === 'Netflix' && r.j.code === '1037', 'asked again, the same answer');
+  await new Promise(res => setTimeout(res, 800));
+  ok(
+    bCalls.indexOf('closeByAppId {"id":"com.webos.app.discovery"}') >= 0 &&
+      bCalls.indexOf('launch {"id":"com.cleanyourtv.manager","params":{"button":"1037"}}') >= 0,
+    "the app LG opened for the press is closed and the manager opens the button's screen: " + bCalls.join(' | ')
+  );
+  r = await bask('status', 'GET');
+  ok(
+    r.j.buttons.length === 1 && r.j.buttons[0].code === '1037' && r.j.buttons[0].bound === false,
+    "until an action is chosen it stays LG's"
+  );
+  r = await bask('button', 'POST', { code: '1037', action: 'app', app: 'youtube.leanback.v4' });
+  ok(
+    r.code === 200 &&
+      r.j.buttons[0].action === 'app' &&
+      r.j.buttons[0].app === 'youtube.leanback.v4' &&
+      r.j.buttons[0].bound &&
+      bEnsured > 0,
+    'choosing an app binds the button at once'
+  );
+  ok(
+    lines.some(l => /config: buttons\.1037 .*"action":"app".*\(manager\)/.test(l)),
+    'the change is logged with its source'
+  );
+  r = await bask('button', 'POST', { code: '1037', action: 'live' });
+  ok(r.j.buttons[0].action === 'live' && r.j.buttons[0].bound === false, "an action that cannot run now is kept, the button stays LG's");
+  r = await bask('button', 'POST', { code: '1037', action: 'app', app: 'x; reboot' });
+  ok(r.code === 400 && bconf.buttons()['1037'].action === 'live', 'an app id that is not one is refused');
+  r = await bask('button', 'POST', { code: '1037', action: 'format' });
+  ok(r.code === 400, 'an unknown action is refused');
+  r = await bask('button', 'POST', { code: '999', action: 'none' });
+  ok(r.code === 400 && !('999' in bconf.buttons()), 'only a learned button can be set');
+  r = await bask('button', 'POST', { code: '1037', forget: true });
+  ok(r.code === 200 && r.j.buttons.length === 0, 'a button can be forgotten');
+
   // the settings file: one read-modify-write at a time, written atomically, the launcher's part replaced without touching the rest
   const file = path.join(process.env.CYTV_DIR, 'config.json');
   const c = config.create(file, { log: () => {} });

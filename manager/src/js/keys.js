@@ -1,4 +1,5 @@
-/* the remote's Input and Home buttons differ between remotes and firmware: learn their codes from the hook, then test */
+/* the remote's Input and Home buttons differ between remotes and firmware: learn their codes from the hook, then test. Also the
+   remote's other buttons (Remote buttons: Netflix, Prime Video, ...), each set to an action of ours */
 function kShow(text, list) {
   kText = text;
   kRows = list;
@@ -9,7 +10,7 @@ function kShow(text, list) {
 function openKeys(flow) {
   kFlow = flow || 'input';
   if (view !== 'keys') push('keys');
-  kStep(kFlow === 'home' || kFlow === 'voice' || kFlow === 'guide' ? kFlow : 'input');
+  kStep(kFlow === 'home' || kFlow === 'voice' || kFlow === 'guide' || kFlow === 'button' ? kFlow : 'input');
 }
 function closeKeys() {
   clearTimeout(kTimer);
@@ -19,6 +20,7 @@ function closeKeys() {
 }
 /* whole sentences per key, so a translation does not have to fit a key name into one sentence */
 function kPress(n) {
+  if (n === 'button') return t('Press the button now\u2026');
   return n === 'input'
     ? t('Press the Input button now\u2026')
     : n === 'voice'
@@ -27,7 +29,8 @@ function kPress(n) {
         ? t('Press the Guide button now\u2026')
         : t('Press the Home button now\u2026');
 }
-function kGot(n, code) {
+function kGot(n, code, label) {
+  if (n === 'button') return (label ? t('Learned: %s.').replace('%s', label) + '\n' : '') + t('Code %s.').replace('%s', code);
   return (
     n === 'input'
       ? t('Input key learned: code %s.')
@@ -133,6 +136,21 @@ function kStep(n) {
         { label: t('Close'), fn: closeKeys },
       ]
     );
+  if (n === 'button')
+    return kShow(
+      t(
+        'A button on the remote.\nChoose Start, then press the button you want to use, such as Netflix or Prime Video. It keeps doing what LG made it do until you choose something else.'
+      ),
+      [
+        {
+          label: t('Start'),
+          fn: function () {
+            kLearn('button');
+          },
+        },
+        { label: t('Close'), fn: closeKeys },
+      ]
+    );
   if (n === 'test') return kTest();
   if (n === 'done')
     return api('/api/manager/keys-done', {})
@@ -193,6 +211,24 @@ function kLearn(name) {
         api('/api/manager/learn-state').then(
           function (l) {
             if (view !== 'keys') return;
+            if (l.state === 'got' && name === 'button') {
+              kShow(kGot(name, l.code, l.label), [
+                {
+                  label: t('Choose what it does'),
+                  fn: function () {
+                    api('/api/manager/status').then(function (s) {
+                      st = s;
+                      clearTimeout(kTimer);
+                      banner('');
+                      pop();
+                      btn = l.code;
+                      push('button');
+                    });
+                  },
+                },
+              ]);
+              return;
+            }
             if (l.state === 'got') {
               kShow(kGot(name, l.code), [
                 {
@@ -304,4 +340,145 @@ function kTest() {
       }, 700);
     })();
   });
+}
+
+/* ---------- Remote buttons: what each learned button does (helper/buttons.js, scripts/buttonkey.sh) ---------- */
+var BTN_ACTIONS = ['', 'none', 'live', 'guide', 'vod', 'inputs', 'voice', 'app'];
+function btnOf(code) {
+  var f = null;
+  (st.buttons || []).forEach(function (b) {
+    if (b.code === code) f = b;
+  });
+  return f;
+}
+function btnAction(a) {
+  return a === 'none'
+    ? t('Nothing')
+    : a === 'live'
+      ? t('Live TV')
+      : a === 'guide'
+        ? t('Live TV guide')
+        : a === 'vod'
+          ? t('Films & Series')
+          : a === 'inputs'
+            ? t('Inputs list')
+            : a === 'voice'
+              ? t('Voice')
+              : a === 'app'
+                ? t('An app or input\u2026')
+                : t('LG\u2019s own');
+}
+function btnHelp(a) {
+  return a === 'none'
+    ? t('The button does nothing; LG\u2019s app no longer opens.')
+    : a === 'live'
+      ? t('Opens Live TV. Only while Live TV is on and CleanYourTV is Home; otherwise the button does what LG made it do.')
+      : a === 'guide'
+        ? t(
+            'Opens the Live TV channel guide over whatever is running, as the Guide key does. Only while Live TV is on and CleanYourTV is Home.'
+          )
+        : a === 'vod'
+          ? t('Opens Films & Series. Only while CleanYourTV is Home.')
+          : a === 'inputs'
+            ? t('Shows the Inputs list, as the Input key does.')
+            : a === 'voice'
+              ? t('Starts listening, as the voice button does. Only while voice is installed and on.')
+              : a === 'app'
+                ? t('Opens an app or an input (HDMI) you choose.')
+                : t('The button does what LG made it do, such as opening its streaming app.');
+}
+function btnApp(id) {
+  var n = id;
+  (bapps || []).forEach(function (a) {
+    if (a.id === id) n = a.title;
+  });
+  return n;
+}
+function btnSub(b) {
+  if (!b.action) return t('LG\u2019s own');
+  var s = b.action === 'app' ? btnApp(b.app) : btnAction(b.action);
+  return b.bound ? s : s + ' \u00B7 ' + t('not now: LG\u2019s own');
+}
+/* the apps and the inputs a button can open: the inputs first, then the apps by name; never ours or Home */
+function loadBtnApps() {
+  return Promise.all([
+    api('/api/apps').catch(function () {
+      return {};
+    }),
+    api('/api/inputs').catch(function () {
+      return {};
+    }),
+  ]).then(function (r) {
+    var seen = {},
+      ins = [],
+      aps = [];
+    (r[1].devices || []).forEach(function (d) {
+      if (d.appId && !seen[d.appId]) {
+        seen[d.appId] = true;
+        ins.push({ id: d.appId, title: d.label || 'HDMI ' + d.port, input: true });
+      }
+    });
+    (r[0].apps || []).forEach(function (a) {
+      if (a.input || seen[a.id] || /^com\.cleanyourtv\./.test(a.id) || a.id === 'com.webos.app.home') return;
+      seen[a.id] = true;
+      aps.push({ id: a.id, title: a.title || a.id });
+    });
+    aps.sort(function (x, y) {
+      return x.title.toLowerCase() < y.title.toLowerCase() ? -1 : 1;
+    });
+    bapps = ins.concat(aps);
+    return bapps;
+  });
+}
+function openButtons() {
+  loadBtnApps().then(
+    function () {
+      push('buttons');
+    },
+    function () {
+      push('buttons');
+    }
+  );
+}
+/* straight to one button's screen, over Remote buttons (from the main list) */
+function openButton(code) {
+  api('/api/manager/status').then(
+    function (s) {
+      st = s;
+      banner('');
+      loadBtnApps().then(go, go);
+    },
+    function () {
+      load();
+    }
+  );
+  function go() {
+    build();
+    draw();
+    push('buttons');
+    btn = code;
+    if (btnOf(code)) push('button');
+  }
+}
+function openBtnApps() {
+  loadBtnApps().then(function () {
+    push('buttonapp');
+  });
+}
+/* body: {code, action, app} or {code, forget: true}; back: leave this button's screen */
+function setBtn(body, back) {
+  api('/api/manager/button', body).then(
+    function (s) {
+      if (s.error) return banner(t('The service did not answer'), 'err');
+      st = s;
+      if (back || view === 'buttonapp') pop();
+      else {
+        build();
+        draw();
+      }
+    },
+    function () {
+      banner(t('The service did not answer'), 'err');
+    }
+  );
 }

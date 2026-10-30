@@ -26,6 +26,8 @@ var napi = null,
   pending = null,
   pollT = 0,
   setup = { debloat: true, inputKey: true },
+  btn = '' /* the remote button being set (Remote buttons) */,
+  bapps = null /* what a button can open: [{id, title}] */,
   offline = false,
   busyMsg = '';
 function $(i) {

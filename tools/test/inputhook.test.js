@@ -53,4 +53,21 @@ run(async () => {
     !read()['773'] && !read()['1023'] && /guidekey\.sh$/.test(cmd('362')) && cmd('999') === 'echo other',
     'without a Home key (or with LG as Home) its bind goes; the Input key released; other binds are left alone'
   );
+
+  // the remote's other buttons (buttons.js): bound next to the keys, never over one of them or over a bind that is not ours
+  const bk = 'sh ' + process.env.CYTV_DIR + '/buttonkey.sh ';
+  let btn = { 1037: bk + 'live', 362: bk + 'vod', 999: bk + 'none' };
+  hook.setButtons(() => btn);
+  hook.ensure(false, '1023');
+  ok(
+    /buttonkey\.sh live$/.test(cmd('1037')) && /guidekey\.sh$/.test(cmd('362')) && cmd('999') === 'echo other',
+    'a button is bound; a learned key and a bind that is not ours win over it'
+  );
+  btn = { 1038: bk + 'app youtube.leanback.v4' };
+  guide = '';
+  hook.ensure(false, '1023');
+  ok(
+    !read()['1037'] && !read()['362'] && /app youtube\.leanback\.v4$/.test(cmd('1038')) && cmd('999') === 'echo other',
+    "a button set back to LG's own loses its bind, wherever it was; the new one is bound"
+  );
 });

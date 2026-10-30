@@ -63,6 +63,30 @@ to LG.
 
 The Guide button can be bound the same way; that is part of [Live TV](live-tv.md#the-guide-button) (manager app > **Live TV** > **Learn the Guide key**).
 
+## The remote's other buttons
+
+Many LG remotes have buttons for streaming services: Netflix, Prime Video, Disney+, Rakuten TV, LG Channels, Alexa and others,
+depending on the country. Manager app > **Remote buttons** > **Learn a button** records the code of the next button you press
+and names it after LG's name for it. That press still does what LG made it do; when it opens LG's app over the manager, the
+service closes that app and brings the manager back on the button's screen. A learned button keeps doing what LG made it do until
+you choose something else for it:
+
+| Choice | What the button does |
+|---|---|
+| LG's own | What LG made it do, such as opening its streaming app |
+| Nothing | Nothing; LG's app no longer opens |
+| Live TV | Opens Live TV (while Live TV is on and CleanYourTV is Home) |
+| Live TV guide | Opens the channel guide over whatever is running, as the [Guide button](live-tv.md#the-guide-button) does (same conditions) |
+| Films & Series | Opens [Films & Series](vod.md) (while CleanYourTV is Home) |
+| Inputs list | Shows the Inputs list, as the Input key does |
+| Voice | Starts listening, as the [voice button](voice.md) does (while voice is installed and on) |
+| An app or input | Opens the app or the HDMI input you choose |
+
+The hook binds the button to `buttonkey.sh` with the choice, so LG's own action does not happen. While a choice cannot run (Live
+TV off, LG's Home chosen, voice off), the button does what LG made it do, and the row says **not now: LG's own**. A learned key
+(Input, Home, Guide, voice) on the same button comes first. **Forget this button** removes it from the list and gives it back to
+LG. Tested on webOS 26 (an LG C5 with the MR25GA remote): all six of its streaming buttons reach the hook.
+
 !!! note "When the hook is not attached"
     On some firmware the hook cannot attach. The manager then shows the Input key as not available and LG's picker is used.
 
