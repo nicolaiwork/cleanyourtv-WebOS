@@ -24,6 +24,7 @@
 | `server.js`, `web.js` | The HTTP server with the origin rules, and small reply helpers. |
 | `apps.js`, `running.js` | The app list, icons, usage, launching and the launcher's own settings; the running apps to close (Back on Home). |
 | `inputkey.js`, `inputhook.js`, `picker.js` | The Input key: the hook in LG's input processes, the key binds, the Inputs picker. |
+| `buttons.js` | The remote's other buttons (Remote buttons): what config.json keeps, the `buttonkey.sh` command per button, LG's name for a button. |
 | `pointer.js` | Hides the Magic Remote pointer: writes "cursor off" over "cursor on" in the running `lginput2` ([The pointer](../input-key.md#the-pointer)). |
 | `manager.js`, `updates.js`, `debloat.js` | The manager's API, updates from GitHub releases with rollback, switching the debloat. |
 | `live.js`, `notify.js`, `notifyapi.js` | One feature each. |

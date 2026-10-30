@@ -631,6 +631,66 @@ function build() {
     rows.push({ label: t('No, keep it'), fn: pop });
     return;
   }
+  if (view === 'buttons') {
+    (st.buttons || []).forEach(function (b) {
+      rows.push({
+        label: b.name || t('Button %s').replace('%s', b.code),
+        sub: btnSub(b),
+        fn: function () {
+          btn = b.code;
+          push('button');
+        },
+      });
+    });
+    if ((st.buttons || []).length) rows.push({ sep: true });
+    rows.push({
+      label: t('Learn a button'),
+      fn: function () {
+        openKeys('button');
+      },
+    });
+    rows.push({ label: t('Back'), fn: pop });
+    return;
+  }
+  if (view === 'button') {
+    var bt = btnOf(btn);
+    if (!bt) return void rows.push({ label: t('Back'), fn: pop });
+    BTN_ACTIONS.forEach(function (a) {
+      rows.push({
+        label: btnAction(a),
+        sub: (bt.action === a ? t('selected') : '') + (a === 'app' && bt.action === 'app' ? ' · ' + btnApp(bt.app) : ''),
+        info: { t: btnAction(a), d: btnHelp(a) },
+        fn: function () {
+          if (a === 'app') return openBtnApps();
+          setBtn({ code: bt.code, action: a });
+        },
+      });
+    });
+    rows.push({ sep: true });
+    rows.push({
+      label: t('Forget this button'),
+      fn: function () {
+        setBtn({ code: bt.code, forget: true }, true);
+      },
+    });
+    rows.push({ label: t('Back'), fn: pop });
+    return;
+  }
+  if (view === 'buttonapp') {
+    var bc = btnOf(btn) || {};
+    (bapps || []).forEach(function (a) {
+      rows.push({
+        label: a.title,
+        sub: bc.action === 'app' && bc.app === a.id ? t('selected') : a.input ? t('input') : '',
+        fn: function () {
+          setBtn({ code: btn, action: 'app', app: a.id });
+        },
+      });
+    });
+    rows.push({ sep: true });
+    rows.push({ label: t('Back'), fn: pop });
+    return;
+  }
   if (view === 'inputkey') {
     var hk = st.inputhook || {},
       na = hk.hook && !hk.hook.attached;
@@ -762,6 +822,16 @@ function build() {
     fn: function () {
       push('inputkey');
     },
+  });
+  rows.push({
+    label: t('Remote buttons'),
+    sub: (function () {
+      var n = (st.buttons || []).filter(function (b) {
+        return b.action;
+      }).length;
+      return n ? t('%s in use').replace('%s', n) : t('none set');
+    })(),
+    fn: openButtons,
   });
   rows.push({ sep: true });
   rows.push({

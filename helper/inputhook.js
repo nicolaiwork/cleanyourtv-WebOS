@@ -1,6 +1,7 @@
 // Input key: injects the bundled inputhook (see third-party/inputhook) into LG's input processes and binds the remote's
 // Input button (id 241) to scripts/inputkey.sh, which opens the Inputs picker overlay. Removing our bind gives the key
-// back to LG's own picker. The learned Voice, Guide and Home keys are bound the same way. Other binds in keybinds.json are left alone.
+// back to LG's own picker. The learned Voice, Guide and Home keys, and the remote's other buttons (buttons.js), are bound the same
+// way. Other binds in keybinds.json are left alone.
 const fs = require('fs'),
   nc = require('./netcompat'),
   exec = require('./exec'),
@@ -20,7 +21,8 @@ const DEFAULT_KEY = '241',
   COMMAND = 'sh ' + D + '/inputkey.sh',
   VOICE_COMMAND = 'sh ' + D + '/voicekey.sh',
   GUIDE_COMMAND = 'sh ' + D + '/guidekey.sh',
-  HOME_COMMAND = 'sh ' + D + '/homekey.sh'; // 241: the Input button on the remote this was written with; learned in the setup
+  HOME_COMMAND = 'sh ' + D + '/homekey.sh', // 241: the Input button on the remote this was written with; learned in the setup
+  BUTTON_COMMAND = 'sh ' + D + '/buttonkey.sh ';
 
 function procs() {
   const out = [];
@@ -46,15 +48,25 @@ const hooked = pid => {
   }
 };
 
-// want: command -> the key it is bound to, or '' for none
-function writeBinds(want) {
+// want: command -> the key it is bound to, or '' for none. buttons: key -> command for the remote's other buttons (buttonkey.sh); a
+// key in want comes first, and a bind that is not ours is never replaced
+function writeBinds(want, buttons) {
   let b = {};
   try {
     b = JSON.parse(fs.readFileSync(BINDS, 'utf8'));
   } catch (_) {}
-  const before = JSON.stringify(b);
-  for (const k of Object.keys(b)) if (b[k] && b[k].command in want && want[b[k].command] !== k) delete b[k]; // our binds only, wherever they were
+  const before = JSON.stringify(b),
+    taken = {},
+    btn = buttons || {};
+  for (const c of Object.keys(want)) if (want[c]) taken[want[c]] = true;
+  const isButton = x => !!x && typeof x.command === 'string' && x.command.indexOf(BUTTON_COMMAND) === 0;
+  for (const k of Object.keys(b)) {
+    if (b[k] && b[k].command in want && want[b[k].command] !== k)
+      delete b[k]; // our binds only, wherever they were
+    else if (isButton(b[k]) && (btn[k] !== b[k].command || taken[k])) delete b[k];
+  }
   for (const c of Object.keys(want)) if (want[c]) b[want[c]] = { action: 'exec', command: c };
+  for (const k of Object.keys(btn)) if (!taken[k] && !b[k]) b[k] = { action: 'exec', command: btn[k] };
   if (JSON.stringify(b) === before) return;
   nc.mkdirp(CFGDIR);
   fs.writeFileSync(BINDS + '.tmp', JSON.stringify(b));
@@ -75,21 +87,29 @@ let homeFn = () => ''; // the key that relaunches Home, or '' (CleanYourTV is no
 const setHomeKey = f => {
   homeFn = f;
 };
+let buttonsFn = () => ({}); // key -> command of the remote's other bound buttons
+const setButtons = f => {
+  buttonsFn = f;
+};
 function ensure(enabled, key) {
   const vkey = String(voiceFn() || ''),
     gkey = String(guideFn() || ''),
-    hkey = String(homeFn() || '');
+    hkey = String(homeFn() || ''),
+    btn = buttonsFn() || {};
   try {
-    writeBinds({
-      [COMMAND]: enabled ? String(key || DEFAULT_KEY) : '',
-      [VOICE_COMMAND]: vkey,
-      [GUIDE_COMMAND]: gkey,
-      [HOME_COMMAND]: hkey,
-    });
+    writeBinds(
+      {
+        [COMMAND]: enabled ? String(key || DEFAULT_KEY) : '',
+        [VOICE_COMMAND]: vkey,
+        [GUIDE_COMMAND]: gkey,
+        [HOME_COMMAND]: hkey,
+      },
+      btn
+    );
   } catch (e) {
     console.error('inputhook: keybinds:', e.message);
   }
-  if (!(enabled || vkey || gkey || hkey) || busy || !fs.existsSync(HOOK + '/ezinject')) return;
+  if (!(enabled || vkey || gkey || hkey || Object.keys(btn).length) || busy || !fs.existsSync(HOOK + '/ezinject')) return;
   const todo = procs().filter(p => !hooked(p.pid));
   if (!todo.length) return;
   busy = true;
@@ -147,6 +167,7 @@ const IGNORE = {
   home: [28, 103, 105, 106, 108, 272, 273, 274, 352],
   voice: [28, 103, 105, 106, 108, 272, 273, 274, 352, 412],
   guide: [28, 103, 105, 106, 108, 272, 273, 274, 352, 412],
+  button: [28, 103, 105, 106, 108, 272, 273, 274, 352, 412],
 }; // arrows, OK, pointer, Back
 let learn = null;
 const markSaved = () => {
@@ -190,4 +211,17 @@ function learnState() {
     seconds: Math.round((Date.now() - learn.at) / 1000),
   };
 }
-module.exports = { setVoiceKey, setGuideKey, setHomeKey, ensure, status, markSaved, startLearn, learnState, hookInfo, procs, DEFAULT_KEY };
+module.exports = {
+  setVoiceKey,
+  setGuideKey,
+  setHomeKey,
+  setButtons,
+  ensure,
+  status,
+  markSaved,
+  startLearn,
+  learnState,
+  hookInfo,
+  procs,
+  DEFAULT_KEY,
+};

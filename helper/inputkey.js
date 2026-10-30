@@ -1,10 +1,12 @@
-// The remote's Input key (and the learned Voice, Guide and Home keys): keeps the hook in LG's input processes and the key binds up to date
-// (inputhook.js), keeps the Inputs picker ready where that works (picker.js), closes the picker when it asks, and writes the mode
-// that scripts/inputkey.sh follows. GET /api/log?m=... is the picker's and the overlay apps' small diagnostics channel.
+// The remote's Input key (and the learned Voice, Guide and Home keys, and the other buttons in buttons.js): keeps the hook in LG's
+// input processes and the key binds up to date (inputhook.js), keeps the Inputs picker ready where that works (picker.js), closes
+// the picker when it asks, and writes the mode that scripts/inputkey.sh follows. GET /api/log?m=... is the picker's and the overlay
+// apps' small diagnostics channel.
 const fs = require('fs');
 const P = require('./paths'),
   web = require('./web'),
-  picker = require('./picker');
+  picker = require('./picker'),
+  buttons = require('./buttons');
 
 const PICKER = 'com.cleanyourtv.picker';
 
@@ -15,15 +17,26 @@ function create(ctx) {
 
   const keyCode = () => String(config.keys().input || '241');
   // the voice key belongs to us only while voice is installed and on; the Guide key only while Live TV is on and a key was learned
-  const voiceKey = () => {
+  const voiceKeyOn = () => {
     const v = config.get().voice || {};
     const voice = ctx.feature('voice');
-    return v.enabled && voice && voice.installed() ? String(config.keys().voice || '') : '';
+    return v.enabled && voice && voice.installed();
   };
+  const voiceKey = () => (voiceKeyOn() ? String(config.keys().voice || '') : '');
   const guideKey = () => (config.options().liveTv !== false ? String(config.keys().guide || '') : '');
   // the Home key only while CleanYourTV is Home: LG's handling does not relaunch Home that is in front, so Live TV and Films & Series
   // (inside the page) would not close
   const homeKey = () => (fs.existsSync(P.DISABLE) ? '' : String(config.keys().home || ''));
+  // the remote's other buttons: Live TV, its guide and Films & Series are in our Home, so only while it is Home (and Live TV is on);
+  // voice while it is on. Otherwise the button stays LG's
+  const canDo = action => {
+    const home = !fs.existsSync(P.DISABLE);
+    if (action === 'live' || action === 'guide') return home && config.options().liveTv !== false;
+    if (action === 'vod') return home;
+    if (action === 'voice') return !!voiceKeyOn();
+    return true;
+  };
+  const buttonBinds = () => buttons.binds(config.buttons(), P.D, canDo);
   // overlay, ondemand or launcher: the manager's choice, else this TV's default (tvprofile.js)
   const mode = () => picker.modeOf(config.get().picker || {}, profile.get().pickerMode);
   // with the launcher's list as the target, CleanYourTV has to be the Home: while LG's Home is chosen the key stays with LG
@@ -61,6 +74,7 @@ function create(ctx) {
     if (inputhook.setVoiceKey) inputhook.setVoiceKey(voiceKey);
     if (inputhook.setGuideKey) inputhook.setGuideKey(guideKey);
     if (inputhook.setHomeKey) inputhook.setHomeKey(homeKey);
+    if (inputhook.setButtons) inputhook.setButtons(buttonBinds);
     syncMode();
     // bind the key and keep the hook in LG's input processes (they restart now and then)
     setTimeout(ensure, 500);
@@ -94,6 +108,7 @@ function create(ctx) {
     on,
     syncMode,
     ensure,
+    buttonBinds,
     pickerShownAt: () => pickerShownAt,
     keyCode,
   };

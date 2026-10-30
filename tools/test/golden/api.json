@@ -367,6 +367,7 @@
  },
  "manager check": {
   "body": {
+   "buttons": [],
    "channel": "",
    "checkError": "",
    "checkedAt": "<time>",
@@ -448,6 +449,7 @@
  },
  "manager status": {
   "body": {
+   "buttons": [],
    "channel": "",
    "checkError": "",
    "checkedAt": "<time>",
@@ -547,6 +549,7 @@
  },
  "an option": {
   "body": {
+   "buttons": [],
    "channel": "",
    "checkError": "",
    "checkedAt": "<time>",

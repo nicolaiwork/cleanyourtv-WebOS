@@ -2085,6 +2085,22 @@ var VOD = (function () {
     );
   };
   o.check();
+  /* the remote's Films & Series button (launched with {vod:true}): open now, or once the service says a curator is set (just after a
+     boot the page can ask before it knows) */
+  o.open = function () {
+    if (o.ready) return o.enter();
+    api('/api/vod/status').then(
+      function (s) {
+        if (!s.configured || o.on) return;
+        base = s.base || '';
+        o.ready = true;
+        lastSig = '';
+        load();
+        o.enter();
+      },
+      function () {}
+    );
+  };
 
   /* ---------- what Home (home.js) asks of Films & Series ---------- */
   var autoNext = false,

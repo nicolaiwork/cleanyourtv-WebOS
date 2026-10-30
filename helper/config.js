@@ -2,13 +2,15 @@
 //   config.get()                 a copy of everything
 //   config.options()             {debloat, inputKey, liveTv, hidePointer} with their defaults
 //   config.keys()                the learned remote buttons with their defaults
+//   config.buttons()             the remote's other learned buttons and what each does (buttons.js)
 //   language(config.get())       the language chosen in the launcher ('da', 'en'), or '' for the TV's
 //   config.update(source, fn)    fn changes a copy, which is then written at once (atomically). The read, the change and the write
 //                                happen in one go, so two parts of the service can never overwrite each other's settings.
-// Every change of an option, a learned key or the Input-key mode is logged with its source ("manager", "launcher", "setup", ...),
+// Every change of an option, a learned key or button, or the Input-key mode is logged with its source ("manager", "launcher", "setup", ...),
 // so a setting that changes by itself shows up in the service log and in Share log.
 const fs = require('fs');
-const P = require('./paths');
+const P = require('./paths'),
+  buttons = require('./buttons');
 
 const OPTIONS = { debloat: true, inputKey: true, liveTv: true, hidePointer: false };
 const KEYS = { input: '', home: '', voice: '', guide: '', learned: false };
@@ -41,6 +43,7 @@ function create(file, opts) {
     options: Object.assign({}, OPTIONS, c.options),
     keys: Object.assign({}, KEYS, c.keys),
     picker: { mode: (c.picker || {}).mode },
+    buttons: buttons.clean(c.buttons),
     launcher: { language: c.language || 'auto' },
   });
   function report(source, before, after) {
@@ -66,6 +69,7 @@ function create(file, opts) {
     get: read,
     options: () => Object.assign({}, OPTIONS, read().options || {}),
     keys: () => Object.assign({}, KEYS, read().keys || {}),
+    buttons: () => buttons.clean(read().buttons),
     update,
     // for code that still thinks in whole files (tests, older modules): replaces everything, still logged
     replace: (source, c) => update(source, () => c),

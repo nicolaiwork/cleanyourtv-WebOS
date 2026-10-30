@@ -725,6 +725,45 @@ var TX = {
       'Gemmer koden for Guide-knappen. Derefter åbner den Live-tv’s programguide over det, der kører (kun mens Live-tv er slået til). Ryd den for at få LG’s guide tilbage.',
     'How the Input button shows the Inputs. Over the running app, ready in the background: instant, tested on webOS 25. Over the running app, started when pressed: nothing runs hidden, so it cannot keep the remote; the default on older webOS, where the background one showed a loading circle. The launcher’s Inputs list: the TV goes to our Home (needs CleanYourTV as Home; otherwise the key stays with LG). Choose to go to the next one.':
       'Hvordan Input-knappen viser indgangene. Over den åbne app, klar i baggrunden: straks, testet på webOS 25. Over den åbne app, startes ved tryk: intet kører skjult, så den kan ikke holde på fjernbetjeningen; standard på ældre webOS, hvor den i baggrunden viste en indlæsningscirkel. Startskærmens liste over indgange: tv’et går til vores startskærm (kræver CleanYourTV som startskærm; ellers bliver knappen hos LG). Vælg for at gå til den næste.',
+    // Remote buttons (the remote's other buttons: keys.js)
+    'Remote buttons': 'Fjernbetjeningens knapper',
+    '%s in use': '%s i brug',
+    'none set': 'ingen valgt',
+    'Learn a button': 'Lær en knap',
+    'Forget this button': 'Glem denne knap',
+    'Button %s': 'Knap %s',
+    'input': 'indgang',
+    'Choose what it does': 'Vælg, hvad den gør',
+    'Choose what it opens': 'Vælg, hvad den åbner',
+    'The remote’s other buttons: learn one, then choose what it does': 'Fjernbetjeningens andre knapper: lær en, og vælg så, hvad den gør',
+    'Press the button now…': 'Tryk på knappen nu…',
+    'Learned: %s.': 'Lært: %s.',
+    'Code %s.': 'Kode %s.',
+    'A button on the remote.\nChoose Start, then press the button you want to use, such as Netflix or Prime Video. It keeps doing what LG made it do until you choose something else.':
+      'En knap på fjernbetjeningen.\nVælg Start, og tryk så på den knap, du vil bruge, fx Netflix eller Prime Video. Den gør det, LG har bestemt, indtil du vælger noget andet.',
+    'Nothing': 'Ingenting',
+    'Live TV guide': 'Live-tv’s programguide',
+    'Films & Series': 'Film og serier',
+    'Inputs list': 'Listen over indgange',
+    'An app or input…': 'En app eller indgang…',
+    'LG’s own': 'LG’s egen',
+    'not now: LG’s own': 'ikke nu: LG’s egen',
+    'The button does nothing; LG’s app no longer opens.': 'Knappen gør ingenting; LG’s app åbner ikke længere.',
+    'Opens Live TV. Only while Live TV is on and CleanYourTV is Home; otherwise the button does what LG made it do.':
+      'Åbner Live-tv. Kun mens Live-tv er slået til og CleanYourTV er startskærmen; ellers gør knappen det, LG har bestemt.',
+    'Opens the Live TV channel guide over whatever is running, as the Guide key does. Only while Live TV is on and CleanYourTV is Home.':
+      'Åbner Live-tv’s programguide over det, der kører, ligesom Guide-knappen. Kun mens Live-tv er slået til og CleanYourTV er startskærmen.',
+    'Opens Films & Series. Only while CleanYourTV is Home.': 'Åbner Film og serier. Kun mens CleanYourTV er startskærmen.',
+    'Shows the Inputs list, as the Input key does.': 'Viser listen over indgange, ligesom Input-knappen.',
+    'Starts listening, as the voice button does. Only while voice is installed and on.':
+      'Begynder at lytte, ligesom stemmeknappen. Kun mens stemme er installeret og slået til.',
+    'Opens an app or an input (HDMI) you choose.': 'Åbner en app eller en indgang (HDMI), som du vælger.',
+    'The button does what LG made it do, such as opening its streaming app.': 'Knappen gør det, LG har bestemt, fx åbner sin streamingapp.',
+    'The remote’s other buttons, such as Netflix, Prime Video, Disney+ or Alexa: learn one, then choose what it does instead of opening LG’s app. Live TV, its guide or Films & Series, the Inputs list, voice, or an app or input of your choice.':
+      'Fjernbetjeningens andre knapper, fx Netflix, Prime Video, Disney+ eller Alexa: lær en, og vælg så, hvad den gør i stedet for at åbne LG’s app. Live-tv, programguiden eller Film og serier, listen over indgange, stemme eller en app eller indgang efter eget valg.',
+    'Records the code of the next button you press. It keeps doing what LG made it do until you choose something else.':
+      'Gemmer koden for den næste knap, du trykker på. Den gør det, LG har bestemt, indtil du vælger noget andet.',
+    'The button does what LG made it do again, and leaves this list.': 'Knappen gør igen det, LG har bestemt, og forsvinder fra listen.',
     'Optional. Records the Home button’s code. Afterwards the Home key also closes Live TV and Films & Series (while CleanYourTV is Home). Clear it to give the key back to LG.':
       'Valgfrit. Gemmer koden for Hjem-knappen. Derefter lukker Hjem-knappen også Live-tv og Film og serier (mens CleanYourTV er startskærmen). Ryd den for at give knappen tilbage til LG.',
     'Back to the main list.': 'Tilbage til hovedlisten.',
@@ -796,6 +835,8 @@ var napi = null,
   pending = null,
   pollT = 0,
   setup = { debloat: true, inputKey: true },
+  btn = '' /* the remote button being set (Remote buttons) */,
+  bapps = null /* what a button can open: [{id, title}] */,
   offline = false,
   busyMsg = '';
 function $(i) {
@@ -1499,6 +1540,66 @@ function build() {
     rows.push({ label: t('No, keep it'), fn: pop });
     return;
   }
+  if (view === 'buttons') {
+    (st.buttons || []).forEach(function (b) {
+      rows.push({
+        label: b.name || t('Button %s').replace('%s', b.code),
+        sub: btnSub(b),
+        fn: function () {
+          btn = b.code;
+          push('button');
+        },
+      });
+    });
+    if ((st.buttons || []).length) rows.push({ sep: true });
+    rows.push({
+      label: t('Learn a button'),
+      fn: function () {
+        openKeys('button');
+      },
+    });
+    rows.push({ label: t('Back'), fn: pop });
+    return;
+  }
+  if (view === 'button') {
+    var bt = btnOf(btn);
+    if (!bt) return void rows.push({ label: t('Back'), fn: pop });
+    BTN_ACTIONS.forEach(function (a) {
+      rows.push({
+        label: btnAction(a),
+        sub: (bt.action === a ? t('selected') : '') + (a === 'app' && bt.action === 'app' ? ' · ' + btnApp(bt.app) : ''),
+        info: { t: btnAction(a), d: btnHelp(a) },
+        fn: function () {
+          if (a === 'app') return openBtnApps();
+          setBtn({ code: bt.code, action: a });
+        },
+      });
+    });
+    rows.push({ sep: true });
+    rows.push({
+      label: t('Forget this button'),
+      fn: function () {
+        setBtn({ code: bt.code, forget: true }, true);
+      },
+    });
+    rows.push({ label: t('Back'), fn: pop });
+    return;
+  }
+  if (view === 'buttonapp') {
+    var bc = btnOf(btn) || {};
+    (bapps || []).forEach(function (a) {
+      rows.push({
+        label: a.title,
+        sub: bc.action === 'app' && bc.app === a.id ? t('selected') : a.input ? t('input') : '',
+        fn: function () {
+          setBtn({ code: btn, action: 'app', app: a.id });
+        },
+      });
+    });
+    rows.push({ sep: true });
+    rows.push({ label: t('Back'), fn: pop });
+    return;
+  }
   if (view === 'inputkey') {
     var hk = st.inputhook || {},
       na = hk.hook && !hk.hook.attached;
@@ -1630,6 +1731,16 @@ function build() {
     fn: function () {
       push('inputkey');
     },
+  });
+  rows.push({
+    label: t('Remote buttons'),
+    sub: (function () {
+      var n = (st.buttons || []).filter(function (b) {
+        return b.action;
+      }).length;
+      return n ? t('%s in use').replace('%s', n) : t('none set');
+    })(),
+    fn: openButtons,
   });
   rows.push({ sep: true });
   rows.push({
@@ -1797,6 +1908,11 @@ var INFO = {
   'Input key shows': t(
     'How the Input button shows the Inputs. Over the running app, ready in the background: instant, tested on webOS 25. Over the running app, started when pressed: nothing runs hidden, so it cannot keep the remote; the default on older webOS, where the background one showed a loading circle. The launcher\u2019s Inputs list: the TV goes to our Home (needs CleanYourTV as Home; otherwise the key stays with LG). Choose to go to the next one.'
   ),
+  'Remote buttons': t(
+    'The remote\u2019s other buttons, such as Netflix, Prime Video, Disney+ or Alexa: learn one, then choose what it does instead of opening LG\u2019s app. Live TV, its guide or Films & Series, the Inputs list, voice, or an app or input of your choice.'
+  ),
+  'Learn a button': t('Records the code of the next button you press. It keeps doing what LG made it do until you choose something else.'),
+  'Forget this button': t('The button does what LG made it do again, and leaves this list.'),
   'Learn the Home key': t(
     'Optional. Records the Home button\u2019s code. Afterwards the Home key also closes Live TV and Films & Series (while CleanYourTV is Home). Clear it to give the key back to LG.'
   ),
@@ -1972,6 +2088,19 @@ function draw() {
   }
   if (view === 'inputkey') {
     $('sub').textContent = t('Input key');
+    return;
+  }
+  if (view === 'buttons') {
+    $('sub').textContent = t('The remote\u2019s other buttons: learn one, then choose what it does');
+    return;
+  }
+  if (view === 'button') {
+    var cb = btnOf(btn);
+    $('sub').textContent = cb ? cb.name || t('Button %s').replace('%s', cb.code) : '';
+    return;
+  }
+  if (view === 'buttonapp') {
+    $('sub').textContent = t('Choose what it opens');
     return;
   }
   if (view === 'confirm-home' || view === 'confirm-uninstall') {
@@ -2573,7 +2702,8 @@ function pollUpdate(n) {
     }, 2000);
   });
 }
-/* the remote's Input and Home buttons differ between remotes and firmware: learn their codes from the hook, then test */
+/* the remote's Input and Home buttons differ between remotes and firmware: learn their codes from the hook, then test. Also the
+   remote's other buttons (Remote buttons: Netflix, Prime Video, ...), each set to an action of ours */
 function kShow(text, list) {
   kText = text;
   kRows = list;
@@ -2584,7 +2714,7 @@ function kShow(text, list) {
 function openKeys(flow) {
   kFlow = flow || 'input';
   if (view !== 'keys') push('keys');
-  kStep(kFlow === 'home' || kFlow === 'voice' || kFlow === 'guide' ? kFlow : 'input');
+  kStep(kFlow === 'home' || kFlow === 'voice' || kFlow === 'guide' || kFlow === 'button' ? kFlow : 'input');
 }
 function closeKeys() {
   clearTimeout(kTimer);
@@ -2594,6 +2724,7 @@ function closeKeys() {
 }
 /* whole sentences per key, so a translation does not have to fit a key name into one sentence */
 function kPress(n) {
+  if (n === 'button') return t('Press the button now\u2026');
   return n === 'input'
     ? t('Press the Input button now\u2026')
     : n === 'voice'
@@ -2602,7 +2733,8 @@ function kPress(n) {
         ? t('Press the Guide button now\u2026')
         : t('Press the Home button now\u2026');
 }
-function kGot(n, code) {
+function kGot(n, code, label) {
+  if (n === 'button') return (label ? t('Learned: %s.').replace('%s', label) + '\n' : '') + t('Code %s.').replace('%s', code);
   return (
     n === 'input'
       ? t('Input key learned: code %s.')
@@ -2708,6 +2840,21 @@ function kStep(n) {
         { label: t('Close'), fn: closeKeys },
       ]
     );
+  if (n === 'button')
+    return kShow(
+      t(
+        'A button on the remote.\nChoose Start, then press the button you want to use, such as Netflix or Prime Video. It keeps doing what LG made it do until you choose something else.'
+      ),
+      [
+        {
+          label: t('Start'),
+          fn: function () {
+            kLearn('button');
+          },
+        },
+        { label: t('Close'), fn: closeKeys },
+      ]
+    );
   if (n === 'test') return kTest();
   if (n === 'done')
     return api('/api/manager/keys-done', {})
@@ -2768,6 +2915,24 @@ function kLearn(name) {
         api('/api/manager/learn-state').then(
           function (l) {
             if (view !== 'keys') return;
+            if (l.state === 'got' && name === 'button') {
+              kShow(kGot(name, l.code, l.label), [
+                {
+                  label: t('Choose what it does'),
+                  fn: function () {
+                    api('/api/manager/status').then(function (s) {
+                      st = s;
+                      clearTimeout(kTimer);
+                      banner('');
+                      pop();
+                      btn = l.code;
+                      push('button');
+                    });
+                  },
+                },
+              ]);
+              return;
+            }
             if (l.state === 'got') {
               kShow(kGot(name, l.code), [
                 {
@@ -2879,6 +3044,147 @@ function kTest() {
       }, 700);
     })();
   });
+}
+
+/* ---------- Remote buttons: what each learned button does (helper/buttons.js, scripts/buttonkey.sh) ---------- */
+var BTN_ACTIONS = ['', 'none', 'live', 'guide', 'vod', 'inputs', 'voice', 'app'];
+function btnOf(code) {
+  var f = null;
+  (st.buttons || []).forEach(function (b) {
+    if (b.code === code) f = b;
+  });
+  return f;
+}
+function btnAction(a) {
+  return a === 'none'
+    ? t('Nothing')
+    : a === 'live'
+      ? t('Live TV')
+      : a === 'guide'
+        ? t('Live TV guide')
+        : a === 'vod'
+          ? t('Films & Series')
+          : a === 'inputs'
+            ? t('Inputs list')
+            : a === 'voice'
+              ? t('Voice')
+              : a === 'app'
+                ? t('An app or input\u2026')
+                : t('LG\u2019s own');
+}
+function btnHelp(a) {
+  return a === 'none'
+    ? t('The button does nothing; LG\u2019s app no longer opens.')
+    : a === 'live'
+      ? t('Opens Live TV. Only while Live TV is on and CleanYourTV is Home; otherwise the button does what LG made it do.')
+      : a === 'guide'
+        ? t(
+            'Opens the Live TV channel guide over whatever is running, as the Guide key does. Only while Live TV is on and CleanYourTV is Home.'
+          )
+        : a === 'vod'
+          ? t('Opens Films & Series. Only while CleanYourTV is Home.')
+          : a === 'inputs'
+            ? t('Shows the Inputs list, as the Input key does.')
+            : a === 'voice'
+              ? t('Starts listening, as the voice button does. Only while voice is installed and on.')
+              : a === 'app'
+                ? t('Opens an app or an input (HDMI) you choose.')
+                : t('The button does what LG made it do, such as opening its streaming app.');
+}
+function btnApp(id) {
+  var n = id;
+  (bapps || []).forEach(function (a) {
+    if (a.id === id) n = a.title;
+  });
+  return n;
+}
+function btnSub(b) {
+  if (!b.action) return t('LG\u2019s own');
+  var s = b.action === 'app' ? btnApp(b.app) : btnAction(b.action);
+  return b.bound ? s : s + ' \u00B7 ' + t('not now: LG\u2019s own');
+}
+/* the apps and the inputs a button can open: the inputs first, then the apps by name; never ours or Home */
+function loadBtnApps() {
+  return Promise.all([
+    api('/api/apps').catch(function () {
+      return {};
+    }),
+    api('/api/inputs').catch(function () {
+      return {};
+    }),
+  ]).then(function (r) {
+    var seen = {},
+      ins = [],
+      aps = [];
+    (r[1].devices || []).forEach(function (d) {
+      if (d.appId && !seen[d.appId]) {
+        seen[d.appId] = true;
+        ins.push({ id: d.appId, title: d.label || 'HDMI ' + d.port, input: true });
+      }
+    });
+    (r[0].apps || []).forEach(function (a) {
+      if (a.input || seen[a.id] || /^com\.cleanyourtv\./.test(a.id) || a.id === 'com.webos.app.home') return;
+      seen[a.id] = true;
+      aps.push({ id: a.id, title: a.title || a.id });
+    });
+    aps.sort(function (x, y) {
+      return x.title.toLowerCase() < y.title.toLowerCase() ? -1 : 1;
+    });
+    bapps = ins.concat(aps);
+    return bapps;
+  });
+}
+function openButtons() {
+  loadBtnApps().then(
+    function () {
+      push('buttons');
+    },
+    function () {
+      push('buttons');
+    }
+  );
+}
+/* straight to one button's screen, over Remote buttons (from the main list) */
+function openButton(code) {
+  api('/api/manager/status').then(
+    function (s) {
+      st = s;
+      banner('');
+      loadBtnApps().then(go, go);
+    },
+    function () {
+      load();
+    }
+  );
+  function go() {
+    build();
+    draw();
+    push('buttons');
+    btn = code;
+    if (btnOf(code)) push('button');
+  }
+}
+function openBtnApps() {
+  loadBtnApps().then(function () {
+    push('buttonapp');
+  });
+}
+/* body: {code, action, app} or {code, forget: true}; back: leave this button's screen */
+function setBtn(body, back) {
+  api('/api/manager/button', body).then(
+    function (s) {
+      if (s.error) return banner(t('The service did not answer'), 'err');
+      st = s;
+      if (back || view === 'buttonapp') pop();
+      else {
+        build();
+        draw();
+      }
+    },
+    function () {
+      banner(t('The service did not answer'), 'err');
+    }
+  );
 }
 function drawQr(url) {
   var q = qrcode(0, 'M');
@@ -3088,10 +3394,17 @@ document.addEventListener('wheel', function (e) {
   else if (e.deltaY < 0) next(-1);
 }); /* the Magic Remote wheel */
 document.addEventListener('webOSRelaunch', function () {
+  var p = {};
+  try {
+    p = JSON.parse(webOSSystem.launchParams || '{}');
+  } catch (e) {}
+  clearTimeout(kTimer);
   view = 'main';
   idx = 0;
   idxStack = [];
   listY = 0;
+  /* {button: code}: the service brought the manager back after learning a button whose press opened LG's app: choose its action */
+  if (p && p.button) return openButton(String(p.button));
   load();
 });
 $('shareclose').textContent = t('Close');

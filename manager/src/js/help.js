@@ -106,6 +106,11 @@ var INFO = {
   'Input key shows': t(
     'How the Input button shows the Inputs. Over the running app, ready in the background: instant, tested on webOS 25. Over the running app, started when pressed: nothing runs hidden, so it cannot keep the remote; the default on older webOS, where the background one showed a loading circle. The launcher\u2019s Inputs list: the TV goes to our Home (needs CleanYourTV as Home; otherwise the key stays with LG). Choose to go to the next one.'
   ),
+  'Remote buttons': t(
+    'The remote\u2019s other buttons, such as Netflix, Prime Video, Disney+ or Alexa: learn one, then choose what it does instead of opening LG\u2019s app. Live TV, its guide or Films & Series, the Inputs list, voice, or an app or input of your choice.'
+  ),
+  'Learn a button': t('Records the code of the next button you press. It keeps doing what LG made it do until you choose something else.'),
+  'Forget this button': t('The button does what LG made it do again, and leaves this list.'),
   'Learn the Home key': t(
     'Optional. Records the Home button\u2019s code. Afterwards the Home key also closes Live TV and Films & Series (while CleanYourTV is Home). Clear it to give the key back to LG.'
   ),

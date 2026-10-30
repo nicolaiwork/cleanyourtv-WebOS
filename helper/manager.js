@@ -1,11 +1,12 @@
-// The manager app's API (/api/manager/*): status, updates (updates.js), options, learning remote buttons, the update channel, LG's
-// Home or ours, and uninstalling. Also POST /api/frontend-ok (a new launcher reports that it started) and POST /api/undo (the
-// launcher's "LG's Home" button).
+// The manager app's API (/api/manager/*): status, updates (updates.js), options, learning remote buttons and what the remote's other
+// buttons do (buttons.js), the update channel, LG's Home or ours, and uninstalling. Also POST /api/frontend-ok (a new launcher reports
+// that it started) and POST /api/undo (the launcher's "LG's Home" button).
 const fs = require('fs');
 const P = require('./paths'),
   web = require('./web'),
   exec = require('./exec'),
   debloat = require('./debloat'),
+  buttons = require('./buttons'),
   { language } = require('./config');
 
 // the TV comes back to its last app after a restart; that must not be one of ours
@@ -28,6 +29,7 @@ function setHome(enabled) {
 }
 const KEY_NAMES = ['home', 'voice', 'guide'];
 const PICKER_MODES = ['overlay', 'ondemand', 'launcher'];
+const MANAGER_APP = 'com.cleanyourtv.manager';
 
 function create(ctx) {
   const { config } = ctx;
@@ -46,6 +48,62 @@ function create(ctx) {
     return Object.assign(k, { inputIsDefault: !k.input, input: k.input || '241' });
   };
   const ensureHook = code => inputhook.ensure(inputkey().on(), code || keys().input);
+  // the remote's other buttons (buttons.js) for the manager; bound: the hook runs our action for it now (else LG's own happens)
+  function buttonList() {
+    const all = config.buttons(),
+      k = keys(),
+      bb = inputkey().buttonBinds ? inputkey().buttonBinds() : {},
+      special = [k.input, k.home, k.voice, k.guide].filter(Boolean);
+    return Object.keys(all).map(code => Object.assign({ code }, all[code], { bound: !!bb[code] && special.indexOf(code) < 0 }));
+  }
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  // LG's name for the button pressed since the learning started; asked a few times, as LG's history can lag the hook
+  async function buttonName(since) {
+    for (let i = 0; i < 5; i++) {
+      try {
+        const r = await ctx.luna('luna://com.webos.service.mrcu/getButtonHistory', {});
+        const n = buttons.nameFrom(r && r.historyArray, since);
+        if (n) return n;
+      } catch (_) {}
+      await wait(400);
+    }
+    return '';
+  }
+  // the press that was learned also did what LG made it do, usually open its app over the manager: close that app and show the
+  // manager again, so the action can be chosen. Only an app that came to the front in the seconds after the press
+  async function bringBack(code) {
+    for (let i = 0; i < 10; i++) {
+      await wait(500);
+      const f = await ctx.luna('luna://com.webos.applicationManager/getForegroundAppInfo', {});
+      const id = (f && f.appId) || '';
+      if (!id || id === MANAGER_APP) continue;
+      if (/^com\.cleanyourtv\./.test(id) || id === 'com.webos.app.home') return;
+      console.log('manager: closing ' + id + ', opened by the button being learned');
+      await ctx.luna('luna://com.webos.applicationManager/closeByAppId', { id });
+      await ctx.luna('luna://com.webos.applicationManager/launch', { id: MANAGER_APP, params: { button: code } });
+      return;
+    }
+  }
+  function setButton(b) {
+    const code = String(b.code || '');
+    if (!(code in config.buttons())) return 'not a learned button';
+    if (b.forget) {
+      config.update('manager', c => {
+        c.buttons = buttons.clean(c.buttons);
+        delete c.buttons[code];
+      });
+    } else {
+      const action = String(b.action || '');
+      if (buttons.ACTIONS.indexOf(action) < 0) return 'unknown action';
+      if (action === 'app' && !buttons.APP_ID.test(String(b.app || ''))) return 'bad app';
+      config.update('manager', c => {
+        c.buttons = buttons.clean(c.buttons);
+        c.buttons[code] = { name: c.buttons[code].name, action, app: action === 'app' ? String(b.app) : '' };
+      });
+    }
+    ensureHook();
+    return '';
+  }
 
   function status() {
     const opts = config.options(),
@@ -67,6 +125,7 @@ function create(ctx) {
       inputhook: inputhook.status(keys().input),
       pointer: (p => (p ? p.status() : null))(ctx.feature('pointer')),
       keys: keys(),
+      buttons: buttonList(),
       job: updates.job(),
       repo: updates.repo(),
       language: language(config.get()) || 'auto',
@@ -101,19 +160,55 @@ function create(ctx) {
     return next;
   }
 
-  // the code of the key just pressed while learning; saved here once it arrives ('learned' is set when the Input flow ends: keys-done)
-  function learnState() {
+  // the code of the key just pressed while learning; saved here once it arrives ('learned' is set when the Input flow ends: keys-done).
+  // A button for Remote buttons is saved with LG's name for it and no action yet (it stays LG's until one is chosen). Its name takes
+  // a moment: a second ask meanwhile gets the same answer once it is saved
+  let saving = null,
+    savedButton = null,
+    learnAt = 0;
+  async function learnState() {
+    if (saving) return saving;
     const l = inputhook.learnState();
     if (l.state === 'got' && !l.saved) {
+      if (inputhook.markSaved) inputhook.markSaved();
+      if (l.name === 'button') {
+        saving = buttonName(learnAt).then(name => {
+          config.update('manager', c => {
+            c.buttons = buttons.clean(c.buttons);
+            c.buttons[l.code] = Object.assign({ action: '', app: '' }, c.buttons[l.code], {
+              name: name || (c.buttons[l.code] || {}).name || '',
+            });
+          });
+          savedButton = Object.assign({}, l, { label: name });
+          saving = null;
+          bringBack(l.code).catch(() => {});
+          return savedButton;
+        });
+        return saving;
+      }
       config.update('manager', c => {
         c.keys = Object.assign({ input: '241', home: '', voice: '' }, c.keys || {});
         c.keys[l.name] = l.code;
       });
-      if (inputhook.markSaved) inputhook.markSaved();
       if (l.name === 'input') ensureHook(l.code);
       else ensureHook();
     }
+    if (l.state === 'got' && l.name === 'button' && savedButton && savedButton.code === l.code) return savedButton;
     return l;
+  }
+  // a button is learned while the manager may be behind the app the press opened (and asks nothing then): the service watches
+  let watching = null;
+  function watchLearn() {
+    clearInterval(watching);
+    const until = Date.now() + 46000;
+    watching = setInterval(() => {
+      learnState().then(
+        l => {
+          if (l.state !== 'waiting' || Date.now() > until) clearInterval(watching);
+        },
+        () => {}
+      );
+    }, 500);
   }
   // forget a learned code: Input goes back to the default, the others to none
   function clearKey(name) {
@@ -143,7 +238,7 @@ function create(ctx) {
       if (updates.stale()) updates.check();
       return json(status());
     }
-    if (act === 'learn-state') return json(learnState());
+    if (act === 'learn-state') return json(await learnState());
     if (act === 'notify-api' && req.method === 'GET') return json(napi ? napi.info() : { enabled: false });
     if (act === 'test-key') return json({ pickerShownAt: inputkey().pickerShownAt(), now: Date.now() });
     if (act === 'tests') return json(await updates.tests());
@@ -160,12 +255,19 @@ function create(ctx) {
     }
     if (act === 'notify-api') return json(napi ? napi.set(b) : { enabled: false });
     if (act === 'learn-key') {
-      inputhook.startLearn(KEY_NAMES.includes(b.name) ? b.name : 'input');
+      inputhook.startLearn(KEY_NAMES.includes(b.name) || b.name === 'button' ? b.name : 'input');
+      learnAt = Date.now();
+      savedButton = null;
+      if (b.name === 'button') watchLearn();
       return json({ returnValue: true });
     }
     if (act === 'clear-key') {
       clearKey(KEY_NAMES.includes(b.name) ? b.name : 'input');
       return json({ returnValue: true });
+    }
+    if (act === 'button') {
+      const err = setButton(b);
+      return err ? json({ error: err }, 400) : json(status());
     }
     if (act === 'keys-done') {
       config.update('manager', c => {

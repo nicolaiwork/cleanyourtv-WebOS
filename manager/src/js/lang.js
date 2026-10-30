@@ -473,6 +473,45 @@ var TX = {
       'Gemmer koden for Guide-knappen. Derefter åbner den Live-tv’s programguide over det, der kører (kun mens Live-tv er slået til). Ryd den for at få LG’s guide tilbage.',
     'How the Input button shows the Inputs. Over the running app, ready in the background: instant, tested on webOS 25. Over the running app, started when pressed: nothing runs hidden, so it cannot keep the remote; the default on older webOS, where the background one showed a loading circle. The launcher’s Inputs list: the TV goes to our Home (needs CleanYourTV as Home; otherwise the key stays with LG). Choose to go to the next one.':
       'Hvordan Input-knappen viser indgangene. Over den åbne app, klar i baggrunden: straks, testet på webOS 25. Over den åbne app, startes ved tryk: intet kører skjult, så den kan ikke holde på fjernbetjeningen; standard på ældre webOS, hvor den i baggrunden viste en indlæsningscirkel. Startskærmens liste over indgange: tv’et går til vores startskærm (kræver CleanYourTV som startskærm; ellers bliver knappen hos LG). Vælg for at gå til den næste.',
+    // Remote buttons (the remote's other buttons: keys.js)
+    'Remote buttons': 'Fjernbetjeningens knapper',
+    '%s in use': '%s i brug',
+    'none set': 'ingen valgt',
+    'Learn a button': 'Lær en knap',
+    'Forget this button': 'Glem denne knap',
+    'Button %s': 'Knap %s',
+    'input': 'indgang',
+    'Choose what it does': 'Vælg, hvad den gør',
+    'Choose what it opens': 'Vælg, hvad den åbner',
+    'The remote’s other buttons: learn one, then choose what it does': 'Fjernbetjeningens andre knapper: lær en, og vælg så, hvad den gør',
+    'Press the button now…': 'Tryk på knappen nu…',
+    'Learned: %s.': 'Lært: %s.',
+    'Code %s.': 'Kode %s.',
+    'A button on the remote.\nChoose Start, then press the button you want to use, such as Netflix or Prime Video. It keeps doing what LG made it do until you choose something else.':
+      'En knap på fjernbetjeningen.\nVælg Start, og tryk så på den knap, du vil bruge, fx Netflix eller Prime Video. Den gør det, LG har bestemt, indtil du vælger noget andet.',
+    'Nothing': 'Ingenting',
+    'Live TV guide': 'Live-tv’s programguide',
+    'Films & Series': 'Film og serier',
+    'Inputs list': 'Listen over indgange',
+    'An app or input…': 'En app eller indgang…',
+    'LG’s own': 'LG’s egen',
+    'not now: LG’s own': 'ikke nu: LG’s egen',
+    'The button does nothing; LG’s app no longer opens.': 'Knappen gør ingenting; LG’s app åbner ikke længere.',
+    'Opens Live TV. Only while Live TV is on and CleanYourTV is Home; otherwise the button does what LG made it do.':
+      'Åbner Live-tv. Kun mens Live-tv er slået til og CleanYourTV er startskærmen; ellers gør knappen det, LG har bestemt.',
+    'Opens the Live TV channel guide over whatever is running, as the Guide key does. Only while Live TV is on and CleanYourTV is Home.':
+      'Åbner Live-tv’s programguide over det, der kører, ligesom Guide-knappen. Kun mens Live-tv er slået til og CleanYourTV er startskærmen.',
+    'Opens Films & Series. Only while CleanYourTV is Home.': 'Åbner Film og serier. Kun mens CleanYourTV er startskærmen.',
+    'Shows the Inputs list, as the Input key does.': 'Viser listen over indgange, ligesom Input-knappen.',
+    'Starts listening, as the voice button does. Only while voice is installed and on.':
+      'Begynder at lytte, ligesom stemmeknappen. Kun mens stemme er installeret og slået til.',
+    'Opens an app or an input (HDMI) you choose.': 'Åbner en app eller en indgang (HDMI), som du vælger.',
+    'The button does what LG made it do, such as opening its streaming app.': 'Knappen gør det, LG har bestemt, fx åbner sin streamingapp.',
+    'The remote’s other buttons, such as Netflix, Prime Video, Disney+ or Alexa: learn one, then choose what it does instead of opening LG’s app. Live TV, its guide or Films & Series, the Inputs list, voice, or an app or input of your choice.':
+      'Fjernbetjeningens andre knapper, fx Netflix, Prime Video, Disney+ eller Alexa: lær en, og vælg så, hvad den gør i stedet for at åbne LG’s app. Live-tv, programguiden eller Film og serier, listen over indgange, stemme eller en app eller indgang efter eget valg.',
+    'Records the code of the next button you press. It keeps doing what LG made it do until you choose something else.':
+      'Gemmer koden for den næste knap, du trykker på. Den gør det, LG har bestemt, indtil du vælger noget andet.',
+    'The button does what LG made it do again, and leaves this list.': 'Knappen gør igen det, LG har bestemt, og forsvinder fra listen.',
     'Optional. Records the Home button’s code. Afterwards the Home key also closes Live TV and Films & Series (while CleanYourTV is Home). Clear it to give the key back to LG.':
       'Valgfrit. Gemmer koden for Hjem-knappen. Derefter lukker Hjem-knappen også Live-tv og Film og serier (mens CleanYourTV er startskærmen). Ryd den for at give knappen tilbage til LG.',
     'Back to the main list.': 'Tilbage til hovedlisten.',

@@ -39,10 +39,17 @@ document.addEventListener('wheel', function (e) {
   else if (e.deltaY < 0) next(-1);
 }); /* the Magic Remote wheel */
 document.addEventListener('webOSRelaunch', function () {
+  var p = {};
+  try {
+    p = JSON.parse(webOSSystem.launchParams || '{}');
+  } catch (e) {}
+  clearTimeout(kTimer);
   view = 'main';
   idx = 0;
   idxStack = [];
   listY = 0;
+  /* {button: code}: the service brought the manager back after learning a button whose press opened LG's app: choose its action */
+  if (p && p.button) return openButton(String(p.button));
   load();
 });
 $('shareclose').textContent = t('Close');
