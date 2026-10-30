@@ -291,7 +291,7 @@ var LIVE = (function () {
         perfMark('live playing ' + (Date.now() - tuneAt) + ' variant ' + vi + (variants[vi] && variants[vi].type ? ' typed' : ' src'));
         tracksStart();
         clearTimeout(playedT);
-        var c = byNum[cur];
+        var c = origin === null ? byNum[cur] : null; /* the partner channel shown in a break is not the viewer's recent one */
         playedT = setTimeout(function () {
           markPlayed(c);
         }, 3000);
@@ -608,9 +608,7 @@ var LIVE = (function () {
     if (!c) return;
     if (LB.how(BR.mode, BR.partner, c.key, !!p) === 'partner') {
       origin = cur;
-      brOwn = true;
-      play(p.num, true);
-      brOwn = false;
+      brPlay(p.num, true);
       brTick(r);
       layer('lv-pill', true);
       return;
@@ -666,9 +664,14 @@ var LIVE = (function () {
     var n = origin;
     origin = null;
     layer('lv-pill', false);
-    if (n !== cur && byNum[n]) {
-      brOwn = true;
-      play(n, true);
+    if (n !== cur && byNum[n]) brPlay(n, true);
+  }
+  /* play() for the break code (or a retry of the same channel): not a channel change by the viewer, so what a break changed stays */
+  function brPlay(num, quiet) {
+    brOwn = true;
+    try {
+      play(num, quiet);
+    } finally {
       brOwn = false;
     }
   }
@@ -1382,6 +1385,8 @@ var LIVE = (function () {
     }
   };
   o.exit = function () {
+    /* left on the partner channel during a break: Live TV opens on the channel the viewer was watching */
+    if (origin !== null && byNum[origin]) cur = origin;
     o.on = false;
     closeList();
     M.open = false;
@@ -1499,8 +1504,9 @@ var LIVE = (function () {
       if (brDim) {
         LB.cancel(BS); /* "Watch the ads": picture and sound back for the rest of this break */
         brUndim();
-      } else if (failed) play(cur);
-      else openList();
+      } else if (failed) {
+        brPlay(cur); /* a retry of the same channel: on the partner the break's return, after "Watch the ads" its skip, both stay */
+      } else openList();
     } else if (k === 404) toggleFav(byNum[cur]);
     else if (k === 405 || k === MENU_KEY) openMenu();
     else if (k === 406) setStats(!stats);

@@ -4669,8 +4669,12 @@ var LT = (function () {
 /* ---------- Live TV: ad breaks (the page's side) ---------- */
 /* The page asks the service once a second whether the channel is in a break (/api/breaks/now). next() turns each reply into
    'start', 'end' or 'none' and keeps the state; the picture is dimmed (or a partner channel shown) between start and end.
-   Three failed polls in a row end a break, so the picture is never left dimmed when the curator stops answering. */
+   Three failed polls in a row end a break, so the picture is never left dimmed when the curator stops answering, and a reply
+   more than MAX_S into a break is not a break (the curator ends such a break itself; a logo that never returns must not leave
+   the picture dimmed and muted). */
 var LB = (function () {
+  var MAX_S = 600;
+
   /* the state for a channel the viewer is not watching a break on */
   function fresh() {
     return { on: false, id: null, skip: null, fails: 0 };
@@ -4687,7 +4691,8 @@ var LB = (function () {
       return 'none';
     }
     st.fails = 0;
-    if (reply.status === 'works' && reply.break) {
+    var tooLong = typeof reply.elapsed === 'number' && reply.elapsed > MAX_S;
+    if (reply.status === 'works' && reply.break && !tooLong) {
       if (!st.on && reply.id !== st.skip) {
         st.on = true;
         st.id = reply.id;
@@ -5364,7 +5369,7 @@ var LIVE = (function () {
         perfMark('live playing ' + (Date.now() - tuneAt) + ' variant ' + vi + (variants[vi] && variants[vi].type ? ' typed' : ' src'));
         tracksStart();
         clearTimeout(playedT);
-        var c = byNum[cur];
+        var c = origin === null ? byNum[cur] : null; /* the partner channel shown in a break is not the viewer's recent one */
         playedT = setTimeout(function () {
           markPlayed(c);
         }, 3000);
@@ -5681,9 +5686,7 @@ var LIVE = (function () {
     if (!c) return;
     if (LB.how(BR.mode, BR.partner, c.key, !!p) === 'partner') {
       origin = cur;
-      brOwn = true;
-      play(p.num, true);
-      brOwn = false;
+      brPlay(p.num, true);
       brTick(r);
       layer('lv-pill', true);
       return;
@@ -5739,9 +5742,14 @@ var LIVE = (function () {
     var n = origin;
     origin = null;
     layer('lv-pill', false);
-    if (n !== cur && byNum[n]) {
-      brOwn = true;
-      play(n, true);
+    if (n !== cur && byNum[n]) brPlay(n, true);
+  }
+  /* play() for the break code (or a retry of the same channel): not a channel change by the viewer, so what a break changed stays */
+  function brPlay(num, quiet) {
+    brOwn = true;
+    try {
+      play(num, quiet);
+    } finally {
       brOwn = false;
     }
   }
@@ -6455,6 +6463,8 @@ var LIVE = (function () {
     }
   };
   o.exit = function () {
+    /* left on the partner channel during a break: Live TV opens on the channel the viewer was watching */
+    if (origin !== null && byNum[origin]) cur = origin;
     o.on = false;
     closeList();
     M.open = false;
@@ -6572,8 +6582,9 @@ var LIVE = (function () {
       if (brDim) {
         LB.cancel(BS); /* "Watch the ads": picture and sound back for the rest of this break */
         brUndim();
-      } else if (failed) play(cur);
-      else openList();
+      } else if (failed) {
+        brPlay(cur); /* a retry of the same channel: on the partner the break's return, after "Watch the ads" its skip, both stay */
+      } else openList();
     } else if (k === 404) toggleFav(byNum[cur]);
     else if (k === 405 || k === MENU_KEY) openMenu();
     else if (k === 406) setStats(!stats);

@@ -100,25 +100,31 @@ more rows:
 - **Partner channel**: the channel shown during breaks in **Partner channel** mode, one for all channels. OK makes the channel you
   are watching the partner; the row shows the partner's name, or `—` when there is none.
 
-The rows are not there when the service does not know a curator.
+The rows are not there when the Live TV playlist is not the curator's (`http://<curator>/playlist.m3u`): the curator's
+Films & Series address alone is not enough, since the channels it would be asked about are the playlist's.
 
 What happens when a break starts:
 
 - **Dim**: the picture fades to 20 % and is muted. The channel banner stays up for as long as the break lasts, with
-  "Reklamer · <channel>", now and next from the guide, the progress bar, and a counter of how long the break has run. **OK**
+  "Reklamer · <channel>", now and next from the guide, the progress bar, and a counter of how long the break has run (from
+  when the logo went, so it starts at about 0:15). **OK**
   ("Se reklamerne") brings picture and sound back for the rest of this break; the next break dims again. When the programme
   returns, the picture fades back in with sound and the banner hides as usual.
 - **Partner channel**: the TV switches to the partner channel, which plays normally. A small pill top right says
   "Reklamer på <channel> · m:ss" and "<programme> fortsætter · skifter tilbage selv". When the programme returns, the TV switches
   back. If you change channel yourself in the meantime, nothing switches back and the pill goes; if you go back to the channel in
-  the break yourself, that break is shown. Without a partner, with a partner that is no longer in the playlist, or on the partner
-  channel itself, a break dims instead.
-- Changing channel or leaving Live TV during a break brings picture and sound back at once.
+  the break yourself, that break is shown. If the partner's stream fails, **OK** tries it again and the TV still switches back
+  when the break ends. Without a partner, with a partner that is no longer in the playlist, or on the partner channel itself, a
+  break dims instead.
+- Changing channel or leaving Live TV during a break brings picture and sound back at once. Leaving while the partner channel is
+  shown opens Live TV next time on the channel in the break, and the partner is not added to the recent channels.
+- A break ends by itself after 10 minutes (counted from when the logo went), so a programme without its logo, or a wrong logo,
+  never leaves the picture dimmed and muted; such a long break does not count as one the curator has seen.
 
 How breaks are found: the curator watches the channel you are on with its own connection to the provider (one connection more
 than the TV's own, also in partner mode, where it keeps watching the channel in the break). It looks for the channel's logo in the
 corners of the picture: a break starts when the logo has been gone for about 15 seconds, and ends when it has been back for 2
-seconds. The logo is learned for each channel by itself, and a channel acts on breaks only after the curator has seen its logo go
+seconds. A faint or flickering logo counts as there: the 15 seconds start again whenever the logo is seen twice in a row. The logo is learned for each channel by itself, and a channel acts on breaks only after the curator has seen its logo go
 and come back at least once; until then it is _learning_ and nothing happens. On a channel without a steady logo, or whose logo
 stays on during ads, nothing happens either: the feature never guesses. The curator's web page shows each channel's status
 (learning, works, does not work here) with the learned logo.
@@ -126,7 +132,8 @@ stays on during ads, nothing happens either: the feature never guesses. The cura
 The page asks the service once a second while a channel plays (`GET /api/breaks/now?key=<channel>`), and only when the mode is
 not **Off**; the service asks the curator with the channel's stream number only, never the stream address, which holds the
 provider's credentials. The curator opens the provider's stream only while the TV asks and closes it within about 30 seconds
-after. When the curator stops answering, a dimmed picture comes back after three failed asks. The setting is kept on the TV in
+after. When the curator stops answering, three failed asks end the break: a dimmed picture comes back, and in partner mode the TV
+switches back to the channel in the break. The setting is kept on the TV in
 `/media/developer/cleanyourtv/live/breaks.json` (`GET` and `POST /api/breaks/settings`).
 
 ## Where it is stored

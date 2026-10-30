@@ -1,8 +1,12 @@
 /* ---------- Live TV: ad breaks (the page's side) ---------- */
 /* The page asks the service once a second whether the channel is in a break (/api/breaks/now). next() turns each reply into
    'start', 'end' or 'none' and keeps the state; the picture is dimmed (or a partner channel shown) between start and end.
-   Three failed polls in a row end a break, so the picture is never left dimmed when the curator stops answering. */
+   Three failed polls in a row end a break, so the picture is never left dimmed when the curator stops answering, and a reply
+   more than MAX_S into a break is not a break (the curator ends such a break itself; a logo that never returns must not leave
+   the picture dimmed and muted). */
 var LB = (function () {
+  var MAX_S = 600;
+
   /* the state for a channel the viewer is not watching a break on */
   function fresh() {
     return { on: false, id: null, skip: null, fails: 0 };
@@ -19,7 +23,8 @@ var LB = (function () {
       return 'none';
     }
     st.fails = 0;
-    if (reply.status === 'works' && reply.break) {
+    var tooLong = typeof reply.elapsed === 'number' && reply.elapsed > MAX_S;
+    if (reply.status === 'works' && reply.break && !tooLong) {
       if (!st.on && reply.id !== st.skip) {
         st.on = true;
         st.id = reply.id;

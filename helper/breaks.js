@@ -28,7 +28,9 @@ const clean = o => ({
   partner: o && validKey(o.partner) ? o.partner : '',
 });
 let settings = clean(readJson(FILE, null));
-const base = () => vod.baseFrom(readJson(P.VOD + '/settings.json', {}), readJson(LIVE_SETTINGS, {}));
+// only a Live TV playlist that is the curator's own /playlist.m3u gives its address: the stream ids are that playlist's, so a Films &
+// Series address alone (with someone else's playlist in Live TV) is never asked
+const base = () => vod.baseFrom({}, readJson(LIVE_SETTINGS, {}));
 
 async function now(key) {
   if (settings.mode === 'off') return { status: 'off' };
@@ -39,6 +41,7 @@ async function now(key) {
     const r = await fetch.read(b + '/breaks/' + m[1] + '.json', {
       maxBytes: 1e4,
       totalMs: 2000,
+      idleMs: 2000, // a curator that takes the connection but never answers: the socket goes with the 2 s cut-off, not 20 s later
       anyStatus: true,
       headers: { accept: 'application/json' },
     });

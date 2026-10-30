@@ -48,6 +48,12 @@ async function logic() {
   ok(LB.next(LB.fresh(), { status: 'works', break: true, id: undefined }) === 'start', 'a break without an id still starts');
   ok(LB.next(LB.fresh(), { status: 'off', break: true, id: 3 }) === 'none', 'a break reply that is not works does not start');
 
+  const long = LB.fresh();
+  ok(LB.next(long, { status: 'works', break: true, id: 11, elapsed: 600 }) === 'start', 'ten minutes is still a break');
+  ok(LB.next(long, { status: 'works', break: true, id: 11, elapsed: 601 }) === 'end' && !long.on, 'past ten minutes a break ends');
+  ok(LB.next(long, { status: 'works', break: true, id: 11, elapsed: 700 }) === 'none' && !long.on, 'and does not start again');
+  ok(LB.next(LB.fresh(), { status: 'works', break: true, id: 12, elapsed: 900 }) === 'none', 'a reply past ten minutes never starts');
+
   LB.reset(st);
   ok(!st.on && st.id === null && st.skip === null && st.fails === 0, 'reset gives the fresh values');
 
@@ -67,7 +73,8 @@ function livePage(opts) {
   const els = {},
     timers = [],
     calls = [];
-  let nextId = 1;
+  let nextId = 1,
+    throwOn = null;
   function el(id) {
     const cls = {},
       on = {};
@@ -102,7 +109,13 @@ function livePage(opts) {
       load: () => {},
     };
   }
-  const $ = id => els[id] || (els[id] = el(id));
+  const $ = id => {
+    if (id === throwOn) {
+      throwOn = null;
+      throw new Error('test: ' + id);
+    }
+    return els[id] || (els[id] = el(id));
+  };
   const reply = (p, body) => {
     calls.push({ p: p, body: body });
     if (p === '/api/live/status') return { configured: true };
@@ -160,12 +173,16 @@ function livePage(opts) {
           x.fn();
         }),
     key: k => ctx.LIVE.key({ keyCode: k, preventDefault: () => {} }),
+    /* the next $(id) throws, as a page error inside play() would */
+    throwOnce: id => (throwOn = id),
+    recent: () => calls.filter(c => c.p === '/api/live/state' && c.body && c.body.op === 'recent').map(c => c.body.key),
     video: () => $('lv-stage').video,
     nowAsks: () => calls.filter(c => c.p.indexOf('/api/breaks/now') === 0).map(c => c.p.split('key=')[1]),
   };
   /* the <video> the page creates, found by its 'playing' listener */
-  ctx.document.createElement = () => {
-    const v = el('video');
+  ctx.document.createElement = tag => {
+    const v = el(tag);
+    if (tag !== 'video') return v; /* a <source> */
     els['lv-stage'] = els['lv-stage'] || el('lv-stage');
     els['lv-stage'].video = v;
     return v;
@@ -184,6 +201,14 @@ const playing = async pg => {
   pg.video().on.playing();
   await flush();
 };
+/* the playing stream fails for good: every variant and stream reports an error */
+async function fail(pg) {
+  for (let i = 0; i < 20 && !/not available/.test(pg.$('lv-msg').innerHTML); i++) {
+    const v = pg.video();
+    v.on.error({ target: v });
+  }
+  await flush();
+}
 const brk = (id, elapsed) => ({ status: 'works', break: true, id: id, elapsed: elapsed });
 const nobrk = { status: 'works', break: false, id: null, elapsed: null };
 
@@ -315,6 +340,82 @@ run(async () => {
     await playing(pgd);
     await poll(pgd, brk(1, 0));
     ok(pgd.$('lv-onum').textContent === 1 && pgd.$('lv-dim').has('on'), 'live: a break on the partner channel itself dims');
+  }
+
+  // leaving Live TV while on the partner: it opens again on the channel in the break, and the partner is not a recent channel
+  {
+    const pg = livePage({ settings: { mode: 'partner', partner: 'bbbbbbbbbb', available: true } });
+    pg.LIVE.enter(false, 'aaaaaaaaaa');
+    await flush();
+    await playing(pg);
+    pg.fire(3000);
+    ok(pg.recent().join() === 'aaaaaaaaaa', 'live: the channel watched is recorded as recent');
+    await poll(pg, brk(1, 20));
+    ok(pg.$('lv-onum').textContent === 2, 'live: on the partner during a break');
+    await playing(pg);
+    pg.fire(3000);
+    ok(pg.recent().join() === 'aaaaaaaaaa', 'live: the partner shown in a break is not recorded as recent');
+    pg.LIVE.exit();
+    ok(!pg.$('lv-pill').has('on'), 'live: leaving on the partner removes the pill');
+    pg.LIVE.enter(false);
+    await flush();
+    ok(pg.$('lv-onum').textContent === 1, 'live: back in Live TV on the channel in the break, not the partner');
+  }
+
+  // the partner's stream fails during a break: OK tries it again and the break still switches back at its end
+  {
+    const pg = livePage({ settings: { mode: 'partner', partner: 'bbbbbbbbbb', available: true } });
+    pg.LIVE.enter(false, 'aaaaaaaaaa');
+    await flush();
+    await playing(pg);
+    await poll(pg, brk(1, 20));
+    await fail(pg);
+    ok(pg.$('lv-onum').textContent === 2 && /not available/.test(pg.$('lv-msg').innerHTML), 'live: the partner failed');
+    pg.key(13);
+    await flush();
+    ok(pg.$('lv-onum').textContent === 2 && pg.$('lv-pill').has('on'), 'live: OK retries the partner and keeps the pill');
+    await playing(pg);
+    await poll(pg, nobrk);
+    ok(pg.$('lv-onum').textContent === 1 && !pg.$('lv-pill').has('on'), 'live: after a retry the end of the break still switches back');
+  }
+
+  // dim: after "Watch the ads" the stream fails; OK retries and the same break stays undimmed
+  {
+    const pg = livePage({ settings: { mode: 'dim', partner: '', available: true } });
+    pg.LIVE.enter(false, 'aaaaaaaaaa');
+    await flush();
+    await playing(pg);
+    await poll(pg, brk(6, 20));
+    pg.key(13);
+    await fail(pg);
+    pg.key(13);
+    await flush();
+    await playing(pg);
+    await poll(pg, brk(6, 22));
+    ok(!pg.video().muted && !pg.$('lv-dim').has('on'), 'live: a retry after "Watch the ads" keeps this break undimmed');
+  }
+
+  // a page error inside the break's channel switch: the viewer's next channel change still ends what the break changed
+  {
+    const pg = livePage({ settings: { mode: 'partner', partner: 'bbbbbbbbbb', available: true } });
+    pg.LIVE.enter(false, 'aaaaaaaaaa');
+    await flush();
+    await playing(pg);
+    const errs = [];
+    const onUnhandled = e => errs.push(e);
+    process.on('unhandledRejection', onUnhandled);
+    pg.throwOnce('lv-msg');
+    await poll(pg, brk(1, 20));
+    process.removeListener('unhandledRejection', onUnhandled);
+    ok(errs.length === 1, 'live: the switch to the partner threw (as a page error would)');
+    pg.key(38);
+    pg.fire(180);
+    await playing(pg);
+    await poll(pg, nobrk);
+    ok(
+      pg.$('lv-onum').textContent === 3 && !pg.$('lv-pill').has('on'),
+      "live: then the viewer's channel change is not taken for the break's"
+    );
   }
 
   // off: no poll, no request; the menu rows only when the curator is set up
