@@ -1,5 +1,6 @@
 # Every push to a branch other than main builds the package and publishes it as a PRE-release named test-<branch>.
 # The manager app on the TV can be pointed at such a build (Update channel); "latest" and the stable updater never see it.
+# In this fork the branch tv is moved to main after every merge, so test-tv is always main (main itself builds nothing).
 name: Test build
 on:
   push:
@@ -8,6 +9,8 @@ on:
       - "docs/**"
       - "zensical.toml"
       - ".github/workflows/docs.yml"
+  # by hand, for a branch whose push built nothing (a new branch equal to main): gh workflow run "Test build" --ref <branch>
+  workflow_dispatch:
 permissions:
   contents: write
 jobs:
