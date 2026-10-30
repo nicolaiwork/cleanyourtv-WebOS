@@ -1,4 +1,4 @@
-// The remote's Input key (and the learned Voice and Guide keys): keeps the hook in LG's input processes and the key binds up to date
+// The remote's Input key (and the learned Voice, Guide and Home keys): keeps the hook in LG's input processes and the key binds up to date
 // (inputhook.js), keeps the Inputs picker ready where that works (picker.js), closes the picker when it asks, and writes the mode
 // that scripts/inputkey.sh follows. GET /api/log?m=... is the picker's and the overlay apps' small diagnostics channel.
 const fs = require('fs');
@@ -21,6 +21,9 @@ function create(ctx) {
     return v.enabled && voice && voice.installed() ? String(config.keys().voice || '') : '';
   };
   const guideKey = () => (config.options().liveTv !== false ? String(config.keys().guide || '') : '');
+  // the Home key only while CleanYourTV is Home: LG's handling does not relaunch Home that is in front, so Live TV and Films & Series
+  // (inside the page) would not close
+  const homeKey = () => (fs.existsSync(P.DISABLE) ? '' : String(config.keys().home || ''));
   // overlay, ondemand or launcher: the manager's choice, else this TV's default (tvprofile.js)
   const mode = () => picker.modeOf(config.get().picker || {}, profile.get().pickerMode);
   // with the launcher's list as the target, CleanYourTV has to be the Home: while LG's Home is chosen the key stays with LG
@@ -57,6 +60,7 @@ function create(ctx) {
   function start() {
     if (inputhook.setVoiceKey) inputhook.setVoiceKey(voiceKey);
     if (inputhook.setGuideKey) inputhook.setGuideKey(guideKey);
+    if (inputhook.setHomeKey) inputhook.setHomeKey(homeKey);
     syncMode();
     // bind the key and keep the hook in LG's input processes (they restart now and then)
     setTimeout(ensure, 500);

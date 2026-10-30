@@ -108,7 +108,7 @@ function create(ctx) {
       });
       if (inputhook.markSaved) inputhook.markSaved();
       if (l.name === 'input') ensureHook(l.code);
-      else if (l.name === 'voice' || l.name === 'guide') ensureHook();
+      else ensureHook();
     }
     return l;
   }
@@ -119,7 +119,7 @@ function create(ctx) {
       c.keys[name] = '';
       if (name === 'input') c.keys.learned = false;
     });
-    if (name !== 'home') ensureHook();
+    ensureHook();
   }
 
   async function handle(req, res, u, body) {

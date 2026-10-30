@@ -143,10 +143,9 @@ function kStep(n) {
         function (s) {
           st = s;
           kShow(
-            t('Done.\nInput key %s.\nThe Home key is optional: learn it from the main list if you want it recorded.').replace(
-              '%s',
-              (s.keys || {}).input || '241'
-            ),
+            t(
+              'Done.\nInput key %s.\nThe Home key is optional: learn it from the main list so that it also closes Live TV and Films & Series.'
+            ).replace('%s', (s.keys || {}).input || '241'),
             [{ label: t('Close'), fn: closeKeys }]
           );
         },

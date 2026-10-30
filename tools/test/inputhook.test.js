@@ -31,4 +31,26 @@ run(async () => {
       .join() === 'micomservice,tvservice',
     'firmware without lginput2: the other input processes, as before'
   );
+
+  // the binds: ours follow the keys, LG's and other binds stay
+  const binds = path.join(process.env.CYTV_HOOK_CFG, 'keybinds.json');
+  const read = () => JSON.parse(fs.readFileSync(binds, 'utf8'));
+  const cmd = k => (read()[k] || {}).command || '';
+  let home = '773',
+    guide = '';
+  hook.setHomeKey(() => home);
+  hook.setGuideKey(() => guide);
+  hook.setVoiceKey(() => '');
+  hook.ensure(true, '1023');
+  ok(/inputkey\.sh$/.test(cmd('1023')) && /homekey\.sh$/.test(cmd('773')), 'the Input key and a learned Home key are bound');
+  const b = read();
+  b['999'] = { action: 'exec', command: 'echo other' };
+  fs.writeFileSync(binds, JSON.stringify(b));
+  home = '';
+  guide = '362';
+  hook.ensure(false, '1023');
+  ok(
+    !read()['773'] && !read()['1023'] && /guidekey\.sh$/.test(cmd('362')) && cmd('999') === 'echo other',
+    'without a Home key (or with LG as Home) its bind goes; the Input key released; other binds are left alone'
+  );
 });

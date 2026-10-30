@@ -41,6 +41,7 @@ The playlist and your favourites are kept, so switching it on again brings them 
 | Blue | Statistics | |
 | Red | | Search (the TV's keyboard) |
 | Back | Return to the launcher | Clear filters and search, then close the guide |
+| Home | Return to the launcher, once the Home key is learned ([below](input-key.md#the-home-key)) | Same |
 
 The tabs are **All channels**, **Favourites**, **Recent** and one per category of your playlist. Channels show badges for country,
 language and quality when the playlist names them (for example `NL`, `EN`, `HD`). Filters narrow the list by country, language and

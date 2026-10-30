@@ -1,6 +1,6 @@
 // Input key: injects the bundled inputhook (see third-party/inputhook) into LG's input processes and binds the remote's
 // Input button (id 241) to scripts/inputkey.sh, which opens the Inputs picker overlay. Removing our bind gives the key
-// back to LG's own picker. Other binds in keybinds.json are left alone.
+// back to LG's own picker. The learned Voice, Guide and Home keys are bound the same way. Other binds in keybinds.json are left alone.
 const fs = require('fs'),
   nc = require('./netcompat'),
   exec = require('./exec'),
@@ -19,7 +19,8 @@ const TARGETS = [PRIMARY].concat(FALLBACK);
 const DEFAULT_KEY = '241',
   COMMAND = 'sh ' + D + '/inputkey.sh',
   VOICE_COMMAND = 'sh ' + D + '/voicekey.sh',
-  GUIDE_COMMAND = 'sh ' + D + '/guidekey.sh'; // 241: the Input button on the remote this was written with; learned in the setup
+  GUIDE_COMMAND = 'sh ' + D + '/guidekey.sh',
+  HOME_COMMAND = 'sh ' + D + '/homekey.sh'; // 241: the Input button on the remote this was written with; learned in the setup
 
 function procs() {
   const out = [];
@@ -45,23 +46,15 @@ const hooked = pid => {
   }
 };
 
-function writeBinds(on, key, vkey, gkey) {
+// want: command -> the key it is bound to, or '' for none
+function writeBinds(want) {
   let b = {};
   try {
     b = JSON.parse(fs.readFileSync(BINDS, 'utf8'));
   } catch (_) {}
   const before = JSON.stringify(b);
-  for (const k of Object.keys(b))
-    if (
-      b[k] &&
-      ((b[k].command === COMMAND && (!on || k !== key)) ||
-        (b[k].command === VOICE_COMMAND && (!vkey || k !== vkey)) ||
-        (b[k].command === GUIDE_COMMAND && (!gkey || k !== gkey)))
-    )
-      delete b[k]; // our binds only, wherever they were
-  if (on) b[key] = { action: 'exec', command: COMMAND };
-  if (vkey) b[vkey] = { action: 'exec', command: VOICE_COMMAND };
-  if (gkey) b[gkey] = { action: 'exec', command: GUIDE_COMMAND };
+  for (const k of Object.keys(b)) if (b[k] && b[k].command in want && want[b[k].command] !== k) delete b[k]; // our binds only, wherever they were
+  for (const c of Object.keys(want)) if (want[c]) b[want[c]] = { action: 'exec', command: c };
   if (JSON.stringify(b) === before) return;
   nc.mkdirp(CFGDIR);
   fs.writeFileSync(BINDS + '.tmp', JSON.stringify(b));
@@ -78,15 +71,25 @@ let guideFn = () => ''; // the key bound to the Live TV guide, or '' (Live TV of
 const setGuideKey = f => {
   guideFn = f;
 };
+let homeFn = () => ''; // the key that relaunches Home, or '' (CleanYourTV is not Home or no key learned)
+const setHomeKey = f => {
+  homeFn = f;
+};
 function ensure(enabled, key) {
-  const vkey = voiceFn(),
-    gkey = guideFn();
+  const vkey = String(voiceFn() || ''),
+    gkey = String(guideFn() || ''),
+    hkey = String(homeFn() || '');
   try {
-    writeBinds(enabled, String(key || DEFAULT_KEY), vkey ? String(vkey) : '', gkey ? String(gkey) : '');
+    writeBinds({
+      [COMMAND]: enabled ? String(key || DEFAULT_KEY) : '',
+      [VOICE_COMMAND]: vkey,
+      [GUIDE_COMMAND]: gkey,
+      [HOME_COMMAND]: hkey,
+    });
   } catch (e) {
     console.error('inputhook: keybinds:', e.message);
   }
-  if (!(enabled || vkey || gkey) || busy || !fs.existsSync(HOOK + '/ezinject')) return;
+  if (!(enabled || vkey || gkey || hkey) || busy || !fs.existsSync(HOOK + '/ezinject')) return;
   const todo = procs().filter(p => !hooked(p.pid));
   if (!todo.length) return;
   busy = true;
@@ -187,4 +190,4 @@ function learnState() {
     seconds: Math.round((Date.now() - learn.at) / 1000),
   };
 }
-module.exports = { setVoiceKey, setGuideKey, ensure, status, markSaved, startLearn, learnState, hookInfo, procs, DEFAULT_KEY };
+module.exports = { setVoiceKey, setGuideKey, setHomeKey, ensure, status, markSaved, startLearn, learnState, hookInfo, procs, DEFAULT_KEY };

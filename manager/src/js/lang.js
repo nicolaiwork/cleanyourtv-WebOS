@@ -200,8 +200,8 @@ var TX = {
     'The Guide key.\nChoose Start, then press the Guide button on your remote. It then opens the Live TV channel guide instead of LG’s guide. Clear it to get LG’s guide back.':
       'Guide-knappen.\nVælg Start, og tryk så på Guide-knappen på din fjernbetjening. Derefter åbner den Live-tv’s programguide i stedet for LG’s. Ryd den for at få LG’s guide tilbage.',
     'LG’s guide again': 'LG’s guide igen',
-    'Done.\nInput key %s.\nThe Home key is optional: learn it from the main list if you want it recorded.':
-      'Færdig.\nInput-knappen %s.\nHjem-knappen er valgfri: lær den fra hovedlisten, hvis du vil have den gemt.',
+    'Done.\nInput key %s.\nThe Home key is optional: learn it from the main list so that it also closes Live TV and Films & Series.':
+      'Færdig.\nInput-knappen %s.\nHjem-knappen er valgfri: lær den fra hovedlisten, så den også lukker Live-tv og Film og serier.',
     'Input key cleared.\nIt uses the default code (%s).': 'Input-knappen er ryddet.\nDen bruger standardkoden (%s).',
     'Voice button cleared.': 'Stemmeknappen er ryddet.',
     'Guide key cleared. LG’s guide is back.': 'Guide-knappen er ryddet. LG’s guide er tilbage.',
@@ -469,8 +469,8 @@ var TX = {
       'Gemmer koden for Guide-knappen. Derefter åbner den Live-tv’s programguide over det, der kører (kun mens Live-tv er slået til). Ryd den for at få LG’s guide tilbage.',
     'How the Input button shows the Inputs. Over the running app, ready in the background: instant, tested on webOS 25. Over the running app, started when pressed: nothing runs hidden, so it cannot keep the remote; the default on older webOS, where the background one showed a loading circle. The launcher’s Inputs list: the TV goes to our Home (needs CleanYourTV as Home; otherwise the key stays with LG). Choose to go to the next one.':
       'Hvordan Input-knappen viser indgangene. Over den åbne app, klar i baggrunden: straks, testet på webOS 25. Over den åbne app, startes ved tryk: intet kører skjult, så den kan ikke holde på fjernbetjeningen; standard på ældre webOS, hvor den i baggrunden viste en indlæsningscirkel. Startskærmens liste over indgange: tv’et går til vores startskærm (kræver CleanYourTV som startskærm; ellers bliver knappen hos LG). Vælg for at gå til den næste.',
-    'Optional. Records the Home button’s code. The Home key keeps working exactly as before.':
-      'Valgfrit. Gemmer koden for Hjem-knappen. Hjem-knappen virker præcis som før.',
+    'Optional. Records the Home button’s code. Afterwards the Home key also closes Live TV and Films & Series (while CleanYourTV is Home). Clear it to give the key back to LG.':
+      'Valgfrit. Gemmer koden for Hjem-knappen. Derefter lukker Hjem-knappen også Live-tv og Film og serier (mens CleanYourTV er startskærmen). Ryd den for at give knappen tilbage til LG.',
     'Back to the main list.': 'Tilbage til hovedlisten.',
     'Nothing changes.': 'Intet ændres.',
     'Deletes the apps, the boot scripts and the settings, then restarts the TV.':
