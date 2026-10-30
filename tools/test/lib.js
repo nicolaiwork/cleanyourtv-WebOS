@@ -18,6 +18,7 @@ process.env.CYTV_LIVE_DIR = path.join(tmp, 'live', 'deep'); // exercises mkdir -
 process.env.CYTV_VOD_DIR = path.join(tmp, 'vod');
 process.env.CYTV_RUNFILE = path.join(tmp, 'run.json');
 process.env.CYTV_PROC = path.join(tmp, 'proc');
+process.env.CYTV_HOOK_CFG = path.join(tmp, 'lginputhook');
 for (const d of [process.env.CYTV_DIR, process.env.CYTV_SERVICE_DIR, process.env.CYTV_PROC]) fs.mkdirSync(d);
 
 let failed = 0;

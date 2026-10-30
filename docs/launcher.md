@@ -42,7 +42,7 @@ Continue watching uses the whole width. Home appears at once from what it showed
 | Put an app or an input on Home | Settings > **Apps on Home** / **Inputs on Home**, or hold OK on an input in the Inputs picker |
 | Close running apps | Back on the home screen |
 
-Up or Down into the Trending title always lands on Play. The Home key brings the focus back to Play. The Magic Remote pointer
+Up or Down into the Trending title always lands on Play. The Home key brings the focus back to Play, once it is learned ([The Home key](input-key.md#the-home-key)). The Magic Remote pointer
 works too: pointing and clicking, and holding the button on an app for its options.
 
 ![App options](screenshots/options.jpg)

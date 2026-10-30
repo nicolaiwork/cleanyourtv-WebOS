@@ -52,6 +52,15 @@ the picker opens. **Clear** restores the default.
 
 The switch in the same menu removes the bind and gives the button back to LG's own picker. **Learn the Home key** is optional.
 
+## The Home key
+
+Live TV and Films & Series run inside the launcher page, so to the TV, Home is already in front while you watch. LG's handling of
+the Home button does nothing then: it only launches Home when another app is in front. Once **Learn the Home key** has recorded
+the button's code, the hook binds it to `homekey.sh`, which asks the app manager to launch Home, as the TV does from any other
+app. With Home in front, the launch reaches the page as a relaunch: Live TV and Films & Series close (a film's position is saved)
+and the focus goes back to Play. The bind is only there while CleanYourTV is Home; **Clear** removes it and gives the button back
+to LG.
+
 The Guide button can be bound the same way; that is part of [Live TV](live-tv.md#the-guide-button) (manager app > **Live TV** > **Learn the Guide key**).
 
 !!! note "When the hook is not attached"
