@@ -64,6 +64,10 @@ run(async () => {
   });
   await call(apps, '/api/config', 'POST', { dock: ['a.one'], sort: 'alpha' });
   ok(config.get().pinnedInputs.length === 2, "saving the launcher's settings keeps the pinned inputs");
+  await call(apps, '/api/config', 'POST', { dock: ['a.one'], language: 'da' });
+  ok(config.get().language === 'da', "the launcher's Settings choose the language");
+  await call(apps, '/api/config', 'POST', { dock: ['a.one'], language: 'fr' });
+  ok(config.get().language === undefined, "only a language the pages have is kept (the TV's otherwise)");
   config.update('test', c => {
     c.dock = ['a.one', 'com.webos.app.hdmi2'];
   });

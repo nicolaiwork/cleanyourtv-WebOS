@@ -1,6 +1,7 @@
 # The manager app
 
 **CleanYourTV** in LG's app list sets up, updates and removes everything. The left side of the screen explains the focused row.
+The manager follows the language: the TV's (Danish on a TV set to Danish, English otherwise), or the one chosen in the launcher's **Settings > Language** ([language](launcher.md#language)).
 
 ![Manager app](screenshots/manager.jpg)
 

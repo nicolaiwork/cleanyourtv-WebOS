@@ -5,7 +5,8 @@ const fs = require('fs');
 const P = require('./paths'),
   web = require('./web'),
   exec = require('./exec'),
-  debloat = require('./debloat');
+  debloat = require('./debloat'),
+  { language } = require('./config');
 
 // the TV comes back to its last app after a restart; that must not be one of ours
 function fixLastApp() {
@@ -67,6 +68,7 @@ function create(ctx) {
       keys: keys(),
       job: updates.job(),
       repo: updates.repo(),
+      language: language(config.get()) || 'auto',
     });
   }
 

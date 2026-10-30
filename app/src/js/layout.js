@@ -5,7 +5,7 @@ function load() {
       VOD.check(); /* fork */
       if (x.version && oldSvc(x.version) && !warned) {
         warned = true;
-        toast('The service (' + x.version + ') is older than this launcher needs: update it in the CleanYourTV manager');
+        toast(t('The service (%s) is older than this launcher needs: update it in the CleanYourTV manager').replace('%s', x.version));
       }
       slideLater();
       usage = x.usage || {};
@@ -26,9 +26,16 @@ function load() {
         return a.input ? { id: a.id, title: a.title, input: a.input, off: !!a.off } : { id: a.id, title: a.title };
       });
       cfg = x.config || {};
+      if (locFor(cfg.language) !== LOC) {
+        /* a language chosen in Settings (here or before a boot): the page again, drawn in it */
+        store();
+        if (cachedLang() === (cfg.language || '')) return void location.reload();
+        LOC = locFor(cfg.language); /* no cache to read it from: the texts drawn from now on */
+        LANG = LOC.slice(0, 2);
+      }
       applyTheme(cfg.theme);
       if (liveOn()) apps.push({ id: '__live', title: t('Live TV') });
-      if (VOD.ready) apps.push({ id: '__vod', title: 'Films & Series' }); /* fork */
+      if (VOD.ready) apps.push({ id: '__vod', title: t('Films & Series') }); /* fork */
       store();
       rebuild();
       homeData(); /* after the settings: Live TV may have been switched on or off */

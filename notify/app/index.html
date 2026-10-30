@@ -38,13 +38,20 @@ function place(pos,wide){
   var m=64,s=card.style,w=wide?900:640;s.left=s.right=s.top=s.bottom='auto';
   if(/left/.test(pos))s.left=m+'px';else if(/center/.test(pos))s.left=(1920-w)/2+'px';else s.right=m+'px';
   if(/bottom/.test(pos))s.bottom=m+'px';else if(/middle/.test(pos))s.top='300px';else s.top=m+'px'}
+/* the voice cards' own words (helper/voice.js) in the TV's language; other notifications are shown as they were sent */
+var VOICE={da:{'You said':'Du sagde','Thinking':'T\u00E6nker','Not answered':'Intet svar','Listening':'Lytter','Voice':'Stemme','Recognising':'Genkender',
+  'I did not hear anything':'Jeg h\u00F8rte ikke noget','I could not make out any words':'Jeg kunne ikke opfange nogen ord'}};
+var TVLANG=((window.webOSSystem&&webOSSystem.locale)||navigator.language||'en').slice(0,2),VT=VOICE[TVLANG]||{};
+function vt(s){return VT[s]||s}
 function reveal(){requestAnimationFrame(function(){requestAnimationFrame(function(){card.classList.add('on')})})}   // only after the first full layout, so nothing jumps
 function show(){
   var p={};try{p=JSON.parse(webOSSystem.launchParams||'{}')}catch(e){}
   var inplace=!!p.kind&&card.classList.contains('on')&&card.className.indexOf('k-')>=0;   // a voice card that is already showing is updated without fading out
   if(!inplace)card.classList.remove('on');
   card.className=(card.classList.contains('on')?'on ':'')+(p.kind?'v k-'+p.kind:'');
-  document.getElementById('title').textContent=p.title||'';document.getElementById('q').textContent=p.question||'';document.getElementById('text').textContent=p.text||'';
+  VT=VOICE[p.lang||TVLANG]||{};   // p.lang: the language chosen in the launcher's Settings (helper/notify.js)
+  var tr=p.kind?vt:function(s){return s};
+  document.getElementById('title').textContent=tr(p.title||'');document.getElementById('q').textContent=p.question||'';document.getElementById('text').textContent=tr(p.text||'');
   place(p.position||'top-right',!!p.kind);
   clearTimeout(timer);
   timer=setTimeout(function(){card.classList.remove('on');setTimeout(function(){try{window.close()}catch(e){}},500)},Math.max(2,Math.min(120,p.seconds||8))*1000+500);

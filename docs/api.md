@@ -19,7 +19,7 @@ you can call it from a shell on the TV (for example over SSH).
 | `GET /api/live/status`, `/api/live/channels`, `/api/live/epg` | Live TV data |
 | `POST /api/live/settings`, `/api/live/refresh`, `/api/live/reset` | Live TV setup |
 | `GET /api/live/home` | The channels Home shows (fork): favourites, then recent ones, at most eight, each with its number, name, logo, guide id and the programme now and next, and the channel watched last; no stream addresses |
-| `GET /api/manager/status` | Versions, updates, options, hook state |
+| `GET /api/manager/status` | Versions, updates, options, hook state, and the language chosen in the launcher (`auto`, `da`, `en`) |
 | `GET /api/version` | The service's version |
 | `GET /api/tv` | What the service found out about this TV and the decisions that follow from it (Input key mode, notification window, tested firmware) |
 | `GET /api/service` | The service's version, its Node.js version and which parts are running (a part that failed to load is listed with the reason) |

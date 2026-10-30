@@ -250,6 +250,520 @@ body {
   <div id="sharemsg"></div><div id="shareurl"></div><div id="shareclose">Close</div>
   <div id="qrbox"><canvas id="qr"></canvas></div></div>
 <script>
+/* ---------- language: the TV's, or the one chosen in the launcher's Settings (as the launcher does in app/src/js/clock.js) ----------
+   English is the key itself; TX.da maps English to Danish. A variable part is %s: t('Update to %s').replace('%s', v).
+   tools/test/manager.test.js checks that every text given to t() in manager/src/js has a Danish one. */
+var TVLANG = ((window.webOSSystem && webOSSystem.locale) || navigator.language || 'en').slice(0, 2);
+/* the TV's language, or the one chosen in the launcher's Settings: kept here for the next start, so the first drawing is in it */
+function langOf(pref) {
+  return pref === 'da' || pref === 'en' ? pref : TVLANG;
+}
+var LANG = (function () {
+  try {
+    return langOf(localStorage.getItem('cytv.manager.lang'));
+  } catch (e) {
+    return TVLANG;
+  }
+})();
+/* the service's choice (manager status "language": auto, da or en); another than the one drawn: the page again, in it */
+function followLang(pref) {
+  if (langOf(pref) === LANG) return;
+  try {
+    localStorage.setItem('cytv.manager.lang', pref);
+    if (localStorage.getItem('cytv.manager.lang') === pref) location.reload();
+  } catch (e) {}
+}
+var TX = {
+  da: {
+    // on and off, buttons
+    'On': 'Til',
+    'Off': 'Fra',
+    'Close': 'Luk',
+    'Back': 'Tilbage',
+    'Cancel': 'Annuller',
+    'Start': 'Start',
+    'Skip': 'Spring over',
+    'Clear': 'Ryd',
+    'Continue': 'Fortsæt',
+    'Continue to the test': 'Fortsæt til testen',
+    'Try again': 'Prøv igen',
+    'Learn again': 'Lær igen',
+    'selected': 'valgt',
+    'default': 'standard',
+    'optional': 'valgfri',
+    'Saved': 'Gemt',
+
+    // the main list
+    'Launcher': 'Startskærm',
+    'Service': 'Tjeneste',
+    'Check for updates': 'Søg efter opdateringer',
+    'Update channel': 'Opdateringskanal',
+    'Go back to launcher': 'Gå tilbage til startskærm',
+    'Go back to launcher %s': 'Gå tilbage til startskærm %s',
+    'Update to': 'Opdater til',
+    'Update to %s': 'Opdater til %s',
+    'Update to %s (test build)': 'Opdater til %s (testversion)',
+    'Checking…': 'Søger…',
+    'No release yet': 'Ingen udgivelse endnu',
+    'Cannot check': 'Kan ikke søge',
+    'Up to date': 'Opdateret',
+    'CleanYourTV as Home': 'CleanYourTV som startskærm',
+    'Theme': 'Tema',
+    'Live TV': 'Live-tv',
+    'Input key': 'Input-knappen',
+    'not available': 'ikke tilgængelig',
+    'Voice': 'Stemme',
+    'not installed': 'ikke installeret',
+    'Network notifications': 'Notifikationer fra netværket',
+    'Debloat LG’s ads and telemetry': 'Fjern LG’s reklamer og sporing',
+    'Share log': 'Del log',
+    'QR code for your phone': 'QR-kode til din telefon',
+    'Uninstall': 'Fjern CleanYourTV',
+    'Launcher %s · service %s': 'Startskærm %s · tjeneste %s',
+    'Updates: %s': 'Opdateringer: %s',
+    'Latest release %s': 'Nyeste udgivelse %s',
+    'The service did not answer': 'Tjenesten svarede ikke',
+    'The service did not answer.': 'Tjenesten svarede ikke.',
+    'Waiting for the service…': 'Venter på tjenesten…',
+    'Reading status…': 'Læser status…',
+
+    // update channel
+    'Where updates come from': 'Hvor opdateringerne kommer fra',
+    'Stable releases': 'Stabile udgivelser',
+    'the latest published release': 'den nyeste udgivne version',
+    'Test: %s': 'Test: %s',
+    'build %s': 'version %s',
+    'No test builds right now': 'Ingen testversioner lige nu',
+    'a test build appears when a branch is pushed': 'en testversion dukker op, når en gren bliver skubbet op',
+    'Looking for test builds…': 'Leder efter testversioner…',
+    'Switching…': 'Skifter…',
+    'Following %s. If the Launcher or Service row offers an update, that is the test build.':
+      'Følger %s. Hvis Startskærm eller Tjeneste tilbyder en opdatering, er det testversionen.',
+    'Back on the stable releases': 'Tilbage på de stabile udgivelser',
+
+    // Home
+    'Switch Home?': 'Skift startskærm?',
+    'Remove CleanYourTV?': 'Fjern CleanYourTV?',
+    'Yes, remove CleanYourTV': 'Ja, fjern CleanYourTV',
+    'Yes, use CleanYourTV as Home': 'Ja, brug CleanYourTV som startskærm',
+    'Yes, use LG’s Home': 'Ja, brug LG’s startskærm',
+    'settings and apps are deleted; the TV restarts': 'indstillinger og apps slettes; tv’et genstarter',
+    'the TV restarts': 'tv’et genstarter',
+    'Removing CleanYourTV… the TV restarts in a moment and LG’s Home comes back.':
+      'Fjerner CleanYourTV… tv’et genstarter om lidt, og LG’s startskærm kommer tilbage.',
+    'Switching to CleanYourTV… the TV restarts in a moment.': 'Skifter til CleanYourTV… tv’et genstarter om lidt.',
+    'Switching to LG’s Home… the TV restarts in a moment.': 'Skifter til LG’s startskærm… tv’et genstarter om lidt.',
+
+    // themes
+    'Choose how Home looks. The change shows the next time you open Home.':
+      'Vælg, hvordan startskærmen ser ud. Ændringen ses, næste gang du åbner startskærmen.',
+    'on GitHub': 'på GitHub',
+    'By %s': 'Af %s',
+    'Downloaded from GitHub when you choose it.': 'Hentes fra GitHub, når du vælger det.',
+    'Theme options': 'Temaindstillinger',
+    'accent colour': 'accentfarve',
+    'Accent colour': 'Accentfarve',
+    'Theme default': 'Temaets standard',
+    'Go back to the previous theme': 'Gå tilbage til det forrige tema',
+    'nothing to go back to': 'intet at gå tilbage til',
+    'Previous theme restored': 'Det forrige tema er sat tilbage',
+    'Accent: theme default': 'Accent: temaets standard',
+    'Accent: %s': 'Accent: %s',
+    'The colour of the focus ring and highlights': 'Farven på fokusrammen og fremhævninger',
+    'Loading themes…': 'Indlæser temaer…',
+    'Could not reach GitHub (%s): showing the themes on this TV.': 'Kunne ikke nå GitHub (%s): viser temaerne på dette tv.',
+    'Getting %s…': 'Henter %s…',
+    '%s applied. Open Home to see it.': '%s er valgt. Åbn startskærmen for at se det.',
+    // accent colours (names from the service)
+    'White': 'Hvid',
+    'Blue': 'Blå',
+    'Teal': 'Blågrøn',
+    'Green': 'Grøn',
+    'Yellow': 'Gul',
+    'Orange': 'Orange',
+    'Red': 'Rød',
+    'Pink': 'Lyserød',
+    'Purple': 'Lilla',
+
+    // Live TV
+    'Live TV: your own playlist': 'Live-tv: din egen playliste',
+    'Show Live TV': 'Vis Live-tv',
+    'Playlist': 'Playliste',
+    '%s channels': '%s kanaler',
+    'guide for %s programmes': 'programguide med %s udsendelser',
+    'not set · set up from your phone': 'ikke sat op · sæt op fra din telefon',
+    'Refresh playlist and guide': 'Opdater playliste og programguide',
+    'Refreshing…': 'Opdaterer…',
+    'Refreshing in the background': 'Opdaterer i baggrunden',
+    'Learn the Guide key': 'Lær Guide-knappen',
+    'not learned · LG’s guide stays': 'ikke lært · LG’s guide bliver',
+    'Live TV is off': 'Live-tv er slået fra',
+    'Clear recent channels': 'Ryd seneste kanaler',
+    'Recent channels cleared': 'Seneste kanaler er ryddet',
+    'Remove the playlist': 'Fjern playlisten',
+    'nothing to remove': 'intet at fjerne',
+    'Remove the playlist?': 'Fjern playlisten?',
+    'Yes, remove the playlist': 'Ja, fjern playlisten',
+    'the address, the channel list, the guide and your favourites are deleted':
+      'adressen, kanallisten, programguiden og dine favoritter slettes',
+    'Playlist removed': 'Playlisten er fjernet',
+    'No, keep it': 'Nej, behold den',
+    'Set up Live TV': 'Sæt Live-tv op',
+    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Enter the <b>code</b> below and your playlist address.</li>':
+      '<li>Telefonen på <b>samme wi-fi</b> som tv’et.</li><li>Scan koden med kameraet.</li><li>Indtast <b>koden</b> herunder og adressen på din playliste.</li>',
+    'code %s': 'kode %s',
+    'The page stays open for ten minutes. It is not encrypted: the playlist address, which may hold an access key, travels over your Wi-Fi.':
+      'Siden er åben i ti minutter. Den er ikke krypteret: adressen på playlisten, som kan indeholde en adgangsnøgle, sendes over dit wi-fi.',
+    'Playlist saved': 'Playlisten er gemt',
+    // Live TV states (from the service)
+    'loading playlist': 'indlæser playliste',
+    'loading guide': 'indlæser programguide',
+
+    // the Input key
+    'Input key opens our Inputs list': 'Input-knappen åbner vores liste over indgange',
+    'not available on this firmware': 'ikke tilgængelig på denne firmware',
+    'Learn the Input key': 'Lær Input-knappen',
+    'default (%s)': 'standard (%s)',
+    'learned: %s': 'lært: %s',
+    'default: %s': 'standard: %s',
+    'now: %s': 'nu: %s',
+    'not learned': 'ikke lært',
+    'Input key shows': 'Input-knappen viser',
+    'over the running app, ready in the background (instant)': 'over den åbne app, klar i baggrunden (straks)',
+    'over the running app, started when pressed': 'over den åbne app, startes ved tryk',
+    'the launcher’s Inputs list': 'startskærmens liste over indgange',
+    'LG’s own list: CleanYourTV is not the Home': 'LG’s egen liste: CleanYourTV er ikke startskærmen',
+    'Learn the Home key': 'Lær Hjem-knappen',
+    'Take over the Input key': 'Overtag Input-knappen',
+    // why the picker mode changed (from the service)
+    'switched off in the manager': 'slået fra i CleanYourTV',
+    'chosen in the manager': 'valgt i CleanYourTV',
+    'the TV keeps closing the hidden picker': 'tv’et lukker hele tiden den skjulte liste',
+
+    // learning keys
+    'The Input key.\nChoose Start, then press the Input button on your remote.':
+      'Input-knappen.\nVælg Start, og tryk så på Input-knappen på din fjernbetjening.',
+    'back to the default (%s)': 'tilbage til standard (%s)',
+    'The Home key (optional).\nChoose Start, then press the Home button on your remote.':
+      'Hjem-knappen (valgfri).\nVælg Start, og tryk så på Hjem-knappen på din fjernbetjening.',
+    'forget the code': 'glem koden',
+    'The voice button.\nChoose Start, then press the button you want to use for voice. The remote’s microphone button may not reach the hook; any spare button works.':
+      'Stemmeknappen.\nVælg Start, og tryk så på den knap, du vil bruge til stemme. Fjernbetjeningens mikrofonknap når måske ikke frem; enhver ledig knap virker.',
+    'The Guide key.\nChoose Start, then press the Guide button on your remote. It then opens the Live TV channel guide instead of LG’s guide. Clear it to get LG’s guide back.':
+      'Guide-knappen.\nVælg Start, og tryk så på Guide-knappen på din fjernbetjening. Derefter åbner den Live-tv’s programguide i stedet for LG’s. Ryd den for at få LG’s guide tilbage.',
+    'LG’s guide again': 'LG’s guide igen',
+    'Done.\nInput key %s.\nThe Home key is optional: learn it from the main list if you want it recorded.':
+      'Færdig.\nInput-knappen %s.\nHjem-knappen er valgfri: lær den fra hovedlisten, hvis du vil have den gemt.',
+    'Input key cleared.\nIt uses the default code (%s).': 'Input-knappen er ryddet.\nDen bruger standardkoden (%s).',
+    'Voice button cleared.': 'Stemmeknappen er ryddet.',
+    'Guide key cleared. LG’s guide is back.': 'Guide-knappen er ryddet. LG’s guide er tilbage.',
+    'Home key cleared.': 'Hjem-knappen er ryddet.',
+    'Press the Input button now…': 'Tryk på Input-knappen nu…',
+    'Press the voice button now…': 'Tryk på stemmeknappen nu…',
+    'Press the Guide button now…': 'Tryk på Guide-knappen nu…',
+    'Press the Home button now…': 'Tryk på Hjem-knappen nu…',
+    'Input key learned: code %s.': 'Input-knappen er lært: kode %s.',
+    'Voice button learned: code %s.': 'Stemmeknappen er lært: kode %s.',
+    'Guide key learned: code %s.': 'Guide-knappen er lært: kode %s.',
+    'Home key learned: code %s.': 'Hjem-knappen er lært: kode %s.',
+    'The hook did not attach on this firmware, so keys cannot be learned. The Input key stays with LG’s picker.\nUse Share log to report this.':
+      'Krogen kunne ikke kobles på denne firmware, så knapper kan ikke læres. Input-knappen bliver hos LG’s liste.\nBrug Del log til at melde det.',
+    'Nothing was pressed.': 'Der blev ikke trykket på noget.',
+    'Test.\nPress the Input button once more. Our Inputs list should open over this screen.':
+      'Test.\nTryk på Input-knappen en gang til. Vores liste over indgange skal åbne over denne skærm.',
+    'The Inputs list opened: the Input key works.': 'Listen over indgange åbnede: Input-knappen virker.',
+    'The Inputs list did not open.\nIf LG’s own picker showed, the Input key is not mapped: learn it again or switch the Input key off.':
+      'Listen over indgange åbnede ikke.\nHvis LG’s egen liste kom frem, er Input-knappen ikke koblet: lær den igen, eller slå Input-knappen fra.',
+
+    // voice
+    'Install voice': 'Installer stemme',
+    'installing…': 'installerer…',
+    'downloads about 80 MB': 'henter cirka 80 MB',
+    'Listen on the voice button': 'Lyt på stemmeknappen',
+    'learn a button first': 'lær en knap først',
+    'Learn the voice button': 'Lær stemmeknappen',
+    'Try it now': 'Prøv det nu',
+    'listening…': 'lytter…',
+    'speak when the card appears': 'tal, når kortet vises',
+    'Speak now…': 'Tal nu…',
+    'Listening…': 'Lytter…',
+    'Switch off LG’s voice assistant': 'Slå LG’s stemmeassistent fra',
+    'not paused yet': 'ikke sat på pause endnu',
+    'Home Assistant (Assist)': 'Home Assistant (Assist)',
+    'Which answers first': 'Hvem svarer først',
+    'Home Assistant first, then the AI': 'Home Assistant først, så AI’en',
+    'Home Assistant only': 'Kun Home Assistant',
+    'The AI only': 'Kun AI’en',
+    'Assist agent': 'Assist-agent',
+    'set up Home Assistant first': 'sæt Home Assistant op først',
+    'AI chat (OpenRouter)': 'AI-chat (OpenRouter)',
+    'no key set': 'ingen nøgle sat',
+    'Model': 'Model',
+    'Send the text to': 'Send teksten til',
+    'not set · shows a card only': 'ikke sat · viser kun et kort',
+    'Set up from your phone': 'Sæt op fra din telefon',
+    'key, model, Home Assistant, server': 'nøgle, model, Home Assistant, server',
+    'Set up with commands': 'Sæt op med kommandoer',
+    'for scripts and ssh': 'til scripts og ssh',
+    'Forget the conversation': 'Glem samtalen',
+    'Conversation cleared': 'Samtalen er glemt',
+    'Remove voice': 'Fjern stemme',
+    'deletes the %s MB download': 'sletter de %s MB, der blev hentet',
+    'Voice removed': 'Stemme er fjernet',
+    'Last heard: “%s”': 'Sidst hørt: “%s”',
+    'Not sent: %s': 'Ikke sendt: %s',
+    'Last try: %s': 'Sidste forsøg: %s',
+    // the last try (from the service)
+    'listening': 'lytter',
+    'nothing heard': 'intet hørt',
+    'nothing recognised': 'intet genkendt',
+    'heard': 'hørt',
+    'error': 'fejl',
+    'Choose the model that answers': 'Vælg den model, der svarer',
+    'Choose the Home Assistant agent': 'Vælg Home Assistant-agenten',
+    '$%s per million words in': '$%s pr. million ord ind',
+    'Default agent': 'Standardagent',
+    'Home Assistant’s own': 'Home Assistants egen',
+    'Loading the model list…': 'Indlæser listen over modeller…',
+    'Auto (OpenRouter picks)': 'Auto (OpenRouter vælger)',
+    'Asking Home Assistant…': 'Spørger Home Assistant…',
+    'Connected to %s': 'Forbundet til %s',
+    'Agent: %s': 'Agent: %s',
+    'Model: %s': 'Model: %s',
+    'Set the address of your server (from a shell on the TV):': 'Sæt adressen på din server (fra en shell på tv’et):',
+    'The TV sends: POST, JSON {"text":"..."}, with "Authorization: Bearer <token>" when a token is set. If your server answers with JSON {"text":"..."} (or plain text), the answer is shown as a card. Only the recognised text is sent, never audio.':
+      'Tv’et sender: POST, JSON {"text":"..."}, med "Authorization: Bearer <token>", når en token er sat. Hvis din server svarer med JSON {"text":"..."} (eller ren tekst), vises svaret som et kort. Kun den genkendte tekst sendes, aldrig lyd.',
+    'Chat with a language model through OpenRouter. Run these on the TV (ssh):':
+      'Chat med en sprogmodel via OpenRouter. Kør disse på tv’et (ssh):',
+    'Optional: "system" sets the instructions. Ask by text from anywhere on the TV:':
+      'Valgfrit: "system" sætter instruktionerne. Spørg med tekst fra hvor som helst på tv’et:',
+    'What is the capital of Peru?': 'Hvad er hovedstaden i Peru?',
+    'Spoken and typed questions go to OpenRouter and the model you chose; no audio does. The key stays on the TV.':
+      'Talte og skrevne spørgsmål sendes til OpenRouter og den model, du valgte; lyd gør ikke. Nøglen bliver på tv’et.',
+    'Home Assistant (Assist), with a long-lived access token:': 'Home Assistant (Assist), med en langtidsgyldig adgangstoken:',
+    'Optional: "route" is ha-first, ha-only or ai-only; "selfSigned":true accepts a self-signed certificate; "agent" is a conversation entity.':
+      'Valgfrit: "route" er ha-first, ha-only eller ai-only; "selfSigned":true godtager et selvsigneret certifikat; "agent" er en samtaleenhed.',
+    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Enter your <b>OpenRouter key</b> and model, or your <b>Home Assistant</b> address and access token, and tap <b>Save</b>.</li>':
+      '<li>Telefonen på <b>samme wi-fi</b> som tv’et.</li><li>Scan koden med kameraet.</li><li>Indtast din <b>OpenRouter-nøgle</b> og model, eller adressen og adgangstoken til din <b>Home Assistant</b>, og tryk på <b>Save</b>.</li>',
+    'The page stays open for ten minutes, or until you save. It is not encrypted: the key travels over your Wi-Fi, so use a network you trust.':
+      'Siden er åben i ti minutter, eller indtil du gemmer. Den er ikke krypteret: nøglen sendes over dit wi-fi, så brug et netværk, du stoler på.',
+    'The page has closed. Close this and try again.': 'Siden er lukket. Luk dette, og prøv igen.',
+
+    // network notifications
+    'Accept notifications from the network': 'Tag imod notifikationer fra netværket',
+    'How to send': 'Sådan sender du',
+    'address, token, example': 'adresse, token, eksempel',
+    'Send a POST request:': 'Send en POST-forespørgsel:',
+    'Header:': 'Header:',
+    'Body (JSON):': 'Indhold (JSON):',
+    'Front door': 'Hoveddør',
+    'Someone is at the door': 'Der er nogen ved døren',
+    'Show as QR code': 'Vis som QR-kode',
+    'scan with a phone to copy the address and token': 'scan med en telefon for at kopiere adresse og token',
+    'New token': 'Ny token',
+    'the old one stops working': 'den gamle holder op med at virke',
+    'New token created. Open “How to send” to see it.': 'Ny token oprettet. Åbn “Sådan sender du” for at se den.',
+    'Switch notifications on first': 'Slå notifikationer til først',
+    'Notification address and token': 'Adresse og token til notifikationer',
+    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera and open the page: it shows the address and the token with <b>Copy</b> buttons.</li><li>The token is a <b>secret</b>: anyone who sees this code while it is open can read it.</li>':
+      '<li>Telefonen på <b>samme wi-fi</b> som tv’et.</li><li>Scan koden med kameraet, og åbn siden: den viser adressen og token med <b>Copy</b>-knapper.</li><li>Token er <b>hemmelig</b>: alle, der ser denne kode, mens den er åben, kan læse den.</li>',
+    'Preparing…': 'Gør klar…',
+    'The notification listener is not running.': 'Modtageren af notifikationer kører ikke.',
+    'The page opens for ten minutes. It is not encrypted: the token travels over your Wi-Fi, so use a network you trust.':
+      'Siden er åben i ti minutter. Den er ikke krypteret: token sendes over dit wi-fi, så brug et netværk, du stoler på.',
+
+    // share log
+    'Share the log': 'Del loggen',
+    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Tap <b>Copy</b> on the page and paste it into your message.</li>':
+      '<li>Telefonen på <b>samme wi-fi</b> som tv’et.</li><li>Scan koden med kameraet.</li><li>Tryk på <b>Copy</b> på siden, og indsæt den i din besked.</li>',
+    'Preparing the report…': 'Gør rapporten klar…',
+    'The page is open for ten minutes. It lists versions, the setup log and the service log; addresses and URL paths are masked.':
+      'Siden er åben i ti minutter. Den viser versioner, opsætningsloggen og tjenestens log; adresser og URL-stier er skjult.',
+    'Could not prepare the report (is the Homebrew Channel installed?).':
+      'Kunne ikke gøre rapporten klar (er Homebrew Channel installeret?).',
+
+    // before the setup
+    'The service is not running. Set it up to replace LG’s Home, take over the Input key and keep everything up to date.':
+      'Tjenesten kører ikke. Sæt den op for at erstatte LG’s startskærm, overtage Input-knappen og holde alt opdateret.',
+    'recommended first · installed %s': 'anbefales først · installeret %s',
+    'Set up now': 'Sæt op nu',
+    'the screen blinks once': 'skærmen blinker én gang',
+    'Set up anyway': 'Sæt op alligevel',
+    'untested firmware; a failed start restarts the TV': 'utestet firmware; en mislykket start genstarter tv’et',
+    'works without the service': 'virker uden tjenesten',
+    'Checking for updates…': 'Søger efter opdateringer…',
+    'Could not check: %s': 'Kunne ikke søge: %s',
+    'no answer': 'intet svar',
+    'Version %s is available; this one is %s.': 'Version %s er klar; denne er %s.',
+    'Up to date (%s).': 'Opdateret (%s).',
+    'Updating to %s…': 'Opdaterer til %s…',
+    'Update failed: %s': 'Opdateringen mislykkedes: %s',
+    'The update is taking too long. Log: %s on the TV.': 'Opdateringen tager for lang tid. Log: %s på tv’et.',
+    'Updating… %s': 'Opdaterer… %s',
+    'Setting up… the screen blinks once while LG’s system restarts': 'Sætter op… skærmen blinker én gang, mens LG’s system genstarter',
+    'Could not start the setup: %s': 'Kunne ikke starte opsætningen: %s',
+    'no answer from the Homebrew Channel service (is it installed and up to date?)':
+      'intet svar fra Homebrew Channels tjeneste (er den installeret og opdateret?)',
+    'Setup stopped: %s': 'Opsætningen stoppede: %s',
+    'The service did not start. Log: %s on the TV.': 'Tjenesten startede ikke. Log: %s på tv’et.',
+    'Setting up… %s': 'Sætter op… %s',
+
+    // fixed messages from the service (updates.js, voice.js, selfupdate.js); %s is a version or a number
+    'Downloading launcher %s': 'Henter startskærm %s',
+    'Checking the download': 'Kontrollerer det hentede',
+    'Installing launcher %s': 'Installerer startskærm %s',
+    'Checking that the new launcher starts': 'Kontrollerer, at den nye startskærm starter',
+    'The new launcher did not start; rolling back': 'Den nye startskærm startede ikke; går tilbage',
+    'Launcher %s installed': 'Startskærm %s er installeret',
+    'there is no previous version': 'der er ingen tidligere version',
+    'Going back to launcher %s': 'Går tilbage til startskærm %s',
+    'Launcher %s restored': 'Startskærm %s er sat tilbage',
+    'Downloading service %s': 'Henter tjeneste %s',
+    'Installing service %s': 'Installerer tjeneste %s',
+    'Restarting the service': 'Genstarter tjenesten',
+    'Downloading the speech engine (18 MB)': 'Henter talemotoren (18 MB)',
+    'Downloading the 64-bit C library (27 MB)': 'Henter 64-bit C-biblioteket (27 MB)',
+    'Downloading the speech model (%s of %s)': 'Henter talemodellen (%s af %s)',
+    'Testing': 'Tester',
+    'Starting': 'Starter',
+    'Voice is installed': 'Stemme er installeret',
+    'This package has no voice program (cytv-asr); update CleanYourTV first.':
+      'Denne pakke har intet stemmeprogram (cytv-asr); opdater CleanYourTV først.',
+    'already up to date': 'allerede opdateret',
+    'updated to %s. Close CleanYourTV and open it again.': 'opdateret til %s. Luk CleanYourTV, og åbn den igen.',
+
+    // what each row does (help.js)
+    'The home screen you see. Updates come from GitHub releases and are checked against a SHA-256 file before they are installed. If a new launcher does not start, the previous one is put back.':
+      'Den startskærm, du ser. Opdateringer kommer fra udgivelser på GitHub og kontrolleres mod en SHA-256-fil, før de installeres. Hvis en ny startskærm ikke starter, sættes den forrige tilbage.',
+    'The background service behind the launcher: Live TV, picture notifications, the Input key, these updates. A failed update restores the previous files.':
+      'Tjenesten i baggrunden bag startskærmen: Live-tv, notifikationer med billeder, Input-knappen og disse opdateringer. En mislykket opdatering sætter de forrige filer tilbage.',
+    'Looks for a newer release on GitHub. Nothing is installed until you choose an update.':
+      'Leder efter en nyere udgivelse på GitHub. Intet installeres, før du vælger en opdatering.',
+    'Stable releases are what most people want. A test build is a change someone asks you to try, built from a branch of the repository; it can be less finished. Choose a test build here, then use the Launcher and Service rows to install it. Going back to Stable offers the latest release again.':
+      'Stabile udgivelser er det, de fleste vil have. En testversion er en ændring, nogen beder dig prøve, bygget fra en gren af projektet; den kan være mindre færdig. Vælg en testversion her, og installer den så med rækkerne Startskærm og Tjeneste. Går du tilbage til Stabile, tilbydes den nyeste udgivelse igen.',
+    'Swaps the previous launcher version back in. The newer one stays available as an update.':
+      'Sætter den forrige version af startskærmen tilbage. Den nyere kan stadig hentes som opdatering.',
+    'On: the Home button opens this launcher. Off: LG’s own Home. Switching restarts the TV (about a minute); the service keeps running either way.':
+      'Til: Hjem-knappen åbner denne startskærm. Fra: LG’s egen startskærm. Skiftet genstarter tv’et (cirka et minut); tjenesten kører videre i begge tilfælde.',
+    'Stops LG’s ad, recommendation and telemetry services and blocks a few ad servers. Nothing is uninstalled, and it only applies while this launcher is Home.':
+      'Stopper LG’s tjenester til reklamer, anbefalinger og sporing og blokerer nogle reklameservere. Intet afinstalleres, og det gælder kun, mens denne startskærm er i brug.',
+    'Choose how the home screen looks: colours, the size of tiles and text, the number of columns, the clock, the ambient glow, animation speed and a wallpaper. Themes are small data files bundled with the package; the accent colour can be changed on top of any of them.':
+      'Vælg, hvordan startskærmen ser ud: farver, størrelsen på fliser og tekst, antal kolonner, uret, baggrundsskæret, animationshastighed og et baggrundsbillede. Temaer er små datafiler i pakken; accentfarven kan ændres oven på dem alle.',
+    'More choices for the theme: the accent colour, and going back to the previous theme.':
+      'Flere valg til temaet: accentfarven og at gå tilbage til det forrige tema.',
+    'The colour of the focus ring and of the highlighted button or menu row. “Theme default” uses the theme’s own colour.':
+      'Farven på fokusrammen og på den fremhævede knap eller menurække. “Temaets standard” bruger temaets egen farve.',
+    'Lets other devices on your network send picture notifications to this TV with a POST request and a secret token. Off by default.':
+      'Lader andre enheder på dit netværk sende notifikationer med billeder til dette tv med en POST-forespørgsel og en hemmelig token. Slået fra som standard.',
+    'On: the TV listens on port 8767 for POST /notify with the token. Anyone who has the token and network access can show cards on this screen.':
+      'Til: tv’et lytter på port 8767 efter POST /notify med token. Alle med token og adgang til netværket kan vise kort på denne skærm.',
+    'Shows the address, the token and an example request.': 'Viser adressen, token og en eksempel-forespørgsel.',
+    'Shows a QR code. A phone that scans it opens a page, served by the TV for ten minutes, that shows the notification address and the token with Copy buttons (for Home Assistant, for example). The token is a secret.':
+      'Viser en QR-kode. En telefon, der scanner den, åbner en side fra tv’et i ti minutter med adressen og token til notifikationer og Copy-knapper (til Home Assistant, for eksempel). Token er hemmelig.',
+    'Creates a new secret token. Devices using the old one stop working.':
+      'Laver en ny hemmelig token. Enheder, der bruger den gamle, holder op med at virke.',
+    'Optional. Speak into the remote and the TV turns it into text on the TV itself (Moonshine, English). The text can be sent to a server you run. Audio never leaves the TV. Needs a download of about 80 MB.':
+      'Valgfrit. Tal ind i fjernbetjeningen, og tv’et gør det til tekst på selve tv’et (Moonshine, kun engelsk). Teksten kan sendes til en server, du selv kører. Lyden forlader aldrig tv’et. Kræver en download på cirka 80 MB.',
+    'Downloads the speech engine, a 64-bit C library and the model (checksums are verified), then tests them. About a minute. Nothing is installed in the system folders.':
+      'Henter talemotoren, et 64-bit C-bibliotek og modellen (kontrolsummer tjekkes) og tester dem. Cirka et minut. Intet installeres i systemmapperne.',
+    'On: pressing the button you learned starts listening. A card shows what was heard.':
+      'Til: et tryk på den knap, du har lært, starter lytningen. Et kort viser, hvad der blev hørt.',
+    'On: what you say is also sent as text to a language model through OpenRouter and the answer is shown on screen. Needs your OpenRouter key; the text goes to OpenRouter and the model provider, never audio.':
+      'Til: det, du siger, sendes også som tekst til en sprogmodel via OpenRouter, og svaret vises på skærmen. Kræver din OpenRouter-nøgle; teksten sendes til OpenRouter og modellens udbyder, aldrig lyd.',
+    'Shows a QR code. Scan it with a phone on the same Wi-Fi to enter your OpenRouter key, choose a model, write instructions and set a server address. Nothing is typed on the TV.':
+      'Viser en QR-kode. Scan den med en telefon på samme wi-fi for at indtaste din OpenRouter-nøgle, vælge en model, skrive instruktioner og sætte en serveradresse. Du skriver intet på tv’et.',
+    'Choose the model that answers. The list is read from OpenRouter: the newest models of the main providers, with the price per million words in. The phone page lists every model.':
+      'Vælg den model, der svarer. Listen hentes fra OpenRouter: de nyeste modeller fra de største udbydere med prisen pr. million ord ind. Siden på telefonen viser alle modeller.',
+    'Shows the commands to set the key, model and instructions from a shell, and how to ask by text.':
+      'Viser kommandoerne til at sætte nøgle, model og instruktioner fra en shell, og hvordan du spørger med tekst.',
+    'The AI and Home Assistant remember the last turns for ten minutes. This clears them.':
+      'AI’en og Home Assistant husker de seneste replikker i ti minutter. Dette sletter dem.',
+    'Sends what you say as text to Home Assistant’s Assist and shows its answer. Needs the address and a long-lived access token (Home Assistant profile page), entered on your phone. Choosing this row tests the connection.':
+      'Sender det, du siger, som tekst til Home Assistants Assist og viser svaret. Kræver adressen og en langtidsgyldig adgangstoken (Home Assistants profilside), indtastet på din telefon. Vælger du denne række, testes forbindelsen.',
+    'Home Assistant first, then the AI: Assist gets the text; if it does not understand, the AI answers. Home Assistant only: never the AI. The AI only: Home Assistant is not asked. Choose to switch.':
+      'Home Assistant først, så AI’en: Assist får teksten; forstår den det ikke, svarer AI’en. Kun Home Assistant: aldrig AI’en. Kun AI’en: Home Assistant bliver ikke spurgt. Vælg for at skifte.',
+    'Which Home Assistant conversation agent answers. The default is the built-in one; others (for example a language-model agent) are listed from your Home Assistant.':
+      'Hvilken samtaleagent i Home Assistant der svarer. Standard er den indbyggede; andre (for eksempel en sprogmodel-agent) hentes fra din Home Assistant.',
+    'LG’s own assistant reacts to the same button and sends the audio to LG. On: it is paused while voice is on. A reboot or switching this off undoes it.':
+      'LG’s egen assistent reagerer på den samme knap og sender lyden til LG. Til: den er sat på pause, mens stemme er slået til. En genstart, eller at slå dette fra, fortryder det.',
+    'Records the code of the remote button that starts listening. Try the microphone button first; any spare button works.':
+      'Gemmer koden for den knap på fjernbetjeningen, der starter lytningen. Prøv mikrofonknappen først; enhver ledig knap virker.',
+    'Starts listening without the button: speak when the card appears.': 'Starter lytningen uden knappen: tal, når kortet vises.',
+    'Where the recognised text goes. Shows how to set the address of your server. Without one, the text is only shown on screen.':
+      'Hvor den genkendte tekst sendes hen. Viser, hvordan du sætter adressen på din server. Uden en server vises teksten kun på skærmen.',
+    'Deletes the downloaded engine and model. The rest of CleanYourTV is not affected.':
+      'Sletter den hentede motor og model. Resten af CleanYourTV påvirkes ikke.',
+    'The remote’s Input button opens our Inputs list over the running app instead of LG’s picker. Open this screen to switch it off or to learn the button.':
+      'Fjernbetjeningens Input-knap åbner vores liste over indgange over den åbne app i stedet for LG’s liste. Åbn denne skærm for at slå det fra eller lære knappen.',
+    'Shows a QR code. Scan it with a phone on the same Wi-Fi to copy a report for a bug report. Addresses and URL paths are masked; the page closes after ten minutes.':
+      'Viser en QR-kode. Scan den med en telefon på samme wi-fi for at kopiere en rapport til en fejlmelding. Adresser og URL-stier er skjult; siden lukker efter ti minutter.',
+    'Removes the apps, the boot scripts and your settings, then restarts the TV so LG’s Home comes back.':
+      'Fjerner apps, opstartsscripts og dine indstillinger og genstarter tv’et, så LG’s startskærm kommer tilbage.',
+    'On: pressing Input shows our Inputs list. Off: LG’s picker comes back at once.':
+      'Til: et tryk på Input viser vores liste over indgange. Fra: LG’s liste kommer straks tilbage.',
+    'Reads the code of your remote’s Input button from the hook, then tests that our list opens. The default is 241. Clear goes back to it.':
+      'Læser koden for fjernbetjeningens Input-knap fra krogen og tester, at vores liste åbner. Standard er 241. Ryd går tilbage til den.',
+    'Settings for Live TV: switch it on or off, set up or remove your playlist, refresh the guide and learn the Guide key.':
+      'Indstillinger for Live-tv: slå det til eller fra, sæt din playliste op eller fjern den, opdater programguiden, og lær Guide-knappen.',
+    'On: the launcher has a Live TV button and tile, the Inputs list has Live TV, and the Guide key can open the channel guide. Off: all of that is hidden and LG’s own player and guide are used. Your playlist is kept.':
+      'Til: startskærmen har en Live-tv-knap og -flise, listen over indgange har Live-tv, og Guide-knappen kan åbne programguiden. Fra: alt det skjules, og LG’s egen afspiller og guide bruges. Din playliste bevares.',
+    'Your M3U playlist and its XMLTV guide. Choose it to set up: a QR code opens a page on your phone where you enter the playlist address and the 6-digit code shown here.':
+      'Din M3U-playliste og dens XMLTV-programguide. Vælg den for at sætte op: en QR-kode åbner en side på din telefon, hvor du indtaster adressen på playlisten og den 6-cifrede kode, der vises her.',
+    'Downloads the playlist and the programme guide again now. It also happens twice a day.':
+      'Henter playlisten og programguiden igen nu. Det sker også to gange om dagen.',
+    'Empties the Recent tab and the list of channels that failed. Favourites stay.':
+      'Tømmer fanen Seneste og listen over kanaler, der fejlede. Favoritter bliver.',
+    'Deletes the playlist address, the channel list, the guide and your favourites from the TV.':
+      'Sletter adressen på playlisten, kanallisten, programguiden og dine favoritter fra tv’et.',
+    'Deletes the playlist and everything stored for it on the TV. You can set it up again.':
+      'Sletter playlisten og alt, der er gemt til den på tv’et. Du kan sætte den op igen.',
+    'Records the Guide button’s code. Afterwards it opens the Live TV channel guide over whatever is running (only while Live TV is on). Clear it to get LG’s guide back.':
+      'Gemmer koden for Guide-knappen. Derefter åbner den Live-tv’s programguide over det, der kører (kun mens Live-tv er slået til). Ryd den for at få LG’s guide tilbage.',
+    'How the Input button shows the Inputs. Over the running app, ready in the background: instant, tested on webOS 25. Over the running app, started when pressed: nothing runs hidden, so it cannot keep the remote; the default on older webOS, where the background one showed a loading circle. The launcher’s Inputs list: the TV goes to our Home (needs CleanYourTV as Home; otherwise the key stays with LG). Choose to go to the next one.':
+      'Hvordan Input-knappen viser indgangene. Over den åbne app, klar i baggrunden: straks, testet på webOS 25. Over den åbne app, startes ved tryk: intet kører skjult, så den kan ikke holde på fjernbetjeningen; standard på ældre webOS, hvor den i baggrunden viste en indlæsningscirkel. Startskærmens liste over indgange: tv’et går til vores startskærm (kræver CleanYourTV som startskærm; ellers bliver knappen hos LG). Vælg for at gå til den næste.',
+    'Optional. Records the Home button’s code. The Home key keeps working exactly as before.':
+      'Valgfrit. Gemmer koden for Hjem-knappen. Hjem-knappen virker præcis som før.',
+    'Back to the main list.': 'Tilbage til hovedlisten.',
+    'Nothing changes.': 'Intet ændres.',
+    'Deletes the apps, the boot scripts and the settings, then restarts the TV.':
+      'Sletter apps, opstartsscripts og indstillinger og genstarter tv’et.',
+    'Restarts the TV; this launcher is Home after it starts.': 'Genstarter tv’et; denne startskærm er i brug, når det er startet.',
+    'Restarts the TV; LG’s own Home is Home after it starts. You can switch back here.':
+      'Genstarter tv’et; LG’s egen startskærm er i brug, når det er startet. Du kan skifte tilbage her.',
+    'A newer package is available. Install it before the setup: it may contain fixes for your firmware.':
+      'En nyere pakke er klar. Installer den før opsætningen: den kan indeholde rettelser til din firmware.',
+    'The remote’s Input button opens our Inputs list instead of LG’s picker. You can change this later.':
+      'Fjernbetjeningens Input-knap åbner vores liste over indgange i stedet for LG’s liste. Du kan ændre det senere.',
+    'Installs the launcher, replaces LG’s Home at boot and starts the service. About a minute; the screen blinks once. If the new Home does not come up, the setup removes itself and restarts the TV.':
+      'Installerer startskærmen, erstatter LG’s startskærm ved opstart og starter tjenesten. Cirka et minut; skærmen blinker én gang. Kommer den nye startskærm ikke frem, fjerner opsætningen sig selv og genstarter tv’et.',
+    'Your firmware is not in the compatibility list and LG’s Home looks different. This tries it anyway; a failed start restarts the TV with LG’s Home.':
+      'Din firmware er ikke på listen over kompatible versioner, og LG’s startskærm ser anderledes ud. Dette prøver alligevel; en mislykket start genstarter tv’et med LG’s startskærm.',
+    'Works without the service: looks for a newer package and installs it through the root service.':
+      'Virker uden tjenesten: leder efter en nyere pakke og installerer den via root-tjenesten.',
+    'This TV also has LG’s full-screen Home: if the Home button opens that instead of this launcher, set TV Settings > General > Home Settings > Home Style to Basic.':
+      'Dette tv har også LG’s fuldskærms-startskærm: hvis Hjem-knappen åbner den i stedet for denne startskærm, så sæt Indstillinger > Generelt > Indstillinger for startskærm > Startskærmstil til Basis.',
+  },
+};
+function t(k) {
+  var d = TX[LANG];
+  return (d && d[k]) || k;
+}
+/* a message from the service, shown as it came: a fixed text, or one with versions and numbers in it ('Installing launcher 1.6.0'
+   is looked up as 'Installing launcher %s'). An unknown message stays English. */
+function tm(m) {
+  var s = String(m || ''),
+    d = TX[LANG],
+    v = [];
+  if (!d || !s || d[s]) return t(s);
+  var k = s.replace(/\d[\w\-]*(?:\.[\w\-]+)*/g, function (x) {
+    v.push(x);
+    return '%s';
+  });
+  if (!d[k]) return s;
+  return d[k].replace(/%s/g, function () {
+    return v.shift();
+  });
+}
 var kFlow = 'input',
   kText = '',
   kRows = [],
@@ -289,11 +803,14 @@ function api(p, body, ms) {
     x.open(body ? 'POST' : 'GET', API + p);
     x.timeout = ms || 30000;
     x.onload = function () {
+      var j;
       try {
-        res(JSON.parse(x.responseText));
+        j = JSON.parse(x.responseText);
       } catch (e) {
-        rej(e);
+        return rej(e);
       }
+      if (j && j.language) followLang(j.language); /* the status: the language chosen in the launcher's Settings */
+      res(j);
     };
     x.onerror = x.ontimeout = function () {
       rej(new Error('no answer'));
@@ -322,7 +839,7 @@ function launch(id, params) {
   } catch (e) {}
 }
 function onoff(v) {
-  return v ? 'On' : 'Off';
+  return v ? t('On') : t('Off');
 }
 function banner(text, cls) {
   var b = $('banner');
@@ -348,7 +865,7 @@ function pop() {
 function build() {
   rows = [];
   if (view === 'share') {
-    rows.push({ label: 'Close', fn: closeShare });
+    rows.push({ label: t('Close'), fn: closeShare });
     return;
   }
   if (view === 'keys') {
@@ -356,7 +873,7 @@ function build() {
     return;
   }
   if (view === 'notifyhow' || view === 'voicehow') {
-    rows.push({ label: 'Back', fn: pop });
+    rows.push({ label: t('Back'), fn: pop });
     return;
   }
   if (view === 'theme') {
@@ -364,14 +881,15 @@ function build() {
     ((th && th.themes) || []).forEach(function (x) {
       rows.push({
         label: x.name,
-        sub: x.id === tc.id ? 'selected' : x.installed ? '' : 'on GitHub',
+        sub: x.id === tc.id ? t('selected') : x.installed ? '' : t('on GitHub'),
+        sel: x.id === tc.id,
         pv: x.preview ? x.id : '',
         info: {
           t: x.name,
           d:
             x.description +
-            (x.author ? '\n\nBy ' + x.author : '') +
-            (x.installed || x.id === 'classic' ? '' : '\n\nDownloaded from GitHub when you choose it.'),
+            (x.author ? '\n\n' + t('By %s').replace('%s', x.author) : '') +
+            (x.installed || x.id === 'classic' ? '' : '\n\n' + t('Downloaded from GitHub when you choose it.')),
         },
         fn: function () {
           setTheme({ id: x.id, name: x.name });
@@ -379,91 +897,99 @@ function build() {
       });
     });
     rows.push({ sep: true });
-    var an = 'Theme default';
+    var an = t('Theme default');
     ((th && th.accents) || []).forEach(function (a) {
-      if (a.hex === tc.accent) an = a.name;
+      if (a.hex === tc.accent) an = t(a.name);
     });
     rows.push({
-      label: 'Theme options',
-      sub: 'accent colour \u00B7 ' + an,
+      label: t('Theme options'),
+      sub: t('accent colour') + ' \u00B7 ' + an,
       fn: function () {
         push('themeopts');
       },
     });
     rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
+    rows.push({ label: t('Back'), fn: pop });
     return;
   }
   if (view === 'themeopts') {
     var to = (th && th.current) || { id: 'classic', accent: '' },
-      an2 = 'Theme default';
+      an2 = t('Theme default');
     ((th && th.accents) || []).forEach(function (a) {
-      if (a.hex === to.accent) an2 = a.name;
+      if (a.hex === to.accent) an2 = t(a.name);
     });
     rows.push({
-      label: 'Accent colour',
+      label: t('Accent colour'),
       sub: an2,
       fn: function () {
         push('accent');
       },
     });
     rows.push({
-      label: 'Go back to the previous theme',
-      sub: th && th.previous ? th.previous.id : 'nothing to go back to',
+      label: t('Go back to the previous theme'),
+      sub: th && th.previous ? th.previous.id : t('nothing to go back to'),
       dim: !(th && th.previous),
       fn: function () {
-        if (th && th.previous) themeCall('/api/theme/revert', {}, 'Previous theme restored');
+        if (th && th.previous) themeCall('/api/theme/revert', {}, t('Previous theme restored'));
       },
     });
     rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
+    rows.push({ label: t('Back'), fn: pop });
     return;
   }
   if (view === 'accent') {
     var ta = (th && th.current && th.current.accent) || '';
     ((th && th.accents) || []).forEach(function (a) {
       rows.push({
-        label: a.name,
-        sub: a.hex === ta ? 'selected' : a.hex || '',
+        label: t(a.name),
+        sub: a.hex === ta ? t('selected') : a.hex || '',
+        sel: a.hex === ta,
         fn: function () {
-          themeCall('/api/theme/set', { accent: a.hex }, a.name === 'Theme default' ? 'Accent: theme default' : 'Accent: ' + a.name, true);
+          themeCall(
+            '/api/theme/set',
+            { accent: a.hex },
+            a.name === 'Theme default' ? t('Accent: theme default') : t('Accent: %s').replace('%s', t(a.name)),
+            true
+          );
         },
       });
     });
     rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
+    rows.push({ label: t('Back'), fn: pop });
     return;
   }
   if (view === 'channel') {
     var cc = (st && st.channel) || '';
     rows.push({
-      label: 'Stable releases',
-      sub: (cc ? '' : 'selected \u00B7 ') + 'the latest published release',
+      label: t('Stable releases'),
+      sub: (cc ? '' : t('selected') + ' \u00B7 ') + t('the latest published release'),
+      sel: !cc,
       fn: function () {
         setChannel('');
       },
     });
     ((tst && tst.builds) || []).forEach(function (b) {
       rows.push({
-        label: 'Test: ' + b.branch,
+        label: t('Test: %s').replace('%s', b.branch),
         sub:
-          (b.tag === cc ? 'selected \u00B7 ' : '') +
-          (b.build ? 'build ' + b.build : '') +
+          (b.tag === cc ? t('selected') + ' \u00B7 ' : '') +
+          (b.build ? t('build %s').replace('%s', b.build) : '') +
           (b.published ? (b.build ? ' \u00B7 ' : '') + String(b.published).slice(0, 10) : ''),
         fn: function () {
           setChannel(b.tag);
         },
+        sel: b.tag === cc,
       });
     });
     if (!tst || !tst.builds || !tst.builds.length)
       rows.push({
-        label: 'No test builds right now',
-        sub: tst && tst.error ? String(tst.error) : 'a test build appears when a branch is pushed',
+        label: t('No test builds right now'),
+        sub: tst && tst.error ? String(tst.error) : t('a test build appears when a branch is pushed'),
         dim: true,
         fn: null,
       });
     rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
+    rows.push({ label: t('Back'), fn: pop });
     return;
   }
   if (view === 'models') {
@@ -471,21 +997,26 @@ function build() {
     mdl.forEach(function (x) {
       rows.push({
         label: x.name,
-        sub: x.id + (x.price != null ? ' \u00B7 $' + x.price + ' per million words in' : '') + (x.id === cur ? ' \u00B7 selected' : ''),
+        sub:
+          x.id +
+          (x.price != null ? ' \u00B7 ' + t('$%s per million words in').replace('%s', x.price) : '') +
+          (x.id === cur ? ' \u00B7 ' + t('selected') : ''),
+        sel: x.id === cur,
         fn: function () {
           pickModel(x.id);
         },
       });
     });
     rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
+    rows.push({ label: t('Back'), fn: pop });
     return;
   }
   if (view === 'agents') {
     var ca = ((vo || {}).ha || {}).agent || '';
     rows.push({
-      label: 'Default agent',
-      sub: 'Home Assistant\u2019s own' + (ca ? '' : ' \u00B7 selected'),
+      label: t('Default agent'),
+      sub: t('Home Assistant\u2019s own') + (ca ? '' : ' \u00B7 ' + t('selected')),
+      sel: !ca,
       fn: function () {
         pickAgent('');
       },
@@ -493,14 +1024,15 @@ function build() {
     agl.forEach(function (x) {
       rows.push({
         label: x.name,
-        sub: x.id + (x.id === ca ? ' \u00B7 selected' : ''),
+        sub: x.id + (x.id === ca ? ' \u00B7 ' + t('selected') : ''),
+        sel: x.id === ca,
         fn: function () {
           pickAgent(x.id);
         },
       });
     });
     rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
+    rows.push({ label: t('Back'), fn: pop });
     return;
   }
   if (view === 'voice') {
@@ -510,11 +1042,15 @@ function build() {
       lm = v.llm || {};
     var ha = v.ha || {},
       haOk = !!ha.configured,
-      HR = { 'ha-first': 'Home Assistant first, then the AI', 'ha-only': 'Home Assistant only', 'ai-only': 'The AI only' };
+      HR = {
+        'ha-first': t('Home Assistant first, then the AI'),
+        'ha-only': t('Home Assistant only'),
+        'ai-only': t('The AI only'),
+      };
     if (!v.installed) {
       rows.push({
-        label: 'Install voice',
-        sub: wk ? 'installing…' : 'downloads about 80 MB',
+        label: t('Install voice'),
+        sub: wk ? t('installing…') : t('downloads about 80 MB'),
         dim: wk,
         fn: function () {
           if (wk) return;
@@ -526,15 +1062,15 @@ function build() {
               voiceRefresh();
             },
             function () {
-              banner('The service did not answer', 'err');
+              banner(t('The service did not answer'), 'err');
             }
           );
         },
       });
     } else {
       rows.push({
-        label: 'Listen on the voice button',
-        sub: vk ? onoff(v.enabled) : 'learn a button first',
+        label: t('Listen on the voice button'),
+        sub: vk ? onoff(v.enabled) : t('learn a button first'),
         dim: !vk,
         fn: function () {
           if (!vk) return;
@@ -550,39 +1086,39 @@ function build() {
                 draw();
               },
               function () {
-                banner('The service did not answer', 'err');
+                banner(t('The service did not answer'), 'err');
               }
             );
         },
       });
       rows.push({
-        label: 'Learn the voice button',
-        sub: vk ? 'now: ' + vk : 'not learned',
+        label: t('Learn the voice button'),
+        sub: vk ? t('now: %s').replace('%s', vk) : t('not learned'),
         fn: function () {
           openKeys('voice');
         },
       });
       rows.push({
-        label: 'Try it now',
-        sub: v.listening ? 'listening…' : 'speak when the card appears',
+        label: t('Try it now'),
+        sub: v.listening ? t('listening…') : t('speak when the card appears'),
         dim: v.listening,
         fn: function () {
           if (v.listening) return;
           api('/api/voice/listen', {}).then(
             function (x) {
               if (x.error) banner(x.error, 'err');
-              else banner('Speak now…', 'work');
+              else banner(t('Speak now…'), 'work');
               voiceRefresh();
             },
             function () {
-              banner('The service did not answer', 'err');
+              banner(t('The service did not answer'), 'err');
             }
           );
         },
       });
       rows.push({
-        label: 'Switch off LG\u2019s voice assistant',
-        sub: onoff(v.suppressLg) + (v.suppressLg && v.enabled && !v.lgPaused ? ' \u00B7 not paused yet' : ''),
+        label: t('Switch off LG\u2019s voice assistant'),
+        sub: onoff(v.suppressLg) + (v.suppressLg && v.enabled && !v.lgPaused ? ' \u00B7 ' + t('not paused yet') : ''),
         fn: function () {
           api('/api/voice/set', { suppressLg: !v.suppressLg }).then(
             function (x) {
@@ -591,7 +1127,7 @@ function build() {
               draw();
             },
             function () {
-              banner('The service did not answer', 'err');
+              banner(t('The service did not answer'), 'err');
             }
           );
         },
@@ -599,10 +1135,10 @@ function build() {
     }
     rows.push({ sep: true });
     rows.push({
-      label: 'Home Assistant (Assist)',
+      label: t('Home Assistant (Assist)'),
       sub: haOk
         ? ha.url.replace(/^https?:\/\//, '').replace(/\/.*/, '') + ' \u00B7 ' + HR[ha.route]
-        : 'not set \u00B7 set up from your phone',
+        : t('not set \u00B7 set up from your phone'),
       fn: function () {
         if (!haOk) {
           openPair();
@@ -612,7 +1148,7 @@ function build() {
       },
     });
     rows.push({
-      label: 'Which answers first',
+      label: t('Which answers first'),
       sub: HR[ha.route || 'ha-first'],
       fn: function () {
         var o = ['ha-first', 'ha-only', 'ai-only'],
@@ -628,22 +1164,22 @@ function build() {
             draw();
           },
           function () {
-            banner('The service did not answer', 'err');
+            banner(t('The service did not answer'), 'err');
           }
         );
       },
     });
     rows.push({
-      label: 'Assist agent',
-      sub: haOk ? ha.agent || 'default' : 'set up Home Assistant first',
+      label: t('Assist agent'),
+      sub: haOk ? ha.agent || t('default') : t('set up Home Assistant first'),
       dim: !haOk,
       fn: function () {
         if (haOk) openAgents();
       },
     });
     rows.push({
-      label: 'AI chat (OpenRouter)',
-      sub: lm.hasKey ? onoff(lm.enabled) + ' \u00B7 ' + lm.model : 'no key set',
+      label: t('AI chat (OpenRouter)'),
+      sub: lm.hasKey ? onoff(lm.enabled) + ' \u00B7 ' + lm.model : t('no key set'),
       fn: function () {
         if (!lm.hasKey) {
           openPair();
@@ -660,40 +1196,44 @@ function build() {
             draw();
           },
           function () {
-            banner('The service did not answer', 'err');
+            banner(t('The service did not answer'), 'err');
           }
         );
       },
     });
-    rows.push({ label: 'Model', sub: lm.model || 'openrouter/auto', fn: openModels });
+    rows.push({ label: t('Model'), sub: lm.model || 'openrouter/auto', fn: openModels });
     rows.push({
-      label: 'Send the text to',
-      sub: v.url ? v.url.replace(/^(https?:\/\/[^\/]+).*/, '$1') : 'not set · shows a card only',
+      label: t('Send the text to'),
+      sub: v.url ? v.url.replace(/^(https?:\/\/[^\/]+).*/, '$1') : t('not set · shows a card only'),
       fn: function () {
         kText =
-          'Set the address of your server (from a shell on the TV):\n\ncurl -X POST localhost:8765/api/voice/set -d \'{"url":"http://server:port/path","token":"optional secret"}\'\n\nThe TV sends: POST, JSON {"text":"..."}, with "Authorization: Bearer <token>" when a token is set. If your server answers with JSON {"text":"..."} (or plain text), the answer is shown as a card. Only the recognised text is sent, never audio.';
+          t('Set the address of your server (from a shell on the TV):') +
+          '\n\ncurl -X POST localhost:8765/api/voice/set -d \'{"url":"http://server:port/path","token":"optional secret"}\'\n\n' +
+          t(
+            'The TV sends: POST, JSON {"text":"..."}, with "Authorization: Bearer <token>" when a token is set. If your server answers with JSON {"text":"..."} (or plain text), the answer is shown as a card. Only the recognised text is sent, never audio.'
+          );
         push('voicehow');
       },
     });
     rows.push({ sep: true });
-    rows.push({ label: 'Set up from your phone', sub: 'key, model, Home Assistant, server', fn: openPair });
+    rows.push({ label: t('Set up from your phone'), sub: t('key, model, Home Assistant, server'), fn: openPair });
     rows.push({
-      label: 'Set up with commands',
-      sub: 'for scripts and ssh',
+      label: t('Set up with commands'),
+      sub: t('for scripts and ssh'),
       fn: function () {
         kText = aiHelp();
         push('voicehow');
       },
     });
     rows.push({
-      label: 'Forget the conversation',
+      label: t('Forget the conversation'),
       fn: function () {
         api('/api/voice/forget', {}).then(
           function () {
-            banner('Conversation cleared', 'ok');
+            banner(t('Conversation cleared'), 'ok');
           },
           function () {
-            banner('The service did not answer', 'err');
+            banner(t('The service did not answer'), 'err');
           }
         );
       },
@@ -701,8 +1241,8 @@ function build() {
     if (v.installed) {
       rows.push({ sep: true });
       rows.push({
-        label: 'Remove voice',
-        sub: 'deletes the ' + Math.round((v.bytes || 0) / 1048576) + ' MB download',
+        label: t('Remove voice'),
+        sub: t('deletes the %s MB download').replace('%s', Math.round((v.bytes || 0) / 1048576)),
         fn: function () {
           api('/api/voice/uninstall', {})
             .then(function (x) {
@@ -712,24 +1252,24 @@ function build() {
             .then(
               function (s2) {
                 st = s2;
-                banner('Voice removed', 'ok');
+                banner(t('Voice removed'), 'ok');
                 build();
                 draw();
               },
               function () {
-                banner('The service did not answer', 'err');
+                banner(t('The service did not answer'), 'err');
               }
             );
         },
       });
     }
     rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
+    rows.push({ label: t('Back'), fn: pop });
     return;
   }
   if (view === 'notifyapi') {
     rows.push({
-      label: 'Accept notifications from the network',
+      label: t('Accept notifications from the network'),
       sub: onoff(napi && napi.enabled),
       fn: function () {
         api('/api/manager/notify-api', { enabled: !(napi && napi.enabled) }).then(
@@ -742,35 +1282,44 @@ function build() {
             });
           },
           function () {
-            banner('The service did not answer', 'err');
+            banner(t('The service did not answer'), 'err');
           }
         );
       },
     });
     if (napi && napi.enabled) {
       rows.push({
-        label: 'How to send',
-        sub: 'address, token, example',
+        label: t('How to send'),
+        sub: t('address, token, example'),
         fn: function () {
           kText =
-            'Send a POST request:\nhttp://' +
+            t('Send a POST request:') +
+            '\nhttp://' +
             napi.ip +
             ':' +
             napi.port +
-            '/notify\n\nHeader:\nAuthorization: Bearer ' +
+            '/notify\n\n' +
+            t('Header:') +
+            '\nAuthorization: Bearer ' +
             napi.token +
-            '\n\nBody (JSON):\n{"title":"Front door","text":"Someone is at the door","image":"http://…/snapshot.jpg","seconds":15}';
+            '\n\n' +
+            t('Body (JSON):') +
+            '\n{"title":"' +
+            t('Front door') +
+            '","text":"' +
+            t('Someone is at the door') +
+            '","image":"http://…/snapshot.jpg","seconds":15}';
           push('notifyhow');
         },
       });
-      rows.push({ label: 'Show as QR code', sub: 'scan with a phone to copy the address and token', fn: openNotifyQr });
+      rows.push({ label: t('Show as QR code'), sub: t('scan with a phone to copy the address and token'), fn: openNotifyQr });
       rows.push({
-        label: 'New token',
-        sub: 'the old one stops working',
+        label: t('New token'),
+        sub: t('the old one stops working'),
         fn: function () {
           api('/api/manager/notify-api', { regenerate: true }).then(function (n) {
             napi = n;
-            banner('New token created. Open \u201CHow to send\u201D to see it.', 'ok');
+            banner(t('New token created. Open \u201CHow to send\u201D to see it.'), 'ok');
             build();
             draw();
           });
@@ -778,18 +1327,23 @@ function build() {
       });
     }
     rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
+    rows.push({ label: t('Back'), fn: pop });
     return;
   }
   if (offline) {
     // before the setup: a newer package first, then choose, set up, then the extras
     updIdx = 0;
     if (upd) {
-      rows.push({ label: 'Update to ' + upd.updateTo, sub: 'recommended first · installed ' + upd.installed, fn: offlineUpdate });
+      rows.push({
+        k: 'Update to',
+        label: t('Update to %s').replace('%s', upd.updateTo),
+        sub: t('recommended first · installed %s').replace('%s', upd.installed),
+        fn: offlineUpdate,
+      });
       rows.push({ sep: true });
     }
     rows.push({
-      label: 'Debloat LG’s ads and telemetry',
+      label: t('Debloat LG’s ads and telemetry'),
       sub: onoff(setup.debloat),
       fn: function () {
         setup.debloat = !setup.debloat;
@@ -798,7 +1352,7 @@ function build() {
       },
     });
     rows.push({
-      label: 'Take over the Input key',
+      label: t('Take over the Input key'),
       sub: onoff(setup.inputKey),
       fn: function () {
         setup.inputKey = !setup.inputKey;
@@ -809,40 +1363,40 @@ function build() {
     rows.push({ sep: true });
     setupIdx = rows.length;
     rows.push({
-      label: 'Set up now',
-      sub: 'the screen blinks once',
+      label: t('Set up now'),
+      sub: t('the screen blinks once'),
       fn: function () {
         doSetup(false);
       },
     });
     if (forceOffer)
       rows.push({
-        label: 'Set up anyway',
-        sub: 'untested firmware; a failed start restarts the TV',
+        label: t('Set up anyway'),
+        sub: t('untested firmware; a failed start restarts the TV'),
         fn: function () {
           doSetup(true);
         },
       });
     rows.push({ sep: true });
-    rows.push({ label: 'Check for updates', sub: 'works without the service', fn: offlineCheck });
-    rows.push({ label: 'Share log', sub: 'QR code for your phone', fn: openShare });
+    rows.push({ label: t('Check for updates'), sub: t('works without the service'), fn: offlineCheck });
+    rows.push({ label: t('Share log'), sub: t('QR code for your phone'), fn: openShare });
     return;
   }
   if (view === 'confirm-home' || view === 'confirm-uninstall') {
     var un = view === 'confirm-uninstall',
       on = !(st.home && st.home.enabled);
-    rows.push({ label: 'Cancel', fn: pop });
+    rows.push({ label: t('Cancel'), fn: pop });
     rows.push({
-      label: un ? 'Yes, remove CleanYourTV' : on ? 'Yes, use CleanYourTV as Home' : 'Yes, use LG’s Home',
-      sub: un ? 'settings and apps are deleted; the TV restarts' : 'the TV restarts',
+      label: un ? t('Yes, remove CleanYourTV') : on ? t('Yes, use CleanYourTV as Home') : t('Yes, use LG’s Home'),
+      sub: un ? t('settings and apps are deleted; the TV restarts') : t('the TV restarts'),
       fn: function () {
         api(un ? '/api/manager/uninstall' : '/api/manager/home', un ? {} : { enabled: on }).catch(function () {});
         banner(
           un
-            ? 'Removing CleanYourTV… the TV restarts in a moment and LG’s Home comes back.'
+            ? t('Removing CleanYourTV… the TV restarts in a moment and LG’s Home comes back.')
             : on
-              ? 'Switching to CleanYourTV… the TV restarts in a moment.'
-              : 'Switching to LG’s Home… the TV restarts in a moment.',
+              ? t('Switching to CleanYourTV… the TV restarts in a moment.')
+              : t('Switching to LG’s Home… the TV restarts in a moment.'),
           'work'
         );
       },
@@ -854,43 +1408,42 @@ function build() {
       l2 = lv || {},
       gk = (st.keys && st.keys.guide) || '';
     rows.push({
-      label: 'Show Live TV',
+      label: t('Show Live TV'),
       sub: onoff(lo),
       fn: function () {
         opt({ liveTv: !lo });
       },
     });
     rows.push({
-      label: 'Playlist',
+      label: t('Playlist'),
       sub: l2.configured
-        ? l2.channels +
-          ' channels' +
-          (l2.epg ? ' \u00B7 guide for ' + l2.epg + ' programmes' : '') +
-          (l2.state && l2.state !== 'idle' ? ' \u00B7 ' + l2.state : '')
-        : 'not set \u00B7 set up from your phone',
+        ? t('%s channels').replace('%s', l2.channels) +
+          (l2.epg ? ' \u00B7 ' + t('guide for %s programmes').replace('%s', l2.epg) : '') +
+          (l2.state && l2.state !== 'idle' ? ' \u00B7 ' + t(l2.state) : '')
+        : t('not set \u00B7 set up from your phone'),
       fn: openLivePair,
     });
     rows.push({
-      label: 'Refresh playlist and guide',
+      label: t('Refresh playlist and guide'),
       sub: l2.error ? String(l2.error).slice(0, 70) : '',
       dim: !l2.configured,
       fn: function () {
         if (!l2.configured) return;
-        banner('Refreshing\u2026', 'work');
+        banner(t('Refreshing\u2026'), 'work');
         api('/api/live/refresh', {}).then(
           function () {
-            banner('Refreshing in the background', 'ok');
+            banner(t('Refreshing in the background'), 'ok');
             setTimeout(liveRefresh, 3000);
           },
           function () {
-            banner('The service did not answer', 'err');
+            banner(t('The service did not answer'), 'err');
           }
         );
       },
     });
     rows.push({
-      label: 'Learn the Guide key',
-      sub: lo ? (gk ? 'now: ' + gk : 'not learned \u00B7 LG\u2019s guide stays') : 'Live TV is off',
+      label: t('Learn the Guide key'),
+      sub: lo ? (gk ? t('now: %s').replace('%s', gk) : t('not learned \u00B7 LG\u2019s guide stays')) : t('Live TV is off'),
       dim: !lo,
       fn: function () {
         if (lo) openKeys('guide');
@@ -898,63 +1451,63 @@ function build() {
     });
     rows.push({ sep: true });
     rows.push({
-      label: 'Clear recent channels',
+      label: t('Clear recent channels'),
       fn: function () {
         api('/api/live/state', { op: 'clear' }).then(
           function () {
-            banner('Recent channels cleared', 'ok');
+            banner(t('Recent channels cleared'), 'ok');
           },
           function () {
-            banner('The service did not answer', 'err');
+            banner(t('The service did not answer'), 'err');
           }
         );
       },
     });
     rows.push({
-      label: 'Remove the playlist',
-      sub: l2.configured ? '' : 'nothing to remove',
+      label: t('Remove the playlist'),
+      sub: l2.configured ? '' : t('nothing to remove'),
       dim: !l2.configured,
       fn: function () {
         if (l2.configured) push('confirm-live-reset');
       },
     });
     rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
+    rows.push({ label: t('Back'), fn: pop });
     return;
   }
   if (view === 'confirm-live-reset') {
     rows.push({
-      label: 'Yes, remove the playlist',
-      sub: 'the address, the channel list, the guide and your favourites are deleted',
+      label: t('Yes, remove the playlist'),
+      sub: t('the address, the channel list, the guide and your favourites are deleted'),
       fn: function () {
         api('/api/live/reset', {}).then(
           function () {
-            banner('Playlist removed', 'ok');
+            banner(t('Playlist removed'), 'ok');
             pop();
             liveRefresh();
           },
           function () {
-            banner('The service did not answer', 'err');
+            banner(t('The service did not answer'), 'err');
           }
         );
       },
     });
-    rows.push({ label: 'No, keep it', fn: pop });
+    rows.push({ label: t('No, keep it'), fn: pop });
     return;
   }
   if (view === 'inputkey') {
     var hk = st.inputhook || {},
       na = hk.hook && !hk.hook.attached;
     rows.push({
-      label: 'Input key opens our Inputs list',
-      sub: na ? 'not available on this firmware' : onoff(st.options.inputKey),
+      label: t('Input key opens our Inputs list'),
+      sub: na ? t('not available on this firmware') : onoff(st.options.inputKey),
       fn: function () {
         opt({ inputKey: !st.options.inputKey });
       },
     });
     rows.push({
-      label: 'Learn the Input key',
-      sub: st.keys && st.keys.inputIsDefault ? 'default (' + st.keys.input + ')' : 'learned: ' + (st.keys && st.keys.input),
+      label: t('Learn the Input key'),
+      sub: (st.keys && st.keys.inputIsDefault ? t('default (%s)') : t('learned: %s')).replace('%s', st.keys && st.keys.input),
       fn: function () {
         openKeys('input');
       },
@@ -962,29 +1515,29 @@ function build() {
     var pk = st.picker || {},
       pkMode = pk.mode || 'overlay',
       PKT = {
-        overlay: 'over the running app, ready in the background (instant)',
-        ondemand: 'over the running app, started when pressed',
-        launcher: 'the launcher\u2019s Inputs list',
+        overlay: t('over the running app, ready in the background (instant)'),
+        ondemand: t('over the running app, started when pressed'),
+        launcher: t('the launcher\u2019s Inputs list'),
       };
     rows.push({
-      label: 'Input key shows',
+      label: t('Input key shows'),
       sub:
-        (pk.released ? 'LG\u2019s own list: CleanYourTV is not the Home' : PKT[pkMode]) +
-        (pk.reason && !pk.released ? ' \u00B7 ' + pk.reason : ''),
+        (pk.released ? t('LG\u2019s own list: CleanYourTV is not the Home') : PKT[pkMode]) +
+        (pk.reason && !pk.released ? ' \u00B7 ' + t(pk.reason) : ''),
       fn: function () {
         var o = ['overlay', 'ondemand', 'launcher'];
         opt({ pickerMode: o[(o.indexOf(pkMode) + 1) % 3] });
       },
     });
     rows.push({
-      label: 'Learn the Home key',
-      sub: 'optional · ' + (st.keys && st.keys.home ? 'now: ' + st.keys.home : 'not learned'),
+      label: t('Learn the Home key'),
+      sub: t('optional') + ' · ' + (st.keys && st.keys.home ? t('now: %s').replace('%s', st.keys.home) : t('not learned')),
       fn: function () {
         openKeys('home');
       },
     });
     rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
+    rows.push({ label: t('Back'), fn: pop });
     return;
   }
   var fe = st.frontend,
@@ -992,18 +1545,19 @@ function build() {
     busy = st.job && st.job.state === 'working';
   var uptxt = function (u) {
     return u
-      ? 'Update to ' + u + (st.channel ? ' (test build)' : '')
+      ? (st.channel ? t('Update to %s (test build)') : t('Update to %s')).replace('%s', u)
       : st.checking
-        ? 'Checking…'
+        ? t('Checking…')
         : st.checkError
           ? /no release/.test(st.checkError)
-            ? 'No release yet'
-            : 'Cannot check'
-          : 'Up to date';
+            ? t('No release yet')
+            : t('Cannot check')
+          : t('Up to date');
   };
   // updates, then the settings, then support; the destructive row last
   rows.push({
-    label: 'Launcher ' + fe.version,
+    k: 'Launcher',
+    label: t('Launcher') + ' ' + fe.version,
     sub: uptxt(fe.updateTo),
     dim: busy,
     fn: fe.updateTo
@@ -1013,7 +1567,8 @@ function build() {
       : null,
   });
   rows.push({
-    label: 'Service ' + sv.version,
+    k: 'Service',
+    label: t('Service') + ' ' + sv.version,
     sub: uptxt(sv.updateTo),
     dim: busy,
     fn: sv.updateTo
@@ -1023,22 +1578,23 @@ function build() {
       : null,
   });
   rows.push({
-    label: 'Check for updates',
+    label: t('Check for updates'),
     dim: busy,
     fn: function () {
-      banner('Checking…', 'work');
+      banner(t('Checking…'), 'work');
       api('/api/manager/check', {}).then(refreshDone, refreshDone);
     },
   });
   rows.push({
-    label: 'Update channel',
-    sub: st.channel ? 'Test: ' + st.channel.replace(/^test-/, '') : 'Stable releases',
+    label: t('Update channel'),
+    sub: st.channel ? t('Test: %s').replace('%s', st.channel.replace(/^test-/, '')) : t('Stable releases'),
     dim: busy,
     fn: openChannel,
   });
   if (fe.previous)
     rows.push({
-      label: 'Go back to launcher ' + fe.previous,
+      k: 'Go back to launcher',
+      label: t('Go back to launcher %s').replace('%s', fe.previous),
       dim: busy,
       fn: function () {
         run('/api/manager/rollback-frontend', {});
@@ -1046,14 +1602,14 @@ function build() {
     });
   rows.push({ sep: true });
   rows.push({
-    label: 'CleanYourTV as Home',
+    label: t('CleanYourTV as Home'),
     sub: onoff(st.home && st.home.enabled),
     fn: function () {
       push('confirm-home');
     },
   });
   rows.push({
-    label: 'Theme',
+    label: t('Theme'),
     sub: (function () {
       var n = '';
       ((th && th.themes) || []).forEach(function (x) {
@@ -1063,18 +1619,18 @@ function build() {
     })(),
     fn: openTheme,
   });
-  rows.push({ label: 'Live TV', sub: onoff(st.options.liveTv !== false), fn: openLiveTv });
+  rows.push({ label: t('Live TV'), sub: onoff(st.options.liveTv !== false), fn: openLiveTv });
   rows.push({
-    label: 'Input key',
-    sub: st.inputhook && st.inputhook.hook && !st.inputhook.hook.attached ? 'not available' : onoff(st.options.inputKey),
+    label: t('Input key'),
+    sub: st.inputhook && st.inputhook.hook && !st.inputhook.hook.attached ? t('not available') : onoff(st.options.inputKey),
     fn: function () {
       push('inputkey');
     },
   });
   rows.push({ sep: true });
   rows.push({
-    label: 'Voice',
-    sub: st.voice ? (st.voice.installed ? onoff(st.voice.enabled) : 'not installed') : '',
+    label: t('Voice'),
+    sub: st.voice ? (st.voice.installed ? onoff(st.voice.enabled) : t('not installed')) : '',
     fn: function () {
       api('/api/voice/status').then(
         function (v) {
@@ -1083,13 +1639,13 @@ function build() {
           if ((v.job && v.job.state === 'working') || v.listening) voiceRefresh();
         },
         function () {
-          banner('The service did not answer', 'err');
+          banner(t('The service did not answer'), 'err');
         }
       );
     },
   });
   rows.push({
-    label: 'Network notifications',
+    label: t('Network notifications'),
     sub: onoff(st.notifyApi && st.notifyApi.enabled),
     fn: function () {
       api('/api/manager/notify-api').then(
@@ -1098,130 +1654,172 @@ function build() {
           push('notifyapi');
         },
         function () {
-          banner('The service did not answer', 'err');
+          banner(t('The service did not answer'), 'err');
         }
       );
     },
   });
   rows.push({
-    label: 'Debloat LG’s ads and telemetry',
+    label: t('Debloat LG’s ads and telemetry'),
     sub: onoff(st.options.debloat),
     fn: function () {
       opt({ debloat: !st.options.debloat });
     },
   });
   rows.push({ sep: true });
-  rows.push({ label: 'Share log', sub: 'QR code for your phone', fn: openShare });
+  rows.push({ label: t('Share log'), sub: t('QR code for your phone'), fn: openShare });
   rows.push({
-    label: 'Uninstall',
+    label: t('Uninstall'),
     fn: function () {
       push('confirm-uninstall');
     },
   });
 }
-/* what each row does, shown on the left for the focused row */
+/* what each row does, shown on the left for the focused row. The keys are the rows' English labels; a row with a variable label
+   (a version, a name) names its key in k */
 var INFO = {
-  'Launcher':
-    'The home screen you see. Updates come from GitHub releases and are checked against a SHA-256 file before they are installed. If a new launcher does not start, the previous one is put back.',
-  'Service':
-    'The background service behind the launcher: Live TV, picture notifications, the Input key, these updates. A failed update restores the previous files.',
-  'Check for updates': 'Looks for a newer release on GitHub. Nothing is installed until you choose an update.',
-  'Update channel':
-    'Stable releases are what most people want. A test build is a change someone asks you to try, built from a branch of the repository; it can be less finished. Choose a test build here, then use the Launcher and Service rows to install it. Going back to Stable offers the latest release again.',
-  'Go back to launcher': 'Swaps the previous launcher version back in. The newer one stays available as an update.',
-  'CleanYourTV as Home':
-    'On: the Home button opens this launcher. Off: LG\u2019s own Home. Switching restarts the TV (about a minute); the service keeps running either way.',
-  'Debloat LG\u2019s ads and telemetry':
-    'Stops LG\u2019s ad, recommendation and telemetry services and blocks a few ad servers. Nothing is uninstalled, and it only applies while this launcher is Home.',
+  'Launcher': t(
+    'The home screen you see. Updates come from GitHub releases and are checked against a SHA-256 file before they are installed. If a new launcher does not start, the previous one is put back.'
+  ),
+  'Service': t(
+    'The background service behind the launcher: Live TV, picture notifications, the Input key, these updates. A failed update restores the previous files.'
+  ),
+  'Check for updates': t('Looks for a newer release on GitHub. Nothing is installed until you choose an update.'),
+  'Update channel': t(
+    'Stable releases are what most people want. A test build is a change someone asks you to try, built from a branch of the repository; it can be less finished. Choose a test build here, then use the Launcher and Service rows to install it. Going back to Stable offers the latest release again.'
+  ),
+  'Go back to launcher': t('Swaps the previous launcher version back in. The newer one stays available as an update.'),
+  'CleanYourTV as Home': t(
+    'On: the Home button opens this launcher. Off: LG\u2019s own Home. Switching restarts the TV (about a minute); the service keeps running either way.'
+  ),
+  'Debloat LG\u2019s ads and telemetry': t(
+    'Stops LG\u2019s ad, recommendation and telemetry services and blocks a few ad servers. Nothing is uninstalled, and it only applies while this launcher is Home.'
+  ),
 
-  'Theme':
-    'Choose how the home screen looks: colours, the size of tiles and text, the number of columns, the clock, the ambient glow, animation speed and a wallpaper. Themes are small data files bundled with the package; the accent colour can be changed on top of any of them.',
-  'Theme options': 'More choices for the theme: the accent colour, and going back to the previous theme.',
-  'Accent colour':
-    'The colour of the focus ring and of the highlighted button or menu row. \u201CTheme default\u201D uses the theme\u2019s own colour.',
-  'Network notifications':
-    'Lets other devices on your network send picture notifications to this TV with a POST request and a secret token. Off by default.',
-  'Accept notifications from the network':
-    'On: the TV listens on port 8767 for POST /notify with the token. Anyone who has the token and network access can show cards on this screen.',
-  'How to send': 'Shows the address, the token and an example request.',
-  'Show as QR code':
-    'Shows a QR code. A phone that scans it opens a page, served by the TV for ten minutes, that shows the notification address and the token with Copy buttons (for Home Assistant, for example). The token is a secret.',
-  'New token': 'Creates a new secret token. Devices using the old one stop working.',
-  'Voice':
-    'Optional. Speak into the remote and the TV turns it into text on the TV itself (Moonshine, English). The text can be sent to a server you run. Audio never leaves the TV. Needs a download of about 80 MB.',
-  'Install voice':
-    'Downloads the speech engine, a 64-bit C library and the model (checksums are verified), then tests them. About a minute. Nothing is installed in the system folders.',
-  'Listen on the voice button': 'On: pressing the button you learned starts listening. A card shows what was heard.',
-  'AI chat (OpenRouter)':
-    'On: what you say is also sent as text to a language model through OpenRouter and the answer is shown on screen. Needs your OpenRouter key; the text goes to OpenRouter and the model provider, never audio.',
-  'Set up from your phone':
-    'Shows a QR code. Scan it with a phone on the same Wi-Fi to enter your OpenRouter key, choose a model, write instructions and set a server address. Nothing is typed on the TV.',
-  'Model':
-    'Choose the model that answers. The list is read from OpenRouter: the newest models of the main providers, with the price per million words in. The phone page lists every model.',
-  'Set up with commands': 'Shows the commands to set the key, model and instructions from a shell, and how to ask by text.',
-  'Forget the conversation': 'The AI and Home Assistant remember the last turns for ten minutes. This clears them.',
-  'Home Assistant (Assist)':
-    'Sends what you say as text to Home Assistant\u2019s Assist and shows its answer. Needs the address and a long-lived access token (Home Assistant profile page), entered on your phone. Choosing this row tests the connection.',
-  'Which answers first':
-    'Home Assistant first, then the AI: Assist gets the text; if it does not understand, the AI answers. Home Assistant only: never the AI. The AI only: Home Assistant is not asked. Choose to switch.',
-  'Assist agent':
-    'Which Home Assistant conversation agent answers. The default is the built-in one; others (for example a language-model agent) are listed from your Home Assistant.',
-  'Switch off LG\u2019s voice assistant':
-    'LG\u2019s own assistant reacts to the same button and sends the audio to LG. On: it is paused while voice is on. A reboot or switching this off undoes it.',
-  'Learn the voice button':
-    'Records the code of the remote button that starts listening. Try the microphone button first; any spare button works.',
-  'Try it now': 'Starts listening without the button: speak when the card appears.',
-  'Send the text to':
-    'Where the recognised text goes. Shows how to set the address of your server. Without one, the text is only shown on screen.',
-  'Remove voice': 'Deletes the downloaded engine and model. The rest of CleanYourTV is not affected.',
-  'Input key':
-    'The remote\u2019s Input button opens our Inputs list over the running app instead of LG\u2019s picker. Open this screen to switch it off or to learn the button.',
-  'Share log':
-    'Shows a QR code. Scan it with a phone on the same Wi-Fi to copy a report for a bug report. Addresses and URL paths are masked; the page closes after ten minutes.',
-  'Uninstall': 'Removes the apps, the boot scripts and your settings, then restarts the TV so LG\u2019s Home comes back.',
-  'Input key opens our Inputs list': 'On: pressing Input shows our Inputs list. Off: LG\u2019s picker comes back at once.',
-  'Learn the Input key':
-    'Reads the code of your remote\u2019s Input button from the hook, then tests that our list opens. The default is 241. Clear goes back to it.',
-  'Live TV': 'Settings for Live TV: switch it on or off, set up or remove your playlist, refresh the guide and learn the Guide key.',
-  'Show Live TV':
-    'On: the launcher has a Live TV button and tile, the Inputs list has Live TV, and the Guide key can open the channel guide. Off: all of that is hidden and LG\u2019s own player and guide are used. Your playlist is kept.',
-  'Playlist':
-    'Your M3U playlist and its XMLTV guide. Choose it to set up: a QR code opens a page on your phone where you enter the playlist address and the 6-digit code shown here.',
-  'Refresh playlist and guide': 'Downloads the playlist and the programme guide again now. It also happens twice a day.',
-  'Clear recent channels': 'Empties the Recent tab and the list of channels that failed. Favourites stay.',
-  'Remove the playlist': 'Deletes the playlist address, the channel list, the guide and your favourites from the TV.',
-  'Yes, remove the playlist': 'Deletes the playlist and everything stored for it on the TV. You can set it up again.',
-  'Learn the Guide key':
-    'Records the Guide button\u2019s code. Afterwards it opens the Live TV channel guide over whatever is running (only while Live TV is on). Clear it to get LG\u2019s guide back.',
-  'Input key shows':
-    'How the Input button shows the Inputs. Over the running app, ready in the background: instant, tested on webOS 25. Over the running app, started when pressed: nothing runs hidden, so it cannot keep the remote; the default on older webOS, where the background one showed a loading circle. The launcher\u2019s Inputs list: the TV goes to our Home (needs CleanYourTV as Home; otherwise the key stays with LG). Choose to go to the next one.',
-  'Learn the Home key': 'Optional. Records the Home button\u2019s code. The Home key keeps working exactly as before.',
-  'Back': 'Back to the main list.',
-  'Cancel': 'Nothing changes.',
-  'Yes, remove CleanYourTV': 'Deletes the apps, the boot scripts and the settings, then restarts the TV.',
-  'Yes, use CleanYourTV as Home': 'Restarts the TV; this launcher is Home after it starts.',
-  'Yes, use LG\u2019s Home': 'Restarts the TV; LG\u2019s own Home is Home after it starts. You can switch back here.',
-  'Update to': 'A newer package is available. Install it before the setup: it may contain fixes for your firmware.',
-  'Take over the Input key': 'The remote\u2019s Input button opens our Inputs list instead of LG\u2019s picker. You can change this later.',
-  'Set up now':
-    'Installs the launcher, replaces LG\u2019s Home at boot and starts the service. About a minute; the screen blinks once. If the new Home does not come up, the setup removes itself and restarts the TV.',
-  'Set up anyway':
-    'Your firmware is not in the compatibility list and LG\u2019s Home looks different. This tries it anyway; a failed start restarts the TV with LG\u2019s Home.',
+  'Theme': t(
+    'Choose how the home screen looks: colours, the size of tiles and text, the number of columns, the clock, the ambient glow, animation speed and a wallpaper. Themes are small data files bundled with the package; the accent colour can be changed on top of any of them.'
+  ),
+  'Theme options': t('More choices for the theme: the accent colour, and going back to the previous theme.'),
+  'Accent colour': t(
+    'The colour of the focus ring and of the highlighted button or menu row. \u201CTheme default\u201D uses the theme\u2019s own colour.'
+  ),
+  'Network notifications': t(
+    'Lets other devices on your network send picture notifications to this TV with a POST request and a secret token. Off by default.'
+  ),
+  'Accept notifications from the network': t(
+    'On: the TV listens on port 8767 for POST /notify with the token. Anyone who has the token and network access can show cards on this screen.'
+  ),
+  'How to send': t('Shows the address, the token and an example request.'),
+  'Show as QR code': t(
+    'Shows a QR code. A phone that scans it opens a page, served by the TV for ten minutes, that shows the notification address and the token with Copy buttons (for Home Assistant, for example). The token is a secret.'
+  ),
+  'New token': t('Creates a new secret token. Devices using the old one stop working.'),
+  'Voice': t(
+    'Optional. Speak into the remote and the TV turns it into text on the TV itself (Moonshine, English). The text can be sent to a server you run. Audio never leaves the TV. Needs a download of about 80 MB.'
+  ),
+  'Install voice': t(
+    'Downloads the speech engine, a 64-bit C library and the model (checksums are verified), then tests them. About a minute. Nothing is installed in the system folders.'
+  ),
+  'Listen on the voice button': t('On: pressing the button you learned starts listening. A card shows what was heard.'),
+  'AI chat (OpenRouter)': t(
+    'On: what you say is also sent as text to a language model through OpenRouter and the answer is shown on screen. Needs your OpenRouter key; the text goes to OpenRouter and the model provider, never audio.'
+  ),
+  'Set up from your phone': t(
+    'Shows a QR code. Scan it with a phone on the same Wi-Fi to enter your OpenRouter key, choose a model, write instructions and set a server address. Nothing is typed on the TV.'
+  ),
+  'Model': t(
+    'Choose the model that answers. The list is read from OpenRouter: the newest models of the main providers, with the price per million words in. The phone page lists every model.'
+  ),
+  'Set up with commands': t('Shows the commands to set the key, model and instructions from a shell, and how to ask by text.'),
+  'Forget the conversation': t('The AI and Home Assistant remember the last turns for ten minutes. This clears them.'),
+  'Home Assistant (Assist)': t(
+    'Sends what you say as text to Home Assistant\u2019s Assist and shows its answer. Needs the address and a long-lived access token (Home Assistant profile page), entered on your phone. Choosing this row tests the connection.'
+  ),
+  'Which answers first': t(
+    'Home Assistant first, then the AI: Assist gets the text; if it does not understand, the AI answers. Home Assistant only: never the AI. The AI only: Home Assistant is not asked. Choose to switch.'
+  ),
+  'Assist agent': t(
+    'Which Home Assistant conversation agent answers. The default is the built-in one; others (for example a language-model agent) are listed from your Home Assistant.'
+  ),
+  'Switch off LG\u2019s voice assistant': t(
+    'LG\u2019s own assistant reacts to the same button and sends the audio to LG. On: it is paused while voice is on. A reboot or switching this off undoes it.'
+  ),
+  'Learn the voice button': t(
+    'Records the code of the remote button that starts listening. Try the microphone button first; any spare button works.'
+  ),
+  'Try it now': t('Starts listening without the button: speak when the card appears.'),
+  'Send the text to': t(
+    'Where the recognised text goes. Shows how to set the address of your server. Without one, the text is only shown on screen.'
+  ),
+  'Remove voice': t('Deletes the downloaded engine and model. The rest of CleanYourTV is not affected.'),
+  'Input key': t(
+    'The remote\u2019s Input button opens our Inputs list over the running app instead of LG\u2019s picker. Open this screen to switch it off or to learn the button.'
+  ),
+  'Share log': t(
+    'Shows a QR code. Scan it with a phone on the same Wi-Fi to copy a report for a bug report. Addresses and URL paths are masked; the page closes after ten minutes.'
+  ),
+  'Uninstall': t('Removes the apps, the boot scripts and your settings, then restarts the TV so LG\u2019s Home comes back.'),
+  'Input key opens our Inputs list': t('On: pressing Input shows our Inputs list. Off: LG\u2019s picker comes back at once.'),
+  'Learn the Input key': t(
+    'Reads the code of your remote\u2019s Input button from the hook, then tests that our list opens. The default is 241. Clear goes back to it.'
+  ),
+  'Live TV': t('Settings for Live TV: switch it on or off, set up or remove your playlist, refresh the guide and learn the Guide key.'),
+  'Show Live TV': t(
+    'On: the launcher has a Live TV button and tile, the Inputs list has Live TV, and the Guide key can open the channel guide. Off: all of that is hidden and LG\u2019s own player and guide are used. Your playlist is kept.'
+  ),
+  'Playlist': t(
+    'Your M3U playlist and its XMLTV guide. Choose it to set up: a QR code opens a page on your phone where you enter the playlist address and the 6-digit code shown here.'
+  ),
+  'Refresh playlist and guide': t('Downloads the playlist and the programme guide again now. It also happens twice a day.'),
+  'Clear recent channels': t('Empties the Recent tab and the list of channels that failed. Favourites stay.'),
+  'Remove the playlist': t('Deletes the playlist address, the channel list, the guide and your favourites from the TV.'),
+  'Yes, remove the playlist': t('Deletes the playlist and everything stored for it on the TV. You can set it up again.'),
+  'Learn the Guide key': t(
+    'Records the Guide button\u2019s code. Afterwards it opens the Live TV channel guide over whatever is running (only while Live TV is on). Clear it to get LG\u2019s guide back.'
+  ),
+  'Input key shows': t(
+    'How the Input button shows the Inputs. Over the running app, ready in the background: instant, tested on webOS 25. Over the running app, started when pressed: nothing runs hidden, so it cannot keep the remote; the default on older webOS, where the background one showed a loading circle. The launcher\u2019s Inputs list: the TV goes to our Home (needs CleanYourTV as Home; otherwise the key stays with LG). Choose to go to the next one.'
+  ),
+  'Learn the Home key': t('Optional. Records the Home button\u2019s code. The Home key keeps working exactly as before.'),
+  'Back': t('Back to the main list.'),
+  'Cancel': t('Nothing changes.'),
+  'Yes, remove CleanYourTV': t('Deletes the apps, the boot scripts and the settings, then restarts the TV.'),
+  'Yes, use CleanYourTV as Home': t('Restarts the TV; this launcher is Home after it starts.'),
+  'Yes, use LG\u2019s Home': t('Restarts the TV; LG\u2019s own Home is Home after it starts. You can switch back here.'),
+  'Update to': t('A newer package is available. Install it before the setup: it may contain fixes for your firmware.'),
+  'Take over the Input key': t(
+    'The remote\u2019s Input button opens our Inputs list instead of LG\u2019s picker. You can change this later.'
+  ),
+  'Set up now': t(
+    'Installs the launcher, replaces LG\u2019s Home at boot and starts the service. About a minute; the screen blinks once. If the new Home does not come up, the setup removes itself and restarts the TV.'
+  ),
+  'Set up anyway': t(
+    'Your firmware is not in the compatibility list and LG\u2019s Home looks different. This tries it anyway; a failed start restarts the TV with LG\u2019s Home.'
+  ),
 };
+function infoKey(label) {
+  // the label is shown in the TV's language: find the English key it was made from
+  if (INFO[label]) return label;
+  for (var k in INFO) if (INFO.hasOwnProperty(k) && t(k) === label) return k;
+  return '';
+}
 function infoFor(r) {
   if (!r || r.sep) return null;
   if (r.info) return r.info;
-  var k = r.label.replace(/ [0-9][0-9.]*$/, '');
+  var k = r.k || infoKey(r.label);
   if (k === 'Check for updates' && offline)
-    return 'Works without the service: looks for a newer package and installs it through the root service.';
-  if (k === 'CleanYourTV as Home' && st.home && st.home.fullhome)
+    return { t: t(k), d: t('Works without the service: looks for a newer package and installs it through the root service.') };
+  if (k === 'CleanYourTV as Home' && st && st.home && st.home.fullhome)
     return {
-      t: k,
+      t: t(k),
       d:
         INFO[k] +
-        ' This TV also has LG\u2019s full-screen Home: if the Home button opens that instead of this launcher, set TV Settings > General > Home Settings > Home Style to Basic.',
+        ' ' +
+        t(
+          'This TV also has LG\u2019s full-screen Home: if the Home button opens that instead of this launcher, set TV Settings > General > Home Settings > Home Style to Basic.'
+        ),
     };
-  return INFO[k] ? { t: k, d: INFO[k] } : null;
+  return INFO[k] ? { t: t(k), d: INFO[k] } : null;
 }
 var listY = 0;
 /* the list can be taller than the screen: keep the focused row in view and show a fade where more rows are hidden */
@@ -1288,53 +1886,51 @@ function draw() {
     return;
   }
   if (view === 'notifyapi') {
-    $('sub').textContent = 'Network notifications';
+    $('sub').textContent = t('Network notifications');
     return;
   }
   if (view === 'models') {
-    $('sub').textContent = 'Choose the model that answers';
+    $('sub').textContent = t('Choose the model that answers');
     return;
   }
   if (view === 'agents') {
-    $('sub').textContent = 'Choose the Home Assistant agent';
+    $('sub').textContent = t('Choose the Home Assistant agent');
     return;
   }
   if (view === 'channel') {
-    $('sub').textContent = 'Where updates come from';
+    $('sub').textContent = t('Where updates come from');
     return;
   }
   if (view === 'livetv') {
-    $('sub').textContent = 'Live TV: your own playlist';
+    $('sub').textContent = t('Live TV: your own playlist');
     return;
   }
   if (view === 'confirm-live-reset') {
-    $('sub').textContent = 'Remove the playlist?';
+    $('sub').textContent = t('Remove the playlist?');
     return;
   }
   if (view === 'themeopts') {
-    $('sub').textContent = 'Theme options';
+    $('sub').textContent = t('Theme options');
     return;
   }
   if (view === 'theme') {
-    $('sub').textContent = 'Choose how Home looks. The change shows the next time you open Home.';
+    $('sub').textContent = t('Choose how Home looks. The change shows the next time you open Home.');
     return;
   }
   if (view === 'accent') {
-    $('sub').textContent = 'The colour of the focus ring and highlights';
+    $('sub').textContent = t('The colour of the focus ring and highlights');
     return;
   }
   if (view === 'voice') {
     var vv = vo || {},
       ls = vv.last
         ? vv.last.text
-          ? 'Last heard: \u201C' +
-            vv.last.text +
-            '\u201D' +
+          ? t('Last heard: \u201C%s\u201D').replace('%s', vv.last.text) +
             (vv.last.ms ? ' (' + (vv.last.ms / 1000).toFixed(1) + ' s)' : '') +
-            (vv.last.error ? '\nNot sent: ' + vv.last.error : '')
-          : 'Last try: ' + vv.last.state + (vv.last.error ? '\n' + vv.last.error : '')
+            (vv.last.error ? '\n' + t('Not sent: %s').replace('%s', vv.last.error) : '')
+          : t('Last try: %s').replace('%s', t(vv.last.state)) + (vv.last.error ? '\n' + vv.last.error : '')
         : '';
-    $('sub').textContent = 'Voice \u00B7 ' + (vv.engine || '') + (ls ? '\n' + ls : '');
+    $('sub').textContent = t('Voice') + ' \u00B7 ' + (vv.engine || '') + (ls ? '\n' + ls : '');
     $('sub').style.whiteSpace = 'pre-line';
     if (inf) {
       var b2 = document.createElement('b');
@@ -1356,23 +1952,23 @@ function draw() {
     ie.appendChild(document.createTextNode(inf.d));
   }
   if (view === 'inputkey') {
-    $('sub').textContent = 'Input key';
+    $('sub').textContent = t('Input key');
     return;
   }
   if (view === 'confirm-home' || view === 'confirm-uninstall') {
-    $('sub').textContent = view === 'confirm-uninstall' ? 'Remove CleanYourTV?' : 'Switch Home?';
+    $('sub').textContent = view === 'confirm-uninstall' ? t('Remove CleanYourTV?') : t('Switch Home?');
     return;
   }
   if (!offline && st) {
     var m = [];
-    m.push('Launcher ' + st.frontend.version + ' · service ' + st.service.version);
-    if (st.checkError) m.push('Updates: ' + st.checkError);
-    else if (st.release) m.push('Latest release ' + st.release.version);
+    m.push(t('Launcher %s · service %s').replace('%s', st.frontend.version).replace('%s', st.service.version));
+    if (st.checkError) m.push(t('Updates: %s').replace('%s', st.checkError));
+    else if (st.release) m.push(t('Latest release %s').replace('%s', st.release.version));
     $('sub').textContent = m.join('\n');
     $('sub').style.whiteSpace = 'pre-line';
   } else
     $('sub').textContent = offline
-      ? 'The service is not running. Set it up to replace LG’s Home, take over the Input key and keep everything up to date.'
+      ? t('The service is not running. Set it up to replace LG’s Home, take over the Input key and keep everything up to date.')
       : '';
 }
 function next(dir) {
@@ -1389,7 +1985,22 @@ function act() {
   if (r && r.fn && !(st && st.job && st.job.state === 'working' && r.dim)) r.fn();
 }
 function aiHelp() {
-  return 'Chat with a language model through OpenRouter. Run these on the TV (ssh):\n\ncurl -X POST localhost:8765/api/voice/set -d \'{"llm":{"key":"sk-or-...","model":"openrouter/auto"}}\'\ncurl -X POST localhost:8765/api/voice/set -d \'{"llm":{"enabled":true}}\'\n\nOptional: "system" sets the instructions. Ask by text from anywhere on the TV:\ncurl -X POST localhost:8765/api/voice/ask -d \'{"text":"What is the capital of Peru?"}\'\n\nSpoken and typed questions go to OpenRouter and the model you chose; no audio does. The key stays on the TV.\n\nHome Assistant (Assist), with a long-lived access token:\ncurl -X POST localhost:8765/api/voice/set -d \'{"ha":{"url":"http://homeassistant.local:8123","token":"..."}}\'\nOptional: "route" is ha-first, ha-only or ai-only; "selfSigned":true accepts a self-signed certificate; "agent" is a conversation entity.';
+  // the commands stay as they are; the sentences around them follow the TV's language
+  return (
+    t('Chat with a language model through OpenRouter. Run these on the TV (ssh):') +
+    '\n\ncurl -X POST localhost:8765/api/voice/set -d \'{"llm":{"key":"sk-or-...","model":"openrouter/auto"}}\'\ncurl -X POST localhost:8765/api/voice/set -d \'{"llm":{"enabled":true}}\'\n\n' +
+    t('Optional: "system" sets the instructions. Ask by text from anywhere on the TV:') +
+    '\ncurl -X POST localhost:8765/api/voice/ask -d \'{"text":"' +
+    t('What is the capital of Peru?') +
+    '"}\'\n\n' +
+    t('Spoken and typed questions go to OpenRouter and the model you chose; no audio does. The key stays on the TV.') +
+    '\n\n' +
+    t('Home Assistant (Assist), with a long-lived access token:') +
+    '\ncurl -X POST localhost:8765/api/voice/set -d \'{"ha":{"url":"http://homeassistant.local:8123","token":"..."}}\'\n' +
+    t(
+      'Optional: "route" is ha-first, ha-only or ai-only; "selfSigned":true accepts a self-signed certificate; "agent" is a conversation entity.'
+    )
+  );
 }
 function liveRefresh() {
   api('/api/live/status').then(
@@ -1406,7 +2017,7 @@ function liveRefresh() {
 }
 function openNotifyQr() {
   if (!napi || !napi.enabled) {
-    banner('Switch notifications on first', 'err');
+    banner(t('Switch notifications on first'), 'err');
     return;
   }
   shareMode = 'notify';
@@ -1414,25 +2025,27 @@ function openNotifyQr() {
   $('share').style.display = 'block';
   $('shareurl').textContent = '';
   $('qrbox').style.visibility = 'hidden';
-  $('share').querySelector('h2').textContent = 'Notification address and token';
-  $('share').querySelector('ol').innerHTML =
-    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera and open the page: it shows the address and the token with <b>Copy</b> buttons.</li><li>The token is a <b>secret</b>: anyone who sees this code while it is open can read it.</li>';
-  $('sharemsg').textContent = 'Preparing\u2026';
+  $('share').querySelector('h2').textContent = t('Notification address and token');
+  $('share').querySelector('ol').innerHTML = t(
+    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera and open the page: it shows the address and the token with <b>Copy</b> buttons.</li><li>The token is a <b>secret</b>: anyone who sees this code while it is open can read it.</li>'
+  );
+  $('sharemsg').textContent = t('Preparing\u2026');
   api('/api/manager/notify-api', { page: true }).then(
     function (r) {
       if (view !== 'share') return;
       if (!r.pageUrl) {
-        $('sharemsg').textContent = 'The notification listener is not running.';
+        $('sharemsg').textContent = t('The notification listener is not running.');
         return;
       }
       drawQr(r.pageUrl);
       $('qrbox').style.visibility = 'visible';
       $('shareurl').textContent = r.pageUrl;
-      $('sharemsg').textContent =
-        'The page opens for ten minutes. It is not encrypted: the token travels over your Wi-Fi, so use a network you trust.';
+      $('sharemsg').textContent = t(
+        'The page opens for ten minutes. It is not encrypted: the token travels over your Wi-Fi, so use a network you trust.'
+      );
     },
     function () {
-      $('sharemsg').textContent = 'The service did not answer.';
+      $('sharemsg').textContent = t('The service did not answer.');
     }
   );
 }
@@ -1454,18 +2067,20 @@ function openLivePair() {
   $('share').style.display = 'block';
   $('shareurl').textContent = '';
   $('qrbox').style.visibility = 'hidden';
-  $('share').querySelector('h2').textContent = 'Set up Live TV';
-  $('share').querySelector('ol').innerHTML =
-    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Enter the <b>code</b> below and your playlist address.</li>';
-  $('sharemsg').textContent = 'Preparing\u2026';
+  $('share').querySelector('h2').textContent = t('Set up Live TV');
+  $('share').querySelector('ol').innerHTML = t(
+    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Enter the <b>code</b> below and your playlist address.</li>'
+  );
+  $('sharemsg').textContent = t('Preparing\u2026');
   api('/api/live/pair', {}).then(
     function (r) {
       if (view !== 'share') return;
       drawQr(r.url);
       $('qrbox').style.visibility = 'visible';
-      $('shareurl').textContent = r.url + '   code ' + r.code;
-      $('sharemsg').textContent =
-        'The page stays open for ten minutes. It is not encrypted: the playlist address, which may hold an access key, travels over your Wi-Fi.';
+      $('shareurl').textContent = r.url + '   ' + t('code %s').replace('%s', r.code);
+      $('sharemsg').textContent = t(
+        'The page stays open for ten minutes. It is not encrypted: the playlist address, which may hold an access key, travels over your Wi-Fi.'
+      );
       (function poll(n) {
         if (view !== 'share' || shareMode !== 'live') return;
         api('/api/live/status').then(
@@ -1473,7 +2088,7 @@ function openLivePair() {
             if (s2.configured && (!lv || !lv.configured || s2.channels !== lv.channels)) {
               lv = s2;
               closeShare();
-              banner('Playlist saved', 'ok');
+              banner(t('Playlist saved'), 'ok');
               return;
             }
             if (n < 300)
@@ -1490,12 +2105,12 @@ function openLivePair() {
       })(0);
     },
     function () {
-      $('sharemsg').textContent = 'The service did not answer.';
+      $('sharemsg').textContent = t('The service did not answer.');
     }
   );
 }
 function openTheme() {
-  banner('Loading themes\u2026', 'work');
+  banner(t('Loading themes\u2026'), 'work');
   api('/api/theme/list').then(
     function (r) {
       if (r.error) {
@@ -1503,28 +2118,30 @@ function openTheme() {
         return;
       }
       banner(
-        r.catalogue && !r.catalogue.ok ? 'Could not reach GitHub (' + r.catalogue.error + '): showing the themes on this TV.' : '',
+        r.catalogue && !r.catalogue.ok
+          ? t('Could not reach GitHub (%s): showing the themes on this TV.').replace('%s', r.catalogue.error)
+          : '',
         r.catalogue && !r.catalogue.ok ? 'err' : ''
       );
       th = r;
       push('theme');
       for (var k = 0; k < rows.length; k++)
-        if (rows[k].sub && /^selected/.test(rows[k].sub)) {
+        if (rows[k].sel) {
           idx = k;
           draw();
           break;
         }
     },
     function () {
-      banner('The service did not answer', 'err');
+      banner(t('The service did not answer'), 'err');
     }
   );
 }
 function setTheme(b) {
   var n = b.name;
   delete b.name;
-  banner('Getting ' + n + '\u2026', 'work');
-  themeCall('/api/theme/set', b, n + ' applied. Open Home to see it.');
+  banner(t('Getting %s\u2026').replace('%s', n), 'work');
+  themeCall('/api/theme/set', b, t('%s applied. Open Home to see it.').replace('%s', n));
 }
 function themeCall(path, b, msg, back) {
   api(path, b, 60000).then(
@@ -1542,31 +2159,31 @@ function themeCall(path, b, msg, back) {
       }
     },
     function () {
-      banner('The service did not answer', 'err');
+      banner(t('The service did not answer'), 'err');
     }
   );
 }
 function openChannel() {
-  banner('Looking for test builds\u2026', 'work');
+  banner(t('Looking for test builds\u2026'), 'work');
   api('/api/manager/tests').then(
     function (r) {
       banner('');
       tst = r;
       push('channel');
       for (var k = 0; k < rows.length; k++)
-        if (rows[k].sub && /^selected/.test(rows[k].sub)) {
+        if (rows[k].sel) {
           idx = k;
           draw();
           break;
         }
     },
     function () {
-      banner('The service did not answer', 'err');
+      banner(t('The service did not answer'), 'err');
     }
   );
 }
 function setChannel(tag) {
-  banner('Switching\u2026', 'work');
+  banner(t('Switching\u2026'), 'work');
   api('/api/manager/channel', { tag: tag }).then(
     function (s) {
       if (s.error) {
@@ -1577,18 +2194,21 @@ function setChannel(tag) {
       pop();
       banner(
         tag
-          ? 'Following ' + tag.replace(/^test-/, '') + '. If the Launcher or Service row offers an update, that is the test build.'
-          : 'Back on the stable releases',
+          ? t('Following %s. If the Launcher or Service row offers an update, that is the test build.').replace(
+              '%s',
+              tag.replace(/^test-/, '')
+            )
+          : t('Back on the stable releases'),
         'ok'
       );
     },
     function () {
-      banner('The service did not answer', 'err');
+      banner(t('The service did not answer'), 'err');
     }
   );
 }
 function openModels() {
-  banner('Loading the model list\u2026', 'work');
+  banner(t('Loading the model list\u2026'), 'work');
   api('/api/voice/models').then(
     function (r) {
       if (r.error) {
@@ -1596,7 +2216,7 @@ function openModels() {
         return;
       }
       banner('');
-      mdl = [{ id: 'openrouter/auto', name: 'Auto (OpenRouter picks)', price: null }].concat(r.picks);
+      mdl = [{ id: 'openrouter/auto', name: t('Auto (OpenRouter picks)'), price: null }].concat(r.picks);
       var cur = ((vo || {}).llm || {}).model;
       if (
         cur &&
@@ -1607,34 +2227,34 @@ function openModels() {
         mdl.splice(1, 0, { id: cur, name: cur, price: null });
       push('models');
       for (var k = 0; k < rows.length; k++)
-        if (rows[k].sub && /selected$/.test(rows[k].sub)) {
+        if (rows[k].sel) {
           idx = k;
           draw();
           break;
         }
     },
     function () {
-      banner('The service did not answer', 'err');
+      banner(t('The service did not answer'), 'err');
     }
   );
 }
 function haTest() {
-  banner('Asking Home Assistant\u2026', 'work');
+  banner(t('Asking Home Assistant\u2026'), 'work');
   api('/api/voice/ha-test', {}).then(
     function (r) {
       if (r.error) {
         banner(r.error, 'err');
         return;
       }
-      banner('Connected to ' + (r.name || 'Home Assistant') + (r.version ? ' ' + r.version : ''), 'ok');
+      banner(t('Connected to %s').replace('%s', (r.name || 'Home Assistant') + (r.version ? ' ' + r.version : '')), 'ok');
     },
     function () {
-      banner('The service did not answer', 'err');
+      banner(t('The service did not answer'), 'err');
     }
   );
 }
 function openAgents() {
-  banner('Asking Home Assistant\u2026', 'work');
+  banner(t('Asking Home Assistant\u2026'), 'work');
   api('/api/voice/ha-agents').then(
     function (r) {
       if (r.error) {
@@ -1646,14 +2266,14 @@ function openAgents() {
       push('agents');
       var cur = ((vo || {}).ha || {}).agent;
       for (var k = 0; k < rows.length; k++)
-        if (rows[k].sub && /selected$/.test(rows[k].sub)) {
+        if (rows[k].sel) {
           idx = k;
           draw();
           break;
         }
     },
     function () {
-      banner('The service did not answer', 'err');
+      banner(t('The service did not answer'), 'err');
     }
   );
 }
@@ -1665,11 +2285,11 @@ function pickAgent(id) {
         return;
       }
       vo = x;
-      banner(id ? 'Agent: ' + id : 'Default agent', 'ok');
+      banner(id ? t('Agent: %s').replace('%s', id) : t('Default agent'), 'ok');
       pop();
     },
     function () {
-      banner('The service did not answer', 'err');
+      banner(t('The service did not answer'), 'err');
     }
   );
 }
@@ -1681,11 +2301,11 @@ function pickModel(id) {
         return;
       }
       vo = x;
-      banner('Model: ' + id, 'ok');
+      banner(t('Model: %s').replace('%s', id), 'ok');
       pop();
     },
     function () {
-      banner('The service did not answer', 'err');
+      banner(t('The service did not answer'), 'err');
     }
   );
 }
@@ -1696,22 +2316,24 @@ function openPair() {
   $('share').style.display = 'block';
   $('shareurl').textContent = '';
   $('qrbox').style.visibility = 'hidden';
-  $('share').querySelector('h2').textContent = 'Set up from your phone';
-  $('share').querySelector('ol').innerHTML =
-    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Enter your <b>OpenRouter key</b> and model, or your <b>Home Assistant</b> address and access token, and tap <b>Save</b>.</li>';
-  $('sharemsg').textContent = 'Preparing\u2026';
+  $('share').querySelector('h2').textContent = t('Set up from your phone');
+  $('share').querySelector('ol').innerHTML = t(
+    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Enter your <b>OpenRouter key</b> and model, or your <b>Home Assistant</b> address and access token, and tap <b>Save</b>.</li>'
+  );
+  $('sharemsg').textContent = t('Preparing\u2026');
   api('/api/voice/pair', {}).then(
     function (r) {
       if (view !== 'share') return;
       drawQr(r.url);
       $('qrbox').style.visibility = 'visible';
       $('shareurl').textContent = r.url;
-      $('sharemsg').textContent =
-        'The page stays open for ten minutes, or until you save. It is not encrypted: the key travels over your Wi-Fi, so use a network you trust.';
+      $('sharemsg').textContent = t(
+        'The page stays open for ten minutes, or until you save. It is not encrypted: the key travels over your Wi-Fi, so use a network you trust.'
+      );
       pollPair(0);
     },
     function () {
-      $('sharemsg').textContent = 'The service did not answer.';
+      $('sharemsg').textContent = t('The service did not answer.');
     }
   );
 }
@@ -1722,11 +2344,11 @@ function pollPair(n) {
       if (v.pairedAt > pairBase) {
         vo = v;
         closeShare();
-        banner('Saved', 'ok');
+        banner(t('Saved'), 'ok');
         return;
       }
       if (!v.pairing && n > 1) {
-        $('sharemsg').textContent = 'The page has closed. Close this and try again.';
+        $('sharemsg').textContent = t('The page has closed. Close this and try again.');
         return;
       }
       setTimeout(function () {
@@ -1746,9 +2368,9 @@ function voiceRefresh() {
     function (v) {
       vo = v;
       var j = v.job || {};
-      if (j.state === 'working') banner(j.message, 'work');
-      else if (j.state === 'error') banner(j.message, 'err');
-      else if (v.listening) banner('Listening…', 'work');
+      if (j.state === 'working') banner(tm(j.message), 'work');
+      else if (j.state === 'error') banner(tm(j.message), 'err');
+      else if (v.listening) banner(t('Listening…'), 'work');
       else banner('');
       if (view === 'voice') {
         build();
@@ -1776,7 +2398,7 @@ function run(path, body) {
       else poll();
     },
     function () {
-      banner('The service did not answer', 'err');
+      banner(t('The service did not answer'), 'err');
     }
   );
 }
@@ -1788,7 +2410,7 @@ function opt(o) {
       draw();
     },
     function () {
-      banner('The service did not answer', 'err');
+      banner(t('The service did not answer'), 'err');
     }
   );
 }
@@ -1799,20 +2421,20 @@ function poll() {
       st = s;
       var j = s.job || {};
       if (j.state === 'working') {
-        banner(j.message, 'work');
+        banner(tm(j.message), 'work');
         build();
         draw();
         pollT = setTimeout(poll, 1000);
       } else {
-        if (j.state === 'error') banner(j.message, 'err');
-        else if (j.state === 'done') banner(j.message, 'ok');
+        if (j.state === 'error') banner(tm(j.message), 'err');
+        else if (j.state === 'done') banner(tm(j.message), 'ok');
         else banner('');
         build();
         draw();
       }
     },
     function () {
-      banner('Waiting for the service…', 'work');
+      banner(t('Waiting for the service…'), 'work');
       pollT = setTimeout(poll, 2000);
     }
   );
@@ -1875,7 +2497,7 @@ function execOut(m) {
   return { ok: o.returnValue !== false, out: String(o.stdoutString || ''), err: String(o.stderrString || o.errorText || '') };
 }
 function offlineCheck() {
-  banner('Checking for updates\u2026', 'work');
+  banner(t('Checking for updates\u2026'), 'work');
   rootExec('node ' + SVC + '/helper/selfupdate.js check').then(function (m) {
     var e = execOut(m),
       r = null;
@@ -1883,7 +2505,7 @@ function offlineCheck() {
       r = JSON.parse(e.out);
     } catch (x) {}
     if (!r || r.error) {
-      banner('Could not check: ' + ((r && r.error) || e.err || 'no answer'), 'err');
+      banner(t('Could not check: %s').replace('%s', (r && r.error) || e.err || t('no answer')), 'err');
       return;
     }
     upd = r.updateTo ? r : null;
@@ -1891,14 +2513,16 @@ function offlineCheck() {
     if (upd) idx = updIdx;
     draw();
     banner(
-      r.updateTo ? 'Version ' + r.updateTo + ' is available; this one is ' + r.installed + '.' : 'Up to date (' + r.installed + ').',
+      r.updateTo
+        ? t('Version %s is available; this one is %s.').replace('%s', r.updateTo).replace('%s', r.installed)
+        : t('Up to date (%s).').replace('%s', r.installed),
       r.updateTo ? 'ok' : ''
     );
   });
 }
 function offlineUpdate() {
   if (!upd) return;
-  banner('Updating to ' + upd.updateTo + '\u2026', 'work');
+  banner(t('Updating to %s\u2026').replace('%s', upd.updateTo), 'work');
   rootExec('rm -f /tmp/cytv-selfupdate.log; nohup node ' + SVC + '/helper/selfupdate.js install > /tmp/cytv-selfupdate.log 2>&1 &').then(
     function () {
       pollUpdate(0);
@@ -1907,24 +2531,24 @@ function offlineUpdate() {
 }
 function pollUpdate(n) {
   rootExec('tail -n 3 /tmp/cytv-selfupdate.log 2>/dev/null').then(function (m) {
-    var t = execOut(m).out.trim(),
-      last = t.split('\n').pop();
+    var out = execOut(m).out.trim(),
+      last = out.split('\n').pop();
     if (/^DONE/.test(last)) {
       upd = null;
-      banner(last.replace(/^DONE /, ''), 'ok');
+      banner(tm(last.replace(/^DONE /, '')), 'ok');
       build();
       draw();
       return;
     }
     if (/^ERROR/.test(last)) {
-      banner('Update failed: ' + last.replace(/^ERROR /, ''), 'err');
+      banner(t('Update failed: %s').replace('%s', last.replace(/^ERROR /, '')), 'err');
       return;
     }
     if (n > 120) {
-      banner('The update is taking too long. Log: /tmp/cytv-selfupdate.log on the TV.', 'err');
+      banner(t('The update is taking too long. Log: %s on the TV.').replace('%s', '/tmp/cytv-selfupdate.log'), 'err');
       return;
     }
-    if (last) banner('Updating\u2026 ' + last, 'work');
+    if (last) banner(t('Updating\u2026 %s').replace('%s', last), 'work');
     setTimeout(function () {
       pollUpdate(n + 1);
     }, 2000);
@@ -1949,98 +2573,120 @@ function closeKeys() {
   pop();
   load(true);
 }
-function kName(n) {
-  return n === 'input' ? 'Input' : n === 'voice' ? 'voice' : n === 'guide' ? 'Guide' : 'Home';
+/* whole sentences per key, so a translation does not have to fit a key name into one sentence */
+function kPress(n) {
+  return n === 'input'
+    ? t('Press the Input button now\u2026')
+    : n === 'voice'
+      ? t('Press the voice button now\u2026')
+      : n === 'guide'
+        ? t('Press the Guide button now\u2026')
+        : t('Press the Home button now\u2026');
+}
+function kGot(n, code) {
+  return (
+    n === 'input'
+      ? t('Input key learned: code %s.')
+      : n === 'voice'
+        ? t('Voice button learned: code %s.')
+        : n === 'guide'
+          ? t('Guide key learned: code %s.')
+          : t('Home key learned: code %s.')
+  ).replace('%s', code);
 }
 function kStep(n) {
   clearTimeout(kTimer);
   var k = (st && st.keys) || { input: '241', home: '' };
   if (n === 'input')
-    return kShow('The Input key.\nChoose Start, then press the Input button on your remote.', [
+    return kShow(t('The Input key.\nChoose Start, then press the Input button on your remote.'), [
       {
-        label: 'Start',
-        sub: k.inputIsDefault ? 'default: ' + k.input : 'learned: ' + k.input,
+        label: t('Start'),
+        sub: (k.inputIsDefault ? t('default: %s') : t('learned: %s')).replace('%s', k.input),
         fn: function () {
           kLearn('input');
         },
       },
       {
-        label: 'Skip',
+        label: t('Skip'),
         fn: function () {
           kStep('test');
         },
       },
       {
-        label: 'Clear',
-        sub: 'back to the default (241)',
+        label: t('Clear'),
+        sub: t('back to the default (%s)').replace('%s', '241'),
         dim: k.inputIsDefault,
         fn: function () {
           if (!k.inputIsDefault) kClear('input');
         },
       },
-      { label: 'Close', fn: closeKeys },
+      { label: t('Close'), fn: closeKeys },
     ]);
   if (n === 'home')
-    return kShow('The Home key (optional).\nChoose Start, then press the Home button on your remote.', [
+    return kShow(t('The Home key (optional).\nChoose Start, then press the Home button on your remote.'), [
       {
-        label: 'Start',
-        sub: k.home ? 'now: ' + k.home : '',
+        label: t('Start'),
+        sub: k.home ? t('now: %s').replace('%s', k.home) : '',
         fn: function () {
           kLearn('home');
         },
       },
       {
-        label: 'Clear',
-        sub: 'forget the code',
+        label: t('Clear'),
+        sub: t('forget the code'),
         dim: !k.home,
         fn: function () {
           if (k.home) kClear('home');
         },
       },
-      { label: 'Close', fn: closeKeys },
+      { label: t('Close'), fn: closeKeys },
     ]);
   if (n === 'voice')
     return kShow(
-      'The voice button.\nChoose Start, then press the button you want to use for voice. The remote\u2019s microphone button may not reach the hook; any spare button works.',
+      t(
+        'The voice button.\nChoose Start, then press the button you want to use for voice. The remote\u2019s microphone button may not reach the hook; any spare button works.'
+      ),
       [
         {
-          label: 'Start',
-          sub: k.voice ? 'now: ' + k.voice : '',
+          label: t('Start'),
+          sub: k.voice ? t('now: %s').replace('%s', k.voice) : '',
           fn: function () {
             kLearn('voice');
           },
         },
         {
-          label: 'Clear',
-          sub: 'forget the code',
+          label: t('Clear'),
+          sub: t('forget the code'),
           dim: !k.voice,
           fn: function () {
             if (k.voice) kClear('voice');
           },
         },
-        { label: 'Close', fn: closeKeys },
+        { label: t('Close'), fn: closeKeys },
       ]
     );
   if (n === 'guide')
     return kShow(
-      'The Guide key.\nChoose Start, then press the Guide button on your remote. It then opens the Live TV channel guide instead of LG\u2019s guide. Clear it to get LG\u2019s guide back.',
+      t(
+        'The Guide key.\nChoose Start, then press the Guide button on your remote. It then opens the Live TV channel guide instead of LG\u2019s guide. Clear it to get LG\u2019s guide back.'
+      ),
       [
         {
-          label: 'Start',
-          sub: k.guide ? 'now: ' + k.guide : '',
+          label: t('Start'),
+          sub: k.guide ? t('now: %s').replace('%s', k.guide) : '',
           fn: function () {
             kLearn('guide');
           },
         },
         {
-          label: 'Clear',
-          sub: 'LG\u2019s guide again',
+          label: t('Clear'),
+          sub: t('LG\u2019s guide again'),
           dim: !k.guide,
           fn: function () {
             if (k.guide) kClear('guide');
           },
         },
-        { label: 'Close', fn: closeKeys },
+        { label: t('Close'), fn: closeKeys },
       ]
     );
   if (n === 'test') return kTest();
@@ -2053,10 +2699,11 @@ function kStep(n) {
         function (s) {
           st = s;
           kShow(
-            'Done.\nInput key ' +
-              ((s.keys || {}).input || '241') +
-              '.\nThe Home key is optional: learn it from the main list if you want it recorded.',
-            [{ label: 'Close', fn: closeKeys }]
+            t('Done.\nInput key %s.\nThe Home key is optional: learn it from the main list if you want it recorded.').replace(
+              '%s',
+              (s.keys || {}).input || '241'
+            ),
+            [{ label: t('Close'), fn: closeKeys }]
           );
         },
         function () {
@@ -2074,13 +2721,13 @@ function kClear(name) {
         st = s;
         kShow(
           name === 'input'
-            ? 'Input key cleared.\nIt uses the default code (' + ((s.keys || {}).input || '241') + ').'
+            ? t('Input key cleared.\nIt uses the default code (%s).').replace('%s', (s.keys || {}).input || '241')
             : name === 'voice'
-              ? 'Voice button cleared.'
+              ? t('Voice button cleared.')
               : name === 'guide'
-                ? 'Guide key cleared. LG\u2019s guide is back.'
-                : 'Home key cleared.',
-          [{ label: 'Close', fn: closeKeys }]
+                ? t('Guide key cleared. LG\u2019s guide is back.')
+                : t('Home key cleared.'),
+          [{ label: t('Close'), fn: closeKeys }]
         );
       },
       function () {
@@ -2090,9 +2737,9 @@ function kClear(name) {
 }
 function kLearn(name) {
   api('/api/manager/learn-key', { name: name }).then(function () {
-    kShow('Press the ' + kName(name) + ' button now\u2026', [
+    kShow(kPress(name), [
       {
-        label: 'Cancel',
+        label: t('Cancel'),
         fn: function () {
           kStep(name);
         },
@@ -2104,9 +2751,9 @@ function kLearn(name) {
           function (l) {
             if (view !== 'keys') return;
             if (l.state === 'got') {
-              kShow(kName(name) + ' key learned: code ' + l.code + '.', [
+              kShow(kGot(name, l.code), [
                 {
-                  label: name === 'input' ? 'Continue to the test' : 'Close',
+                  label: name === 'input' ? t('Continue to the test') : t('Close'),
                   fn: function () {
                     api('/api/manager/status').then(function (s) {
                       st = s;
@@ -2121,21 +2768,23 @@ function kLearn(name) {
             if (l.state === 'unsupported') {
               api('/api/manager/options', { inputKey: false });
               kShow(
-                'The hook did not attach on this firmware, so keys cannot be learned. The Input key stays with LG\u2019s picker.\nUse Share log to report this.',
-                [{ label: 'Close', fn: closeKeys }]
+                t(
+                  'The hook did not attach on this firmware, so keys cannot be learned. The Input key stays with LG\u2019s picker.\nUse Share log to report this.'
+                ),
+                [{ label: t('Close'), fn: closeKeys }]
               );
               return;
             }
             if (l.state === 'timeout') {
-              kShow('Nothing was pressed.', [
+              kShow(t('Nothing was pressed.'), [
                 {
-                  label: 'Try again',
+                  label: t('Try again'),
                   fn: function () {
                     kLearn(name);
                   },
                 },
                 {
-                  label: name === 'input' ? 'Skip' : 'Close',
+                  label: name === 'input' ? t('Skip') : t('Close'),
                   fn: function () {
                     if (name === 'input') kStep('test');
                     else closeKeys();
@@ -2156,9 +2805,9 @@ function kLearn(name) {
 }
 function kTest() {
   api('/api/manager/test-key').then(function (t0) {
-    kShow('Test.\nPress the Input button once more. Our Inputs list should open over this screen.', [
+    kShow(t('Test.\nPress the Input button once more. Our Inputs list should open over this screen.'), [
       {
-        label: 'Skip',
+        label: t('Skip'),
         fn: function () {
           kStep('done');
         },
@@ -2168,12 +2817,12 @@ function kTest() {
     (function poll() {
       kTimer = setTimeout(function () {
         api('/api/manager/test-key').then(
-          function (t) {
+          function (r) {
             if (view !== 'keys') return;
-            if (t.pickerShownAt > t0.now) {
-              kShow('The Inputs list opened: the Input key works.', [
+            if (r.pickerShownAt > t0.now) {
+              kShow(t('The Inputs list opened: the Input key works.'), [
                 {
-                  label: 'Continue',
+                  label: t('Continue'),
                   fn: function () {
                     kStep('done');
                   },
@@ -2183,16 +2832,18 @@ function kTest() {
             }
             if (Date.now() > until) {
               kShow(
-                'The Inputs list did not open.\nIf LG\u2019s own picker showed, the Input key is not mapped: learn it again or switch the Input key off.',
+                t(
+                  'The Inputs list did not open.\nIf LG\u2019s own picker showed, the Input key is not mapped: learn it again or switch the Input key off.'
+                ),
                 [
                   {
-                    label: 'Learn again',
+                    label: t('Learn again'),
                     fn: function () {
                       kStep('input');
                     },
                   },
                   {
-                    label: 'Skip',
+                    label: t('Skip'),
                     fn: function () {
                       kStep('done');
                     },
@@ -2230,13 +2881,14 @@ function drawQr(url) {
 function openShare() {
   shareMode = 'log';
   push('share');
-  $('share').querySelector('h2').textContent = 'Share the log';
-  $('share').querySelector('ol').innerHTML =
-    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Tap <b>Copy</b> on the page and paste it into your message.</li>';
+  $('share').querySelector('h2').textContent = t('Share the log');
+  $('share').querySelector('ol').innerHTML = t(
+    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Tap <b>Copy</b> on the page and paste it into your message.</li>'
+  );
   $('share').style.display = 'block';
   $('shareurl').textContent = '';
   $('qrbox').style.visibility = 'hidden';
-  $('sharemsg').textContent = 'Preparing the report\u2026';
+  $('sharemsg').textContent = t('Preparing the report\u2026');
   rootExec('rm -f /tmp/cytv-sharelog.json; nohup node ' + SVC + '/helper/sharelog.js > /tmp/cytv-sharelog.out 2>&1 &').then(function () {
     pollShare(0);
   });
@@ -2252,12 +2904,13 @@ function pollShare(n) {
       drawQr(st.url);
       $('qrbox').style.visibility = 'visible';
       $('shareurl').textContent = st.url;
-      $('sharemsg').textContent =
-        'The page is open for ten minutes. It lists versions, the setup log and the service log; addresses and URL paths are masked.';
+      $('sharemsg').textContent = t(
+        'The page is open for ten minutes. It lists versions, the setup log and the service log; addresses and URL paths are masked.'
+      );
       return;
     }
     if (n > 45) {
-      $('sharemsg').textContent = 'Could not prepare the report (is the Homebrew Channel installed?).';
+      $('sharemsg').textContent = t('Could not prepare the report (is the Homebrew Channel installed?).');
       return;
     }
     setTimeout(function () {
@@ -2287,7 +2940,7 @@ function closeShare() {
 }
 function doSetup(force) {
   forceOffer = false;
-  banner('Setting up\u2026 the screen blinks once while LG\u2019s system restarts', 'work');
+  banner(t('Setting up\u2026 the screen blinks once while LG\u2019s system restarts'), 'work');
   var flags =
     (setup.debloat ? '--debloat' : '--no-debloat') + ' ' + (setup.inputKey ? '--input-key' : '--no-input-key') + (force ? ' --force' : '');
   rootExec(
@@ -2303,7 +2956,10 @@ function doSetup(force) {
     } catch (e) {}
     if (o.returnValue === false) {
       banner(
-        'Could not start the setup: ' + (o.errorText || 'no answer from the Homebrew Channel service (is it installed and up to date?)'),
+        t('Could not start the setup: %s').replace(
+          '%s',
+          o.errorText || t('no answer from the Homebrew Channel service (is it installed and up to date?)')
+        ),
         'err'
       );
       return;
@@ -2339,26 +2995,33 @@ function waitUp(n) {
         }, 1500);
     },
     function () {
-      logTail(function (t) {
-        if (/ERROR|rolled back/.test(t)) {
-          forceOffer = /looks different/.test(t);
+      logTail(function (tail) {
+        if (/ERROR|rolled back/.test(tail)) {
+          forceOffer = /looks different/.test(tail);
           build();
           draw();
           banner(
-            'Setup stopped: ' +
-              t
+            t('Setup stopped: %s').replace(
+              '%s',
+              tail
                 .split('\n')
                 .pop()
-                .replace(/^ERROR: /, ''),
+                .replace(/^ERROR: /, '')
+            ),
             'err'
           );
           return;
         }
         if (n > 90) {
-          banner('The service did not start. Log: /media/developer/cytv-setup.log on the TV. ' + t.split('\n').pop(), 'err');
+          banner(
+            t('The service did not start. Log: %s on the TV.').replace('%s', '/media/developer/cytv-setup.log') +
+              ' ' +
+              tail.split('\n').pop(),
+            'err'
+          );
           return;
         }
-        if (t) banner('Setting up\u2026 ' + t.split('\n').pop(), 'work');
+        if (tail) banner(t('Setting up\u2026 %s').replace('%s', tail.split('\n').pop()), 'work');
         setTimeout(function () {
           waitUp(n + 1);
         }, 2000);
@@ -2413,6 +3076,7 @@ document.addEventListener('webOSRelaunch', function () {
   listY = 0;
   load();
 });
-banner('Reading status…', 'work');
+$('shareclose').textContent = t('Close');
+banner(t('Reading status…'), 'work');
 load();
 </script></body></html>

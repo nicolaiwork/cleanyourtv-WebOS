@@ -956,7 +956,7 @@ var LIVE = (function () {
       if (v.buffered && v.buffered.length) ahead = v.buffered.end(v.buffered.length - 1) - v.currentTime;
     } catch (e) {}
     return (
-      (v.videoWidth ? v.videoWidth + '×' + v.videoHeight : 'no picture') +
+      (v.videoWidth ? v.videoWidth + '×' + v.videoHeight : t('no picture')) +
       '\n' +
       t('buffer') +
       ' ' +
@@ -1095,7 +1095,7 @@ var LIVE = (function () {
           api('/api/live/channels').then(function (x) {
             if (!x.channels.length) {
               if (++tries > 40) {
-                msg('<div>' + lesc(s.error || 'No channels') + '</div>');
+                msg('<div>' + lesc(s.error || t('No channels')) + '</div>');
                 return;
               }
               setTimeout(load, 2000);

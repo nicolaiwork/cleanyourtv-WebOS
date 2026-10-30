@@ -1,5 +1,9 @@
 /* ---------- Films & Series (fork): the rules behind resume, watched marks and the rows, without the page (tools/test/vodlib.test.js) ---------- */
 var VL = (function () {
+  /* the page's translation (clock.js); English where there is none (the tests) */
+  function tx(k) {
+    return typeof t === 'function' ? t(k) : k;
+  }
   /* watched: less than 5 minutes or 5 % left */
   function watched(pos, dur) {
     return dur > 0 && (dur - pos < 300 || pos / dur >= 0.95);
@@ -58,16 +62,18 @@ var VL = (function () {
       })
       .sort(newestFirst);
   }
+  function hmin(m) {
+    return m >= 60 ? Math.floor(m / 60) + ' ' + tx('h') + ' ' + (m % 60) + ' min' : m + ' min';
+  }
   function fmtLeft(sec) {
-    var m = Math.max(1, Math.round((sec || 0) / 60));
-    return (m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min') + ' left';
+    return tx('%s left').replace('%s', hmin(Math.max(1, Math.round((sec || 0) / 60))));
   }
   /* the line on a Continue watching card: what is left of a film; for a show the episode and what is left, or the one after */
   function continueSub(x) {
     var e = x.ep;
     if (!e) return x.dur > x.pos ? fmtLeft(x.dur - x.pos) : '';
     if (!e.watched) return epCode(e.season, e.num) + (e.dur > e.pos ? '  ·  ' + fmtLeft(e.dur - e.pos) : '');
-    return e.next ? 'Next: ' + epCode(e.next.season, e.next.num) : 'After ' + epCode(e.season, e.num);
+    return e.next ? tx('Next: %s').replace('%s', epCode(e.next.season, e.next.num)) : tx('After %s').replace('%s', epCode(e.season, e.num));
   }
   /* how far into a Continue watching card (0..1), or -1 for none */
   function continueProgress(x) {
@@ -151,8 +157,8 @@ var VL = (function () {
   }
   function sortLabel(cur, offered) {
     var list = sorts(offered);
-    for (var i = 0; i < list.length; i++) if (list[i][0] === cur) return list[i][1];
-    return list.length ? list[0][1] : '';
+    for (var i = 0; i < list.length; i++) if (list[i][0] === cur) return tx(list[i][1]);
+    return list.length ? tx(list[0][1]) : '';
   }
   /* seconds per keypress while Left/Right is held: 10, then 30, then a minute */
   function skipStep(count) {
@@ -169,8 +175,7 @@ var VL = (function () {
   }
   function fmtLength(sec) {
     var m = Math.round((sec || 0) / 60);
-    if (!(m > 0)) return '';
-    return m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min';
+    return m > 0 ? hmin(m) : '';
   }
   function endsAt(nowMs, remainingSec) {
     var d = new Date(nowMs + remainingSec * 1000);
@@ -181,7 +186,7 @@ var VL = (function () {
     return [Math.max(0, Math.min(focus - before, total)), Math.max(0, Math.min(focus + ahead, total))];
   }
   function epCode(season, num) {
-    return 'S' + two(season) + 'E' + two(num);
+    return tx('S%sE%s').replace('%s', two(season)).replace('%s', two(num));
   }
   return {
     watched: watched,

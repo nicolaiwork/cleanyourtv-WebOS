@@ -1,7 +1,7 @@
 function build() {
   rows = [];
   if (view === 'share') {
-    rows.push({ label: 'Close', fn: closeShare });
+    rows.push({ label: t('Close'), fn: closeShare });
     return;
   }
   if (view === 'keys') {
@@ -9,7 +9,7 @@ function build() {
     return;
   }
   if (view === 'notifyhow' || view === 'voicehow') {
-    rows.push({ label: 'Back', fn: pop });
+    rows.push({ label: t('Back'), fn: pop });
     return;
   }
   if (view === 'theme') {
@@ -17,14 +17,15 @@ function build() {
     ((th && th.themes) || []).forEach(function (x) {
       rows.push({
         label: x.name,
-        sub: x.id === tc.id ? 'selected' : x.installed ? '' : 'on GitHub',
+        sub: x.id === tc.id ? t('selected') : x.installed ? '' : t('on GitHub'),
+        sel: x.id === tc.id,
         pv: x.preview ? x.id : '',
         info: {
           t: x.name,
           d:
             x.description +
-            (x.author ? '\n\nBy ' + x.author : '') +
-            (x.installed || x.id === 'classic' ? '' : '\n\nDownloaded from GitHub when you choose it.'),
+            (x.author ? '\n\n' + t('By %s').replace('%s', x.author) : '') +
+            (x.installed || x.id === 'classic' ? '' : '\n\n' + t('Downloaded from GitHub when you choose it.')),
         },
         fn: function () {
           setTheme({ id: x.id, name: x.name });
@@ -32,91 +33,99 @@ function build() {
       });
     });
     rows.push({ sep: true });
-    var an = 'Theme default';
+    var an = t('Theme default');
     ((th && th.accents) || []).forEach(function (a) {
-      if (a.hex === tc.accent) an = a.name;
+      if (a.hex === tc.accent) an = t(a.name);
     });
     rows.push({
-      label: 'Theme options',
-      sub: 'accent colour \u00B7 ' + an,
+      label: t('Theme options'),
+      sub: t('accent colour') + ' \u00B7 ' + an,
       fn: function () {
         push('themeopts');
       },
     });
     rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
+    rows.push({ label: t('Back'), fn: pop });
     return;
   }
   if (view === 'themeopts') {
     var to = (th && th.current) || { id: 'classic', accent: '' },
-      an2 = 'Theme default';
+      an2 = t('Theme default');
     ((th && th.accents) || []).forEach(function (a) {
-      if (a.hex === to.accent) an2 = a.name;
+      if (a.hex === to.accent) an2 = t(a.name);
     });
     rows.push({
-      label: 'Accent colour',
+      label: t('Accent colour'),
       sub: an2,
       fn: function () {
         push('accent');
       },
     });
     rows.push({
-      label: 'Go back to the previous theme',
-      sub: th && th.previous ? th.previous.id : 'nothing to go back to',
+      label: t('Go back to the previous theme'),
+      sub: th && th.previous ? th.previous.id : t('nothing to go back to'),
       dim: !(th && th.previous),
       fn: function () {
-        if (th && th.previous) themeCall('/api/theme/revert', {}, 'Previous theme restored');
+        if (th && th.previous) themeCall('/api/theme/revert', {}, t('Previous theme restored'));
       },
     });
     rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
+    rows.push({ label: t('Back'), fn: pop });
     return;
   }
   if (view === 'accent') {
     var ta = (th && th.current && th.current.accent) || '';
     ((th && th.accents) || []).forEach(function (a) {
       rows.push({
-        label: a.name,
-        sub: a.hex === ta ? 'selected' : a.hex || '',
+        label: t(a.name),
+        sub: a.hex === ta ? t('selected') : a.hex || '',
+        sel: a.hex === ta,
         fn: function () {
-          themeCall('/api/theme/set', { accent: a.hex }, a.name === 'Theme default' ? 'Accent: theme default' : 'Accent: ' + a.name, true);
+          themeCall(
+            '/api/theme/set',
+            { accent: a.hex },
+            a.name === 'Theme default' ? t('Accent: theme default') : t('Accent: %s').replace('%s', t(a.name)),
+            true
+          );
         },
       });
     });
     rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
+    rows.push({ label: t('Back'), fn: pop });
     return;
   }
   if (view === 'channel') {
     var cc = (st && st.channel) || '';
     rows.push({
-      label: 'Stable releases',
-      sub: (cc ? '' : 'selected \u00B7 ') + 'the latest published release',
+      label: t('Stable releases'),
+      sub: (cc ? '' : t('selected') + ' \u00B7 ') + t('the latest published release'),
+      sel: !cc,
       fn: function () {
         setChannel('');
       },
     });
     ((tst && tst.builds) || []).forEach(function (b) {
       rows.push({
-        label: 'Test: ' + b.branch,
+        label: t('Test: %s').replace('%s', b.branch),
         sub:
-          (b.tag === cc ? 'selected \u00B7 ' : '') +
-          (b.build ? 'build ' + b.build : '') +
+          (b.tag === cc ? t('selected') + ' \u00B7 ' : '') +
+          (b.build ? t('build %s').replace('%s', b.build) : '') +
           (b.published ? (b.build ? ' \u00B7 ' : '') + String(b.published).slice(0, 10) : ''),
         fn: function () {
           setChannel(b.tag);
         },
+        sel: b.tag === cc,
       });
     });
     if (!tst || !tst.builds || !tst.builds.length)
       rows.push({
-        label: 'No test builds right now',
-        sub: tst && tst.error ? String(tst.error) : 'a test build appears when a branch is pushed',
+        label: t('No test builds right now'),
+        sub: tst && tst.error ? String(tst.error) : t('a test build appears when a branch is pushed'),
         dim: true,
         fn: null,
       });
     rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
+    rows.push({ label: t('Back'), fn: pop });
     return;
   }
   if (view === 'models') {
@@ -124,21 +133,26 @@ function build() {
     mdl.forEach(function (x) {
       rows.push({
         label: x.name,
-        sub: x.id + (x.price != null ? ' \u00B7 $' + x.price + ' per million words in' : '') + (x.id === cur ? ' \u00B7 selected' : ''),
+        sub:
+          x.id +
+          (x.price != null ? ' \u00B7 ' + t('$%s per million words in').replace('%s', x.price) : '') +
+          (x.id === cur ? ' \u00B7 ' + t('selected') : ''),
+        sel: x.id === cur,
         fn: function () {
           pickModel(x.id);
         },
       });
     });
     rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
+    rows.push({ label: t('Back'), fn: pop });
     return;
   }
   if (view === 'agents') {
     var ca = ((vo || {}).ha || {}).agent || '';
     rows.push({
-      label: 'Default agent',
-      sub: 'Home Assistant\u2019s own' + (ca ? '' : ' \u00B7 selected'),
+      label: t('Default agent'),
+      sub: t('Home Assistant\u2019s own') + (ca ? '' : ' \u00B7 ' + t('selected')),
+      sel: !ca,
       fn: function () {
         pickAgent('');
       },
@@ -146,14 +160,15 @@ function build() {
     agl.forEach(function (x) {
       rows.push({
         label: x.name,
-        sub: x.id + (x.id === ca ? ' \u00B7 selected' : ''),
+        sub: x.id + (x.id === ca ? ' \u00B7 ' + t('selected') : ''),
+        sel: x.id === ca,
         fn: function () {
           pickAgent(x.id);
         },
       });
     });
     rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
+    rows.push({ label: t('Back'), fn: pop });
     return;
   }
   if (view === 'voice') {
@@ -163,11 +178,15 @@ function build() {
       lm = v.llm || {};
     var ha = v.ha || {},
       haOk = !!ha.configured,
-      HR = { 'ha-first': 'Home Assistant first, then the AI', 'ha-only': 'Home Assistant only', 'ai-only': 'The AI only' };
+      HR = {
+        'ha-first': t('Home Assistant first, then the AI'),
+        'ha-only': t('Home Assistant only'),
+        'ai-only': t('The AI only'),
+      };
     if (!v.installed) {
       rows.push({
-        label: 'Install voice',
-        sub: wk ? 'installing…' : 'downloads about 80 MB',
+        label: t('Install voice'),
+        sub: wk ? t('installing…') : t('downloads about 80 MB'),
         dim: wk,
         fn: function () {
           if (wk) return;
@@ -179,15 +198,15 @@ function build() {
               voiceRefresh();
             },
             function () {
-              banner('The service did not answer', 'err');
+              banner(t('The service did not answer'), 'err');
             }
           );
         },
       });
     } else {
       rows.push({
-        label: 'Listen on the voice button',
-        sub: vk ? onoff(v.enabled) : 'learn a button first',
+        label: t('Listen on the voice button'),
+        sub: vk ? onoff(v.enabled) : t('learn a button first'),
         dim: !vk,
         fn: function () {
           if (!vk) return;
@@ -203,39 +222,39 @@ function build() {
                 draw();
               },
               function () {
-                banner('The service did not answer', 'err');
+                banner(t('The service did not answer'), 'err');
               }
             );
         },
       });
       rows.push({
-        label: 'Learn the voice button',
-        sub: vk ? 'now: ' + vk : 'not learned',
+        label: t('Learn the voice button'),
+        sub: vk ? t('now: %s').replace('%s', vk) : t('not learned'),
         fn: function () {
           openKeys('voice');
         },
       });
       rows.push({
-        label: 'Try it now',
-        sub: v.listening ? 'listening…' : 'speak when the card appears',
+        label: t('Try it now'),
+        sub: v.listening ? t('listening…') : t('speak when the card appears'),
         dim: v.listening,
         fn: function () {
           if (v.listening) return;
           api('/api/voice/listen', {}).then(
             function (x) {
               if (x.error) banner(x.error, 'err');
-              else banner('Speak now…', 'work');
+              else banner(t('Speak now…'), 'work');
               voiceRefresh();
             },
             function () {
-              banner('The service did not answer', 'err');
+              banner(t('The service did not answer'), 'err');
             }
           );
         },
       });
       rows.push({
-        label: 'Switch off LG\u2019s voice assistant',
-        sub: onoff(v.suppressLg) + (v.suppressLg && v.enabled && !v.lgPaused ? ' \u00B7 not paused yet' : ''),
+        label: t('Switch off LG\u2019s voice assistant'),
+        sub: onoff(v.suppressLg) + (v.suppressLg && v.enabled && !v.lgPaused ? ' \u00B7 ' + t('not paused yet') : ''),
         fn: function () {
           api('/api/voice/set', { suppressLg: !v.suppressLg }).then(
             function (x) {
@@ -244,7 +263,7 @@ function build() {
               draw();
             },
             function () {
-              banner('The service did not answer', 'err');
+              banner(t('The service did not answer'), 'err');
             }
           );
         },
@@ -252,10 +271,10 @@ function build() {
     }
     rows.push({ sep: true });
     rows.push({
-      label: 'Home Assistant (Assist)',
+      label: t('Home Assistant (Assist)'),
       sub: haOk
         ? ha.url.replace(/^https?:\/\//, '').replace(/\/.*/, '') + ' \u00B7 ' + HR[ha.route]
-        : 'not set \u00B7 set up from your phone',
+        : t('not set \u00B7 set up from your phone'),
       fn: function () {
         if (!haOk) {
           openPair();
@@ -265,7 +284,7 @@ function build() {
       },
     });
     rows.push({
-      label: 'Which answers first',
+      label: t('Which answers first'),
       sub: HR[ha.route || 'ha-first'],
       fn: function () {
         var o = ['ha-first', 'ha-only', 'ai-only'],
@@ -281,22 +300,22 @@ function build() {
             draw();
           },
           function () {
-            banner('The service did not answer', 'err');
+            banner(t('The service did not answer'), 'err');
           }
         );
       },
     });
     rows.push({
-      label: 'Assist agent',
-      sub: haOk ? ha.agent || 'default' : 'set up Home Assistant first',
+      label: t('Assist agent'),
+      sub: haOk ? ha.agent || t('default') : t('set up Home Assistant first'),
       dim: !haOk,
       fn: function () {
         if (haOk) openAgents();
       },
     });
     rows.push({
-      label: 'AI chat (OpenRouter)',
-      sub: lm.hasKey ? onoff(lm.enabled) + ' \u00B7 ' + lm.model : 'no key set',
+      label: t('AI chat (OpenRouter)'),
+      sub: lm.hasKey ? onoff(lm.enabled) + ' \u00B7 ' + lm.model : t('no key set'),
       fn: function () {
         if (!lm.hasKey) {
           openPair();
@@ -313,40 +332,44 @@ function build() {
             draw();
           },
           function () {
-            banner('The service did not answer', 'err');
+            banner(t('The service did not answer'), 'err');
           }
         );
       },
     });
-    rows.push({ label: 'Model', sub: lm.model || 'openrouter/auto', fn: openModels });
+    rows.push({ label: t('Model'), sub: lm.model || 'openrouter/auto', fn: openModels });
     rows.push({
-      label: 'Send the text to',
-      sub: v.url ? v.url.replace(/^(https?:\/\/[^\/]+).*/, '$1') : 'not set · shows a card only',
+      label: t('Send the text to'),
+      sub: v.url ? v.url.replace(/^(https?:\/\/[^\/]+).*/, '$1') : t('not set · shows a card only'),
       fn: function () {
         kText =
-          'Set the address of your server (from a shell on the TV):\n\ncurl -X POST localhost:8765/api/voice/set -d \'{"url":"http://server:port/path","token":"optional secret"}\'\n\nThe TV sends: POST, JSON {"text":"..."}, with "Authorization: Bearer <token>" when a token is set. If your server answers with JSON {"text":"..."} (or plain text), the answer is shown as a card. Only the recognised text is sent, never audio.';
+          t('Set the address of your server (from a shell on the TV):') +
+          '\n\ncurl -X POST localhost:8765/api/voice/set -d \'{"url":"http://server:port/path","token":"optional secret"}\'\n\n' +
+          t(
+            'The TV sends: POST, JSON {"text":"..."}, with "Authorization: Bearer <token>" when a token is set. If your server answers with JSON {"text":"..."} (or plain text), the answer is shown as a card. Only the recognised text is sent, never audio.'
+          );
         push('voicehow');
       },
     });
     rows.push({ sep: true });
-    rows.push({ label: 'Set up from your phone', sub: 'key, model, Home Assistant, server', fn: openPair });
+    rows.push({ label: t('Set up from your phone'), sub: t('key, model, Home Assistant, server'), fn: openPair });
     rows.push({
-      label: 'Set up with commands',
-      sub: 'for scripts and ssh',
+      label: t('Set up with commands'),
+      sub: t('for scripts and ssh'),
       fn: function () {
         kText = aiHelp();
         push('voicehow');
       },
     });
     rows.push({
-      label: 'Forget the conversation',
+      label: t('Forget the conversation'),
       fn: function () {
         api('/api/voice/forget', {}).then(
           function () {
-            banner('Conversation cleared', 'ok');
+            banner(t('Conversation cleared'), 'ok');
           },
           function () {
-            banner('The service did not answer', 'err');
+            banner(t('The service did not answer'), 'err');
           }
         );
       },
@@ -354,8 +377,8 @@ function build() {
     if (v.installed) {
       rows.push({ sep: true });
       rows.push({
-        label: 'Remove voice',
-        sub: 'deletes the ' + Math.round((v.bytes || 0) / 1048576) + ' MB download',
+        label: t('Remove voice'),
+        sub: t('deletes the %s MB download').replace('%s', Math.round((v.bytes || 0) / 1048576)),
         fn: function () {
           api('/api/voice/uninstall', {})
             .then(function (x) {
@@ -365,24 +388,24 @@ function build() {
             .then(
               function (s2) {
                 st = s2;
-                banner('Voice removed', 'ok');
+                banner(t('Voice removed'), 'ok');
                 build();
                 draw();
               },
               function () {
-                banner('The service did not answer', 'err');
+                banner(t('The service did not answer'), 'err');
               }
             );
         },
       });
     }
     rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
+    rows.push({ label: t('Back'), fn: pop });
     return;
   }
   if (view === 'notifyapi') {
     rows.push({
-      label: 'Accept notifications from the network',
+      label: t('Accept notifications from the network'),
       sub: onoff(napi && napi.enabled),
       fn: function () {
         api('/api/manager/notify-api', { enabled: !(napi && napi.enabled) }).then(
@@ -395,35 +418,44 @@ function build() {
             });
           },
           function () {
-            banner('The service did not answer', 'err');
+            banner(t('The service did not answer'), 'err');
           }
         );
       },
     });
     if (napi && napi.enabled) {
       rows.push({
-        label: 'How to send',
-        sub: 'address, token, example',
+        label: t('How to send'),
+        sub: t('address, token, example'),
         fn: function () {
           kText =
-            'Send a POST request:\nhttp://' +
+            t('Send a POST request:') +
+            '\nhttp://' +
             napi.ip +
             ':' +
             napi.port +
-            '/notify\n\nHeader:\nAuthorization: Bearer ' +
+            '/notify\n\n' +
+            t('Header:') +
+            '\nAuthorization: Bearer ' +
             napi.token +
-            '\n\nBody (JSON):\n{"title":"Front door","text":"Someone is at the door","image":"http://…/snapshot.jpg","seconds":15}';
+            '\n\n' +
+            t('Body (JSON):') +
+            '\n{"title":"' +
+            t('Front door') +
+            '","text":"' +
+            t('Someone is at the door') +
+            '","image":"http://…/snapshot.jpg","seconds":15}';
           push('notifyhow');
         },
       });
-      rows.push({ label: 'Show as QR code', sub: 'scan with a phone to copy the address and token', fn: openNotifyQr });
+      rows.push({ label: t('Show as QR code'), sub: t('scan with a phone to copy the address and token'), fn: openNotifyQr });
       rows.push({
-        label: 'New token',
-        sub: 'the old one stops working',
+        label: t('New token'),
+        sub: t('the old one stops working'),
         fn: function () {
           api('/api/manager/notify-api', { regenerate: true }).then(function (n) {
             napi = n;
-            banner('New token created. Open \u201CHow to send\u201D to see it.', 'ok');
+            banner(t('New token created. Open \u201CHow to send\u201D to see it.'), 'ok');
             build();
             draw();
           });
@@ -431,18 +463,23 @@ function build() {
       });
     }
     rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
+    rows.push({ label: t('Back'), fn: pop });
     return;
   }
   if (offline) {
     // before the setup: a newer package first, then choose, set up, then the extras
     updIdx = 0;
     if (upd) {
-      rows.push({ label: 'Update to ' + upd.updateTo, sub: 'recommended first · installed ' + upd.installed, fn: offlineUpdate });
+      rows.push({
+        k: 'Update to',
+        label: t('Update to %s').replace('%s', upd.updateTo),
+        sub: t('recommended first · installed %s').replace('%s', upd.installed),
+        fn: offlineUpdate,
+      });
       rows.push({ sep: true });
     }
     rows.push({
-      label: 'Debloat LG’s ads and telemetry',
+      label: t('Debloat LG’s ads and telemetry'),
       sub: onoff(setup.debloat),
       fn: function () {
         setup.debloat = !setup.debloat;
@@ -451,7 +488,7 @@ function build() {
       },
     });
     rows.push({
-      label: 'Take over the Input key',
+      label: t('Take over the Input key'),
       sub: onoff(setup.inputKey),
       fn: function () {
         setup.inputKey = !setup.inputKey;
@@ -462,40 +499,40 @@ function build() {
     rows.push({ sep: true });
     setupIdx = rows.length;
     rows.push({
-      label: 'Set up now',
-      sub: 'the screen blinks once',
+      label: t('Set up now'),
+      sub: t('the screen blinks once'),
       fn: function () {
         doSetup(false);
       },
     });
     if (forceOffer)
       rows.push({
-        label: 'Set up anyway',
-        sub: 'untested firmware; a failed start restarts the TV',
+        label: t('Set up anyway'),
+        sub: t('untested firmware; a failed start restarts the TV'),
         fn: function () {
           doSetup(true);
         },
       });
     rows.push({ sep: true });
-    rows.push({ label: 'Check for updates', sub: 'works without the service', fn: offlineCheck });
-    rows.push({ label: 'Share log', sub: 'QR code for your phone', fn: openShare });
+    rows.push({ label: t('Check for updates'), sub: t('works without the service'), fn: offlineCheck });
+    rows.push({ label: t('Share log'), sub: t('QR code for your phone'), fn: openShare });
     return;
   }
   if (view === 'confirm-home' || view === 'confirm-uninstall') {
     var un = view === 'confirm-uninstall',
       on = !(st.home && st.home.enabled);
-    rows.push({ label: 'Cancel', fn: pop });
+    rows.push({ label: t('Cancel'), fn: pop });
     rows.push({
-      label: un ? 'Yes, remove CleanYourTV' : on ? 'Yes, use CleanYourTV as Home' : 'Yes, use LG’s Home',
-      sub: un ? 'settings and apps are deleted; the TV restarts' : 'the TV restarts',
+      label: un ? t('Yes, remove CleanYourTV') : on ? t('Yes, use CleanYourTV as Home') : t('Yes, use LG’s Home'),
+      sub: un ? t('settings and apps are deleted; the TV restarts') : t('the TV restarts'),
       fn: function () {
         api(un ? '/api/manager/uninstall' : '/api/manager/home', un ? {} : { enabled: on }).catch(function () {});
         banner(
           un
-            ? 'Removing CleanYourTV… the TV restarts in a moment and LG’s Home comes back.'
+            ? t('Removing CleanYourTV… the TV restarts in a moment and LG’s Home comes back.')
             : on
-              ? 'Switching to CleanYourTV… the TV restarts in a moment.'
-              : 'Switching to LG’s Home… the TV restarts in a moment.',
+              ? t('Switching to CleanYourTV… the TV restarts in a moment.')
+              : t('Switching to LG’s Home… the TV restarts in a moment.'),
           'work'
         );
       },
@@ -507,43 +544,42 @@ function build() {
       l2 = lv || {},
       gk = (st.keys && st.keys.guide) || '';
     rows.push({
-      label: 'Show Live TV',
+      label: t('Show Live TV'),
       sub: onoff(lo),
       fn: function () {
         opt({ liveTv: !lo });
       },
     });
     rows.push({
-      label: 'Playlist',
+      label: t('Playlist'),
       sub: l2.configured
-        ? l2.channels +
-          ' channels' +
-          (l2.epg ? ' \u00B7 guide for ' + l2.epg + ' programmes' : '') +
-          (l2.state && l2.state !== 'idle' ? ' \u00B7 ' + l2.state : '')
-        : 'not set \u00B7 set up from your phone',
+        ? t('%s channels').replace('%s', l2.channels) +
+          (l2.epg ? ' \u00B7 ' + t('guide for %s programmes').replace('%s', l2.epg) : '') +
+          (l2.state && l2.state !== 'idle' ? ' \u00B7 ' + t(l2.state) : '')
+        : t('not set \u00B7 set up from your phone'),
       fn: openLivePair,
     });
     rows.push({
-      label: 'Refresh playlist and guide',
+      label: t('Refresh playlist and guide'),
       sub: l2.error ? String(l2.error).slice(0, 70) : '',
       dim: !l2.configured,
       fn: function () {
         if (!l2.configured) return;
-        banner('Refreshing\u2026', 'work');
+        banner(t('Refreshing\u2026'), 'work');
         api('/api/live/refresh', {}).then(
           function () {
-            banner('Refreshing in the background', 'ok');
+            banner(t('Refreshing in the background'), 'ok');
             setTimeout(liveRefresh, 3000);
           },
           function () {
-            banner('The service did not answer', 'err');
+            banner(t('The service did not answer'), 'err');
           }
         );
       },
     });
     rows.push({
-      label: 'Learn the Guide key',
-      sub: lo ? (gk ? 'now: ' + gk : 'not learned \u00B7 LG\u2019s guide stays') : 'Live TV is off',
+      label: t('Learn the Guide key'),
+      sub: lo ? (gk ? t('now: %s').replace('%s', gk) : t('not learned \u00B7 LG\u2019s guide stays')) : t('Live TV is off'),
       dim: !lo,
       fn: function () {
         if (lo) openKeys('guide');
@@ -551,63 +587,63 @@ function build() {
     });
     rows.push({ sep: true });
     rows.push({
-      label: 'Clear recent channels',
+      label: t('Clear recent channels'),
       fn: function () {
         api('/api/live/state', { op: 'clear' }).then(
           function () {
-            banner('Recent channels cleared', 'ok');
+            banner(t('Recent channels cleared'), 'ok');
           },
           function () {
-            banner('The service did not answer', 'err');
+            banner(t('The service did not answer'), 'err');
           }
         );
       },
     });
     rows.push({
-      label: 'Remove the playlist',
-      sub: l2.configured ? '' : 'nothing to remove',
+      label: t('Remove the playlist'),
+      sub: l2.configured ? '' : t('nothing to remove'),
       dim: !l2.configured,
       fn: function () {
         if (l2.configured) push('confirm-live-reset');
       },
     });
     rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
+    rows.push({ label: t('Back'), fn: pop });
     return;
   }
   if (view === 'confirm-live-reset') {
     rows.push({
-      label: 'Yes, remove the playlist',
-      sub: 'the address, the channel list, the guide and your favourites are deleted',
+      label: t('Yes, remove the playlist'),
+      sub: t('the address, the channel list, the guide and your favourites are deleted'),
       fn: function () {
         api('/api/live/reset', {}).then(
           function () {
-            banner('Playlist removed', 'ok');
+            banner(t('Playlist removed'), 'ok');
             pop();
             liveRefresh();
           },
           function () {
-            banner('The service did not answer', 'err');
+            banner(t('The service did not answer'), 'err');
           }
         );
       },
     });
-    rows.push({ label: 'No, keep it', fn: pop });
+    rows.push({ label: t('No, keep it'), fn: pop });
     return;
   }
   if (view === 'inputkey') {
     var hk = st.inputhook || {},
       na = hk.hook && !hk.hook.attached;
     rows.push({
-      label: 'Input key opens our Inputs list',
-      sub: na ? 'not available on this firmware' : onoff(st.options.inputKey),
+      label: t('Input key opens our Inputs list'),
+      sub: na ? t('not available on this firmware') : onoff(st.options.inputKey),
       fn: function () {
         opt({ inputKey: !st.options.inputKey });
       },
     });
     rows.push({
-      label: 'Learn the Input key',
-      sub: st.keys && st.keys.inputIsDefault ? 'default (' + st.keys.input + ')' : 'learned: ' + (st.keys && st.keys.input),
+      label: t('Learn the Input key'),
+      sub: (st.keys && st.keys.inputIsDefault ? t('default (%s)') : t('learned: %s')).replace('%s', st.keys && st.keys.input),
       fn: function () {
         openKeys('input');
       },
@@ -615,29 +651,29 @@ function build() {
     var pk = st.picker || {},
       pkMode = pk.mode || 'overlay',
       PKT = {
-        overlay: 'over the running app, ready in the background (instant)',
-        ondemand: 'over the running app, started when pressed',
-        launcher: 'the launcher\u2019s Inputs list',
+        overlay: t('over the running app, ready in the background (instant)'),
+        ondemand: t('over the running app, started when pressed'),
+        launcher: t('the launcher\u2019s Inputs list'),
       };
     rows.push({
-      label: 'Input key shows',
+      label: t('Input key shows'),
       sub:
-        (pk.released ? 'LG\u2019s own list: CleanYourTV is not the Home' : PKT[pkMode]) +
-        (pk.reason && !pk.released ? ' \u00B7 ' + pk.reason : ''),
+        (pk.released ? t('LG\u2019s own list: CleanYourTV is not the Home') : PKT[pkMode]) +
+        (pk.reason && !pk.released ? ' \u00B7 ' + t(pk.reason) : ''),
       fn: function () {
         var o = ['overlay', 'ondemand', 'launcher'];
         opt({ pickerMode: o[(o.indexOf(pkMode) + 1) % 3] });
       },
     });
     rows.push({
-      label: 'Learn the Home key',
-      sub: 'optional · ' + (st.keys && st.keys.home ? 'now: ' + st.keys.home : 'not learned'),
+      label: t('Learn the Home key'),
+      sub: t('optional') + ' · ' + (st.keys && st.keys.home ? t('now: %s').replace('%s', st.keys.home) : t('not learned')),
       fn: function () {
         openKeys('home');
       },
     });
     rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
+    rows.push({ label: t('Back'), fn: pop });
     return;
   }
   var fe = st.frontend,
@@ -645,18 +681,19 @@ function build() {
     busy = st.job && st.job.state === 'working';
   var uptxt = function (u) {
     return u
-      ? 'Update to ' + u + (st.channel ? ' (test build)' : '')
+      ? (st.channel ? t('Update to %s (test build)') : t('Update to %s')).replace('%s', u)
       : st.checking
-        ? 'Checking…'
+        ? t('Checking…')
         : st.checkError
           ? /no release/.test(st.checkError)
-            ? 'No release yet'
-            : 'Cannot check'
-          : 'Up to date';
+            ? t('No release yet')
+            : t('Cannot check')
+          : t('Up to date');
   };
   // updates, then the settings, then support; the destructive row last
   rows.push({
-    label: 'Launcher ' + fe.version,
+    k: 'Launcher',
+    label: t('Launcher') + ' ' + fe.version,
     sub: uptxt(fe.updateTo),
     dim: busy,
     fn: fe.updateTo
@@ -666,7 +703,8 @@ function build() {
       : null,
   });
   rows.push({
-    label: 'Service ' + sv.version,
+    k: 'Service',
+    label: t('Service') + ' ' + sv.version,
     sub: uptxt(sv.updateTo),
     dim: busy,
     fn: sv.updateTo
@@ -676,22 +714,23 @@ function build() {
       : null,
   });
   rows.push({
-    label: 'Check for updates',
+    label: t('Check for updates'),
     dim: busy,
     fn: function () {
-      banner('Checking…', 'work');
+      banner(t('Checking…'), 'work');
       api('/api/manager/check', {}).then(refreshDone, refreshDone);
     },
   });
   rows.push({
-    label: 'Update channel',
-    sub: st.channel ? 'Test: ' + st.channel.replace(/^test-/, '') : 'Stable releases',
+    label: t('Update channel'),
+    sub: st.channel ? t('Test: %s').replace('%s', st.channel.replace(/^test-/, '')) : t('Stable releases'),
     dim: busy,
     fn: openChannel,
   });
   if (fe.previous)
     rows.push({
-      label: 'Go back to launcher ' + fe.previous,
+      k: 'Go back to launcher',
+      label: t('Go back to launcher %s').replace('%s', fe.previous),
       dim: busy,
       fn: function () {
         run('/api/manager/rollback-frontend', {});
@@ -699,14 +738,14 @@ function build() {
     });
   rows.push({ sep: true });
   rows.push({
-    label: 'CleanYourTV as Home',
+    label: t('CleanYourTV as Home'),
     sub: onoff(st.home && st.home.enabled),
     fn: function () {
       push('confirm-home');
     },
   });
   rows.push({
-    label: 'Theme',
+    label: t('Theme'),
     sub: (function () {
       var n = '';
       ((th && th.themes) || []).forEach(function (x) {
@@ -716,18 +755,18 @@ function build() {
     })(),
     fn: openTheme,
   });
-  rows.push({ label: 'Live TV', sub: onoff(st.options.liveTv !== false), fn: openLiveTv });
+  rows.push({ label: t('Live TV'), sub: onoff(st.options.liveTv !== false), fn: openLiveTv });
   rows.push({
-    label: 'Input key',
-    sub: st.inputhook && st.inputhook.hook && !st.inputhook.hook.attached ? 'not available' : onoff(st.options.inputKey),
+    label: t('Input key'),
+    sub: st.inputhook && st.inputhook.hook && !st.inputhook.hook.attached ? t('not available') : onoff(st.options.inputKey),
     fn: function () {
       push('inputkey');
     },
   });
   rows.push({ sep: true });
   rows.push({
-    label: 'Voice',
-    sub: st.voice ? (st.voice.installed ? onoff(st.voice.enabled) : 'not installed') : '',
+    label: t('Voice'),
+    sub: st.voice ? (st.voice.installed ? onoff(st.voice.enabled) : t('not installed')) : '',
     fn: function () {
       api('/api/voice/status').then(
         function (v) {
@@ -736,13 +775,13 @@ function build() {
           if ((v.job && v.job.state === 'working') || v.listening) voiceRefresh();
         },
         function () {
-          banner('The service did not answer', 'err');
+          banner(t('The service did not answer'), 'err');
         }
       );
     },
   });
   rows.push({
-    label: 'Network notifications',
+    label: t('Network notifications'),
     sub: onoff(st.notifyApi && st.notifyApi.enabled),
     fn: function () {
       api('/api/manager/notify-api').then(
@@ -751,22 +790,22 @@ function build() {
           push('notifyapi');
         },
         function () {
-          banner('The service did not answer', 'err');
+          banner(t('The service did not answer'), 'err');
         }
       );
     },
   });
   rows.push({
-    label: 'Debloat LG’s ads and telemetry',
+    label: t('Debloat LG’s ads and telemetry'),
     sub: onoff(st.options.debloat),
     fn: function () {
       opt({ debloat: !st.options.debloat });
     },
   });
   rows.push({ sep: true });
-  rows.push({ label: 'Share log', sub: 'QR code for your phone', fn: openShare });
+  rows.push({ label: t('Share log'), sub: t('QR code for your phone'), fn: openShare });
   rows.push({
-    label: 'Uninstall',
+    label: t('Uninstall'),
     fn: function () {
       push('confirm-uninstall');
     },

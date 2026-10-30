@@ -17,8 +17,10 @@ function setHtml(el, h) {
   el.parentNode.replaceChild(n, el);
   return n;
 }
-function openMenu(title, items) {
-  stack.push({ title: title, items: items, idx: 0 });
+/* o: {grid: a grid of app icons (item.app), hint: a line under the title, settings: the Settings menu (redrawSettings)} */
+function openMenu(title, items, o) {
+  o = o || {};
+  stack.push({ title: title, items: items, idx: 0, grid: !!o.grid, hint: o.hint || '', settings: !!o.settings });
   drawMenu();
 }
 function closeMenus() {
@@ -34,8 +36,9 @@ function backMenu() {
   else closeMenus();
 }
 function drawMenu() {
-  var m = stack[stack.length - 1],
-    N = 8,
+  var m = stack[stack.length - 1];
+  if (m.grid) return drawGrid(m);
+  var N = 8,
     start = Math.max(0, Math.min(m.idx - 3, m.items.length - N));
   if (!ovEl) {
     ovEl = document.createElement('div');
@@ -59,31 +62,80 @@ function drawMenu() {
   }
   h += '<div class="more">' + (start + N < m.items.length ? '▼' : '') + '</div></div>';
   ovEl = setHtml(ovEl, h);
+  ovEl.className = '';
+  ovEl._grid = null;
   ovEl.querySelector('h2').textContent = m.title;
   [].forEach.call(ovEl.querySelectorAll('.row'), function (row) {
     var it = m.items[+row.getAttribute('data-i')];
     row.querySelector('.lb').textContent = it.label;
     if (it.sub) row.querySelector('.st').textContent = it.sub;
-    var pt = 0,
+    wire(row, it, m);
+  });
+}
+/* the pointer: a click picks the item, a long press gives its options */
+function wire(row, it, m) {
+  var pt = 0,
+    rowHeld = false;
+  if (it.hold) {
+    row.addEventListener('mousedown', function () {
       rowHeld = false;
-    if (it.hold) {
-      row.addEventListener('mousedown', function () {
-        rowHeld = false;
-        clearTimeout(pt);
-        pt = setTimeout(function () {
-          rowHeld = true;
-          it.hold();
-        }, 650);
-      });
-      row.addEventListener('mouseup', function () {
-        clearTimeout(pt);
-      });
-    }
-    row.addEventListener('click', function () {
-      if (rowHeld) return void (rowHeld = false);
-      m.idx = +row.getAttribute('data-i');
-      pickMenu();
+      clearTimeout(pt);
+      pt = setTimeout(function () {
+        rowHeld = true;
+        it.hold();
+      }, 650);
     });
+    row.addEventListener('mouseup', function () {
+      clearTimeout(pt);
+    });
+  }
+  row.addEventListener('click', function () {
+    if (rowHeld) return void (rowHeld = false);
+    m.idx = +row.getAttribute('data-i');
+    pickMenu();
+  });
+}
+/* All apps: six icons a row, three rows on screen; moving within them only moves the focus (no new elements) */
+var GRID_COLS = 6,
+  GRID_ROWS = 3;
+function drawGrid(m) {
+  var n = m.items.length,
+    top = Math.max(0, Math.min(Math.floor(m.idx / GRID_COLS) - 1, Math.ceil(n / GRID_COLS) - GRID_ROWS)),
+    start = top * GRID_COLS,
+    end = Math.min(n, start + GRID_COLS * GRID_ROWS);
+  if (ovEl && ovEl._grid === m && ovEl._top === top) {
+    [].forEach.call(ovEl.querySelectorAll('.gt'), function (g) {
+      g.classList.toggle('f', +g.getAttribute('data-i') === m.idx);
+    });
+    return;
+  }
+  if (!ovEl) {
+    ovEl = document.createElement('div');
+    ovEl.id = 'ov';
+    document.body.appendChild(ovEl);
+  }
+  var h = '<div class="gpanel"><h2></h2><div class="hint"></div><div class="more">' + (top > 0 ? '▲' : '') + '</div><div class="grid">';
+  for (var i = start; i < end; i++)
+    h += '<div class="gt' + (i === m.idx ? ' f' : '') + '" data-i="' + i + '"><img class="gi" alt=""><span class="lb"></span></div>';
+  h += '</div><div class="more">' + (end < n ? '▼' : '') + '</div></div>';
+  ovEl = setHtml(ovEl, h);
+  ovEl.className = 'grid';
+  ovEl._grid = m;
+  ovEl._top = top;
+  ovEl.querySelector('h2').textContent = m.title;
+  ovEl.querySelector('.hint').textContent = m.hint;
+  [].forEach.call(ovEl.querySelectorAll('.gt'), function (g) {
+    var it = m.items[+g.getAttribute('data-i')],
+      im = g.querySelector('img');
+    g.querySelector('.lb').textContent = it.label;
+    im.onerror = function () {
+      var s = document.createElement('span');
+      s.className = 'gi';
+      s.innerHTML = svg('grid');
+      if (im.parentNode) im.parentNode.replaceChild(s, im);
+    };
+    im.src = API + '/icon/' + encodeURIComponent(it.app);
+    wire(g, it, m);
   });
 }
 function pickMenu() {
@@ -97,6 +149,16 @@ function pickMenu() {
 }
 function menuKey(k) {
   var m = stack[stack.length - 1];
+  if (m.grid && k >= 37 && k <= 40) {
+    var n = m.items.length,
+      C = GRID_COLS;
+    if (k === 37 && m.idx % C > 0) m.idx--;
+    else if (k === 39 && m.idx % C < C - 1 && m.idx < n - 1) m.idx++;
+    else if (k === 38 && m.idx >= C) m.idx -= C;
+    else if (k === 40 && Math.floor(m.idx / C) < Math.floor((n - 1) / C)) m.idx = Math.min(n - 1, m.idx + C);
+    drawMenu();
+    return true;
+  }
   if (k === 38 && m.idx > 0) {
     m.idx--;
     drawMenu();
@@ -338,9 +400,91 @@ function appMenu(a) {
     });
   openMenu(a.title, items);
 }
-/* every app that is not hidden, in the chosen order (hold OK on one for its options), then Customise */
+/* ---------- Settings: the one tile at the end of Home's strip. Every app, what Home shows, the language, the clock, the order;
+   the rest is in the CleanYourTV app (the manager) ---------- */
+var LANGS = [
+  ['auto', 'Follow the TV'],
+  ['da', 'Dansk'],
+  ['en', 'English'],
+];
+function langName(l) {
+  for (var i = 0; i < LANGS.length; i++) if (LANGS[i][0] === (l || 'auto')) return t(LANGS[i][1]);
+  return t(LANGS[0][1]);
+}
+/* "Netflix, YouTube +3" */
+function namesOf(list) {
+  if (!list.length) return t('None');
+  return list.slice(0, 2).join(', ') + (list.length > 2 ? ' +' + (list.length - 2) : '');
+}
+function settingsItems() {
+  var pinned = apps
+      .filter(function (a) {
+        return a.input;
+      })
+      .map(function (a) {
+        return a.title;
+      }),
+    hidden = (cfg.hidden || []).filter(function (id) {
+      return apps.some(function (a) {
+        return a.id === id;
+      });
+    });
+  return [
+    { icon: 'grid', label: t('All apps'), stay: true, fn: allAppsMenu },
+    { label: t('Apps on Home'), sub: namesOf(dockIds().filter(not(isInput)).map(title)), stay: true, fn: homeAppsMenu },
+    { label: t('Inputs on Home'), sub: namesOf(pinned), stay: true, fn: inputsHomeMenu },
+    { label: t('Hidden apps'), sub: hidden.length ? String(hidden.length) : t('None'), stay: true, fn: hiddenMenu },
+    { label: t('Language'), sub: langName(cfg.language), stay: true, fn: languageMenu },
+    {
+      label: t('Clock'),
+      sub: cfg.clock === '24' ? t('24-hour') : cfg.clock === '12' ? t('12-hour') : t('Automatic'),
+      stay: true,
+      fn: function () {
+        cfg.clock = cfg.clock === '24' ? '12' : cfg.clock === '12' ? 'auto' : '24';
+        saveCfg();
+        tick();
+        redrawSettings();
+      },
+    },
+    {
+      label: t('App order'),
+      sub: cfg.sort === 'alpha' ? t('A to Z') : t('Most used first'),
+      stay: true,
+      fn: function () {
+        cfg.sort = cfg.sort === 'alpha' ? 'usage' : 'alpha';
+        saveCfg();
+        redrawSettings();
+      },
+    },
+    {
+      label: t('More in the CleanYourTV app'),
+      fn: function () {
+        launch('com.cleanyourtv.manager');
+      },
+    },
+    { label: t('Reset Home...'), stay: true, fn: resetMenu },
+  ];
+}
+function settingsMenu() {
+  openMenu(t('Settings'), settingsItems(), { settings: true });
+}
+/* the Settings rows again with their new values, wherever Settings is in the stack */
+function redrawSettings() {
+  for (var i = 0; i < stack.length; i++) if (stack[i].settings) stack[i].items = settingsItems();
+  if (stack.length) drawMenu();
+}
+function not(f) {
+  return function (x) {
+    return !f(x);
+  };
+}
+function isInput(id) {
+  return apps.some(function (a) {
+    return a.id === id && a.input;
+  });
+}
+/* every app that is not hidden, as a grid of icons in the chosen order: OK opens one, holding OK gives its options */
 function allAppsMenu() {
-  var di = dockIds();
   openMenu(
     t('All apps'),
     apps
@@ -350,8 +494,8 @@ function allAppsMenu() {
       .sort(byOrder)
       .map(function (a) {
         return {
+          app: a.id,
           label: a.title,
-          sub: di.indexOf(a.id) >= 0 ? t('On Home') : '',
           fn: function () {
             launch(a.id);
           },
@@ -359,47 +503,81 @@ function allAppsMenu() {
             appMenu(a);
           },
         };
-      })
-      .concat([{ icon: 'edit', label: t('Customise'), stay: true, fn: customizeMenu }])
+      }),
+    { grid: true, hint: t('Hold OK on an app for its options') }
   );
 }
-
-function customizeMenu() {
-  openMenu(t('Customise'), [
+/* the apps, each on Home or not: OK puts it on Home (while there is room) or takes it off */
+function homeAppsMenu() {
+  var list = apps
+    .filter(function (a) {
+      return !a.input && a.id !== '__live' && a.id !== '__vod' && !isHidden(a.id);
+    })
+    .sort(byOrder);
+  function items() {
+    var di = dockIds();
+    return list.map(function (a) {
+      var on = di.indexOf(a.id) >= 0;
+      return {
+        icon: on ? 'check' : 'none',
+        label: a.title,
+        sub: on ? t('On Home') : '',
+        stay: true,
+        fn: function () {
+          var d = dockIds();
+          if (d.indexOf(a.id) >= 0)
+            setDock(
+              d.filter(function (i) {
+                return i !== a.id;
+              })
+            );
+          else if (d.length < HOME_DOCK) setDock(d.concat(a.id));
+          else return toast(t('Home is full: take an app off first'));
+          stack[stack.length - 1].items = items();
+          redrawSettings();
+        },
+      };
+    });
+  }
+  openMenu(t('Apps on Home'), items());
+}
+function languageMenu() {
+  openMenu(
+    t('Language'),
+    LANGS.map(function (l) {
+      var on = (cfg.language || 'auto') === l[0];
+      return {
+        icon: on ? 'check' : 'none',
+        label: t(l[1]),
+        fn: function () {
+          if (on) return;
+          /* saved, then the page again in the new language (layout.js would reload it as well) */
+          cfg.language = l[0];
+          store();
+          api('/api/config', cfg).then(
+            function () {
+              location.reload();
+            },
+            function () {
+              toast(t('Could not save settings'));
+            }
+          );
+        },
+      };
+    })
+  );
+}
+/* Home's layout back to the start (the strip, hidden apps, order, clock); the language stays */
+function resetMenu() {
+  openMenu(t('Reset Home?'), [
     {
-      label: t('Apps on Home'),
-      sub: t('hold OK on an app'),
-      stay: true,
+      label: t('Reset'),
       fn: function () {
-        toast(t('Hold OK on an app in the strip or in All apps to change Home'));
-      },
-    },
-    { label: t('Inputs on Home'), stay: true, fn: inputsHomeMenu },
-    { label: t('Hidden apps'), stay: true, fn: hiddenMenu },
-    {
-      label: t('App order'),
-      sub: cfg.sort === 'alpha' ? t('A to Z') : t('Most used first'),
-      fn: function () {
-        cfg.sort = cfg.sort === 'alpha' ? 'usage' : 'alpha';
+        cfg = { language: cfg.language };
         saveCfg();
       },
     },
-    {
-      label: t('Clock'),
-      sub: cfg.clock === '24' ? t('24-hour') : cfg.clock === '12' ? t('12-hour') : t('Automatic'),
-      fn: function () {
-        cfg.clock = cfg.clock === '24' ? '12' : cfg.clock === '12' ? 'auto' : '24';
-        saveCfg();
-        tick();
-      },
-    },
-    {
-      label: t('Reset customisation'),
-      fn: function () {
-        cfg = {};
-        saveCfg();
-      },
-    },
+    { label: t('Cancel'), fn: function () {} },
   ]);
 }
 /* the HDMI inputs, each on Home (in the strip, after the apps) or not: OK switches it */

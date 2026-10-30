@@ -101,17 +101,123 @@ run(async () => {
     !/id="bar"/.test(src('index.html')) && !/\btopbar\b|\bbarEls\b/.test(src('js/home.js') + src('js/config.js') + menus),
     'Home has no top buttons'
   );
-  ok(/\.concat\(\[\{[^}]*fn: customizeMenu \}\]\)\s*\);\s*$/.test(fnBody('allAppsMenu')), 'Customise is the last row of All apps');
-  ok(/t\('Inputs on Home'\)[^\n]*fn: inputsHomeMenu/.test(fnBody('customizeMenu')), 'Customise has Inputs on Home');
+  // one Settings tile at the end of the strip (fork): All apps (a grid of icons) is its first row; Home's layout and the language follow
+  ok(/_run = settingsMenu/.test(src('js/home.js')) && !/allAppsMenu/.test(src('js/home.js')), "the strip's last tile is Settings");
+  const rowsOf = fnBody('settingsItems');
+  ok(
+    /^\s*return \[\s*\{ icon: 'grid', label: t\('All apps'\)[^\n]*fn: allAppsMenu/m.test(rowsOf) &&
+      ['homeAppsMenu', 'inputsHomeMenu', 'hiddenMenu', 'languageMenu', 'resetMenu'].every(f => rowsOf.indexOf('fn: ' + f) > 0),
+    'Settings: All apps first, then Home, the language, the clock, the order, the manager and a reset'
+  );
+  ok(/\{ grid: true/.test(fnBody('allAppsMenu')), 'All apps is a grid');
   const vm = require('vm'),
     sb = { window: {}, navigator: { language: 'en-GB' } };
   vm.runInNewContext(src('js/clock.js') + '\nthis.TX = TX;', sb);
-  const words = ['Customise', 'Apps on Home', 'Inputs on Home', 'On Home', 'No inputs', 'Could not read the inputs'],
+  const words = [
+      'Settings',
+      'All apps',
+      'Apps on Home',
+      'Inputs on Home',
+      'On Home',
+      'No inputs',
+      'Could not read the inputs',
+      'Reset Home?',
+    ],
     missing = [];
-  ['nl', 'de', 'fr', 'es'].forEach(l =>
+  ['nl', 'de', 'fr', 'es', 'da'].forEach(l =>
     words.forEach(w => {
       if (!sb.TX[l][w]) missing.push(l + ': ' + w);
     })
   );
-  ok(!missing.length, 'the Customise and Inputs on Home texts are translated' + (missing.length ? ': ' + missing.join(', ') : ''));
+  ok(!missing.length, 'the Settings and Inputs on Home texts are translated' + (missing.length ? ': ' + missing.join(', ') : ''));
+  // the language: the TV's, or the one chosen in Settings, read from the launcher's cache before the first drawing
+  const langAt = (tvLang, cached) => {
+    const b = {
+      window: {},
+      navigator: { language: tvLang },
+      CACHE_KEY: 'k',
+      localStorage: { getItem: () => (cached === undefined ? null : JSON.stringify({ cfg: { language: cached } })) },
+    };
+    vm.runInNewContext(src('js/clock.js') + '\nthis.LANG = LANG; this.LOC = LOC; this.t = t;', b);
+    return b;
+  };
+  ok(langAt('en-GB').LANG === 'en' && langAt('da-DK', 'auto').LANG === 'da', 'the language follows the TV until one is chosen');
+  ok(
+    langAt('en-GB', 'da').LOC === 'da-DK' &&
+      langAt('en-GB', 'da').t('Settings') === 'Indstillinger' &&
+      langAt('da-DK', 'en').LOC === 'en-GB',
+    'a language chosen in Settings wins over the TV (dates and times too)'
+  );
+  ok(langAt('en-US', 'en').LOC === 'en-US', "English on an English TV keeps the TV's own English (its clock and dates)");
+  // Danish (fork): every text the launcher gives t(), as t('…'), t(a ? '…' : '…') or vodlib/homelib's tx('…'), and the ones it
+  // passes in a variable: the Films & Series tabs and sorts, Home's Play / Resume, Live TV's stream errors, the curator's row
+  // titles and TMDB's genres (iptv_curator/tmdb.py)
+  const dsb = { window: {}, navigator: { language: 'da-DK' } };
+  vm.runInNewContext(src('js/clock.js') + '\nthis.t = t;', dsb);
+  const lit = '\'((?:[^\'\\\\]|\\\\.)*)\'|"((?:[^"\\\\]|\\\\.)*)"',
+    keys = {};
+  fs.readdirSync(path.join(root, 'app', 'src', 'js')).forEach(f => {
+    const js = src('js/' + f);
+    [
+      new RegExp('\\btx?\\(\\s*(?:' + lit + ')\\s*\\)', 'g'),
+      new RegExp('\\bt\\([^()?]*\\?\\s*(?:' + lit + ')\\s*:\\s*(?:' + lit + ')\\s*\\)', 'g'),
+    ].forEach(re => {
+      let m;
+      while ((m = re.exec(js)))
+        m.slice(1).forEach(k => {
+          if (k !== undefined) keys[k] = f;
+        });
+    });
+  });
+  const named = [
+    ...['Films', 'Series', 'My list', 'Search', 'Newest', 'A–Z', 'Year', 'Rating', 'Resume', 'Play'],
+    ...(
+      src('js/live.js')
+        .match(/var WHY = \{([\s\S]*?)\};/)[1]
+        .match(/'[^']+'/g) || []
+    ).map(q => q.slice(1, -1)),
+    ...['Trending now', 'Popular', 'New releases', 'New series', 'Top rated', 'Danish films', 'Danish series', 'Nordic films'],
+    ...['Nordic series', 'Kids & family', 'Action', 'Adventure', 'Comedy', 'Crime', 'Documentary', 'Family', 'History', 'Horror'],
+    ...['Music', 'Mystery', 'Romance', 'Science Fiction', 'TV Movie', 'War', 'Action & Adventure', 'Kids', 'News', 'Sci-Fi & Fantasy'],
+    ...['Soap', 'Talk', 'War & Politics'],
+  ];
+  named.forEach(k => (keys[k] = keys[k] || 'named'));
+  const same = [
+      'Action',
+      'Animation',
+      'Drama',
+      'Fantasy',
+      'Thriller',
+      'Western',
+      'Reality',
+      'Trailer',
+      'Stream',
+      'streams',
+      'buffer',
+      'S%sE%s',
+    ],
+    untranslated = Object.keys(keys).filter(k => dsb.t(k) === k && same.indexOf(k) < 0);
+  ok(Object.keys(keys).length > 150, 'the launcher texts are found (' + Object.keys(keys).length + ')');
+  ok(
+    !untranslated.length,
+    'every launcher text has a Danish translation' + (untranslated.length ? ': ' + untranslated.map(k => keys[k] + ' ' + k).join(', ') : '')
+  );
+  // the Inputs picker's words, and the voice cards' words the service sends the notification page (helper/voice.js), in Danish too
+  const page = d => fs.readFileSync(path.join(root, d, 'app', 'index.html'), 'utf8'),
+    psb = {};
+  vm.runInNewContext(
+    page('picker').match(/var TX=\{[\s\S]*?\}\};/)[0] + page('picker').match(/var EN=\{.*\};/)[0] + 'this.TX=TX;this.EN=EN;',
+    psb
+  );
+  const pmiss = Object.keys(psb.EN).filter(k => !psb.TX.da[k]);
+  ok(!pmiss.length, 'the picker has every text in Danish' + (pmiss.length ? ': ' + pmiss.join(', ') : ''));
+  const nsb = { window: {}, navigator: { language: 'da-DK' } };
+  vm.runInNewContext(page('notify').match(/var VOICE=[\s\S]*?\nfunction vt\(s\)\{[^\n]*\}/)[0] + '\nthis.vt=vt;', nsb);
+  const said = [],
+    voice = fs.readFileSync(path.join(root, 'helper', 'voice.js'), 'utf8'),
+    re = /(?:title|text): '([^']+)'/g;
+  let vm2;
+  while ((vm2 = re.exec(voice))) said.push(vm2[1]);
+  const nmiss = said.filter(k => nsb.vt(k) === k);
+  ok(said.length >= 6 && !nmiss.length, 'the voice cards have every word in Danish' + (nmiss.length ? ': ' + nmiss.join(', ') : ''));
 });

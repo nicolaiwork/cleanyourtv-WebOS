@@ -1,5 +1,9 @@
 /* ---------- Home (fork): what the screen shows, without the page (tools/test/homelib.test.js) ---------- */
 var HL = (function () {
+  /* the page's translation (clock.js); English where there is none (the tests) */
+  function tx(k) {
+    return typeof t === 'function' ? t(k) : k;
+  }
   /* the hero: the films Trending row's titles with a backdrop, without those Home's Continue watching row already shows */
   function heroPicks(rows, skipIds, max) {
     var tr = null;
@@ -86,12 +90,12 @@ var HL = (function () {
   function chanLine(ch, nowSec) {
     var n = ch.now;
     /* between two programmes: the next one */
-    if (!n && ch.next) return { title: ch.next[2], times: 'From ' + hm(ch.next[0]), next: '', prog: 0 };
+    if (!n && ch.next) return { title: ch.next[2], times: tx('From %s').replace('%s', hm(ch.next[0])), next: '', prog: 0 };
     if (!n) return { title: 'No guide', times: '', next: '', prog: -1 };
     return {
       title: n[2],
-      times: hm(n[0]) + ' to ' + hm(n[1]),
-      next: ch.next ? 'Then ' + ch.next[2] : '',
+      times: tx('%s to %s').replace('%s', hm(n[0])).replace('%s', hm(n[1])),
+      next: ch.next ? tx('Then %s').replace('%s', ch.next[2]) : '',
       prog: progress(nowSec, n),
     };
   }

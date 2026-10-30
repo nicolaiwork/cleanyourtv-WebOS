@@ -57,9 +57,12 @@ var TX={
   nl:{Apps:'Apps',Inputs:'Ingangen',Connected:'Verbonden',Live:'Live TV',LiveSub:'Je afspeellijst',Nothing:'Niets aangesloten',nohelper:'Kan de ingangen niet lezen. Live TV werkt nog.',pinned:'%s is aan Home toegevoegd',unpinned:'%s is van Home verwijderd',pinfail:'Kan Home niet aanpassen'},
   de:{Apps:'Apps',Inputs:'Eing\u00E4nge',Connected:'Verbunden',Live:'Live-TV',LiveSub:'Deine Playlist',Nothing:'Nichts angeschlossen',nohelper:'Eing\u00E4nge nicht lesbar. Live-TV funktioniert weiter.',pinned:'%s zu Home hinzugef\u00FCgt',unpinned:'%s von Home entfernt',pinfail:'Home konnte nicht ge\u00E4ndert werden'},
   fr:{Apps:'Apps',Inputs:'Entr\u00E9es',Connected:'Connect\u00E9',Live:'TV en direct',LiveSub:'Votre playlist',Nothing:'Rien de connect\u00E9',nohelper:'Impossible de lire les entr\u00E9es. La TV en direct fonctionne encore.',pinned:'%s ajout\u00E9 \u00E0 l\u2019accueil',unpinned:'%s retir\u00E9 de l\u2019accueil',pinfail:'Impossible de modifier l\u2019accueil'},
+  da:{Apps:'Apps',Inputs:'Indgange',Connected:'Tilsluttet',Live:'Live-tv',LiveSub:'Din playliste',Nothing:'Intet tilsluttet',nohelper:'Kan ikke l\u00E6se indgangene. Live-tv virker stadig.',pinned:'%s er f\u00F8jet til startsk\u00E6rmen',unpinned:'%s er fjernet fra startsk\u00E6rmen',pinfail:'Kunne ikke \u00E6ndre startsk\u00E6rmen'},
   es:{Apps:'Apps',Inputs:'Entradas',Connected:'Conectado',Live:'TV en directo',LiveSub:'Tu lista',Nothing:'Nada conectado',nohelper:'No se pueden leer las entradas. La TV en directo sigue funcionando.',pinned:'%s a\u00F1adido a Inicio',unpinned:'%s quitado de Inicio',pinfail:'No se pudo cambiar Inicio'}};
 var EN={Apps:'Apps',Inputs:'Inputs',Connected:'Connected',Live:'Live TV',LiveSub:'Your playlist',Nothing:'Nothing connected',nohelper:'Can\u2019t read the inputs. Live TV still works.',pinned:'%s added to Home',unpinned:'%s removed from Home',pinfail:'Could not change Home'};
-var LANG=((window.webOSSystem&&webOSSystem.locale)||navigator.language||'en').slice(0,2);
+/* the TV's language, or the one chosen in the launcher's Settings (config.language, kept in the cache for the next start) */
+var TVLANG=((window.webOSSystem&&webOSSystem.locale)||navigator.language||'en').slice(0,2),LANG=TVLANG;
+function langOf(pref){return pref==='da'||pref==='en'?pref:TVLANG}
 function t(k){return (TX[LANG]&&TX[LANG][k])||EN[k]||k}
 function $(i){return document.getElementById(i)}
 function call(uri,p){try{var b=new PalmServiceBridge();b.onservicecallback=function(){};b.call(uri,JSON.stringify(p));return true}catch(e){return false}}
@@ -139,13 +142,15 @@ function get(path,cb,fail){var x=new XMLHttpRequest();x.open('GET',API+path);x.t
   x.onload=function(){try{cb(JSON.parse(x.responseText))}catch(e){fail&&fail()}};x.onerror=x.ontimeout=function(){fail&&fail()};x.send()}
 function refresh(){
   var got={apps:null,inputs:null};
-  function done(){if(!got.apps||!got.inputs)return;cache.apps=got.apps;cache.inputs=got.inputs;persist();$('msg').textContent='';setData(cache,false)}
+  // the inputs' lines are made once both answers are in: they need the language and whether Live TV is on, from /api/apps
+  function done(){if(!got.apps||!got.inputs)return;cache.apps=got.apps;cache.inputs=buildInputs(got.inputs);persist();$('msg').textContent='';setData(cache,false)}
   get('/api/apps',function(x){liveOn=!(x.config&&x.config.options&&x.config.options.liveTv===false);var by={};(x.apps||[]).forEach(function(a){by[a.id]=a});
+    var l=langOf(x.config&&x.config.language);if(l!==LANG){LANG=l;cache.lang=l;built=''}
     pins={};(x.apps||[]).forEach(function(a){if(a.input)pins[a.id]=1});
     got.apps=((x.config&&x.config.dock)||[]).filter(function(id){return by[id]}).map(function(id){return by[id].input?{id:id,title:by[id].title,input:by[id].input}:{id:id,title:by[id].title}});done()},function(){});
-  get('/api/inputs',function(x){got.inputs=buildInputs(x.devices);done()},function(){if(shown&&inputs.length<=1)$('msg').textContent=t('nohelper')})}
+  get('/api/inputs',function(x){got.inputs=x.devices||[];done()},function(){if(shown&&inputs.length<=1)$('msg').textContent=t('nohelper')})}
 function load(){   // the last known layout, ready before the first open
-  try{var c=JSON.parse(localStorage.getItem(KEY)||'null');if(c&&c.inputs&&c.inputs.length){cache=c;cache.icons=cache.icons||{};cache.colors=cache.colors||{}}}catch(e){}
+  try{var c=JSON.parse(localStorage.getItem(KEY)||'null');if(c&&c.inputs&&c.inputs.length){cache=c;cache.icons=cache.icons||{};cache.colors=cache.colors||{};LANG=langOf(c.lang)}}catch(e){}
   setData(cache.inputs.length?cache:{apps:[],inputs:buildInputs([])},true)}
 function show(){
   shown=true;moved=false;shownAt=Date.now();downAt=0;log('show');idle();

@@ -24,7 +24,7 @@ function execOut(m) {
   return { ok: o.returnValue !== false, out: String(o.stdoutString || ''), err: String(o.stderrString || o.errorText || '') };
 }
 function offlineCheck() {
-  banner('Checking for updates\u2026', 'work');
+  banner(t('Checking for updates\u2026'), 'work');
   rootExec('node ' + SVC + '/helper/selfupdate.js check').then(function (m) {
     var e = execOut(m),
       r = null;
@@ -32,7 +32,7 @@ function offlineCheck() {
       r = JSON.parse(e.out);
     } catch (x) {}
     if (!r || r.error) {
-      banner('Could not check: ' + ((r && r.error) || e.err || 'no answer'), 'err');
+      banner(t('Could not check: %s').replace('%s', (r && r.error) || e.err || t('no answer')), 'err');
       return;
     }
     upd = r.updateTo ? r : null;
@@ -40,14 +40,16 @@ function offlineCheck() {
     if (upd) idx = updIdx;
     draw();
     banner(
-      r.updateTo ? 'Version ' + r.updateTo + ' is available; this one is ' + r.installed + '.' : 'Up to date (' + r.installed + ').',
+      r.updateTo
+        ? t('Version %s is available; this one is %s.').replace('%s', r.updateTo).replace('%s', r.installed)
+        : t('Up to date (%s).').replace('%s', r.installed),
       r.updateTo ? 'ok' : ''
     );
   });
 }
 function offlineUpdate() {
   if (!upd) return;
-  banner('Updating to ' + upd.updateTo + '\u2026', 'work');
+  banner(t('Updating to %s\u2026').replace('%s', upd.updateTo), 'work');
   rootExec('rm -f /tmp/cytv-selfupdate.log; nohup node ' + SVC + '/helper/selfupdate.js install > /tmp/cytv-selfupdate.log 2>&1 &').then(
     function () {
       pollUpdate(0);
@@ -56,24 +58,24 @@ function offlineUpdate() {
 }
 function pollUpdate(n) {
   rootExec('tail -n 3 /tmp/cytv-selfupdate.log 2>/dev/null').then(function (m) {
-    var t = execOut(m).out.trim(),
-      last = t.split('\n').pop();
+    var out = execOut(m).out.trim(),
+      last = out.split('\n').pop();
     if (/^DONE/.test(last)) {
       upd = null;
-      banner(last.replace(/^DONE /, ''), 'ok');
+      banner(tm(last.replace(/^DONE /, '')), 'ok');
       build();
       draw();
       return;
     }
     if (/^ERROR/.test(last)) {
-      banner('Update failed: ' + last.replace(/^ERROR /, ''), 'err');
+      banner(t('Update failed: %s').replace('%s', last.replace(/^ERROR /, '')), 'err');
       return;
     }
     if (n > 120) {
-      banner('The update is taking too long. Log: /tmp/cytv-selfupdate.log on the TV.', 'err');
+      banner(t('The update is taking too long. Log: %s on the TV.').replace('%s', '/tmp/cytv-selfupdate.log'), 'err');
       return;
     }
-    if (last) banner('Updating\u2026 ' + last, 'work');
+    if (last) banner(t('Updating\u2026 %s').replace('%s', last), 'work');
     setTimeout(function () {
       pollUpdate(n + 1);
     }, 2000);

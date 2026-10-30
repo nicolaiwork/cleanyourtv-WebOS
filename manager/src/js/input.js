@@ -45,5 +45,6 @@ document.addEventListener('webOSRelaunch', function () {
   listY = 0;
   load();
 });
-banner('Reading status…', 'work');
+$('shareclose').textContent = t('Close');
+banner(t('Reading status…'), 'work');
 load();

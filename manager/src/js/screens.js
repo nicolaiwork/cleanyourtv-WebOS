@@ -1,5 +1,20 @@
 function aiHelp() {
-  return 'Chat with a language model through OpenRouter. Run these on the TV (ssh):\n\ncurl -X POST localhost:8765/api/voice/set -d \'{"llm":{"key":"sk-or-...","model":"openrouter/auto"}}\'\ncurl -X POST localhost:8765/api/voice/set -d \'{"llm":{"enabled":true}}\'\n\nOptional: "system" sets the instructions. Ask by text from anywhere on the TV:\ncurl -X POST localhost:8765/api/voice/ask -d \'{"text":"What is the capital of Peru?"}\'\n\nSpoken and typed questions go to OpenRouter and the model you chose; no audio does. The key stays on the TV.\n\nHome Assistant (Assist), with a long-lived access token:\ncurl -X POST localhost:8765/api/voice/set -d \'{"ha":{"url":"http://homeassistant.local:8123","token":"..."}}\'\nOptional: "route" is ha-first, ha-only or ai-only; "selfSigned":true accepts a self-signed certificate; "agent" is a conversation entity.';
+  // the commands stay as they are; the sentences around them follow the TV's language
+  return (
+    t('Chat with a language model through OpenRouter. Run these on the TV (ssh):') +
+    '\n\ncurl -X POST localhost:8765/api/voice/set -d \'{"llm":{"key":"sk-or-...","model":"openrouter/auto"}}\'\ncurl -X POST localhost:8765/api/voice/set -d \'{"llm":{"enabled":true}}\'\n\n' +
+    t('Optional: "system" sets the instructions. Ask by text from anywhere on the TV:') +
+    '\ncurl -X POST localhost:8765/api/voice/ask -d \'{"text":"' +
+    t('What is the capital of Peru?') +
+    '"}\'\n\n' +
+    t('Spoken and typed questions go to OpenRouter and the model you chose; no audio does. The key stays on the TV.') +
+    '\n\n' +
+    t('Home Assistant (Assist), with a long-lived access token:') +
+    '\ncurl -X POST localhost:8765/api/voice/set -d \'{"ha":{"url":"http://homeassistant.local:8123","token":"..."}}\'\n' +
+    t(
+      'Optional: "route" is ha-first, ha-only or ai-only; "selfSigned":true accepts a self-signed certificate; "agent" is a conversation entity.'
+    )
+  );
 }
 function liveRefresh() {
   api('/api/live/status').then(
@@ -16,7 +31,7 @@ function liveRefresh() {
 }
 function openNotifyQr() {
   if (!napi || !napi.enabled) {
-    banner('Switch notifications on first', 'err');
+    banner(t('Switch notifications on first'), 'err');
     return;
   }
   shareMode = 'notify';
@@ -24,25 +39,27 @@ function openNotifyQr() {
   $('share').style.display = 'block';
   $('shareurl').textContent = '';
   $('qrbox').style.visibility = 'hidden';
-  $('share').querySelector('h2').textContent = 'Notification address and token';
-  $('share').querySelector('ol').innerHTML =
-    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera and open the page: it shows the address and the token with <b>Copy</b> buttons.</li><li>The token is a <b>secret</b>: anyone who sees this code while it is open can read it.</li>';
-  $('sharemsg').textContent = 'Preparing\u2026';
+  $('share').querySelector('h2').textContent = t('Notification address and token');
+  $('share').querySelector('ol').innerHTML = t(
+    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera and open the page: it shows the address and the token with <b>Copy</b> buttons.</li><li>The token is a <b>secret</b>: anyone who sees this code while it is open can read it.</li>'
+  );
+  $('sharemsg').textContent = t('Preparing\u2026');
   api('/api/manager/notify-api', { page: true }).then(
     function (r) {
       if (view !== 'share') return;
       if (!r.pageUrl) {
-        $('sharemsg').textContent = 'The notification listener is not running.';
+        $('sharemsg').textContent = t('The notification listener is not running.');
         return;
       }
       drawQr(r.pageUrl);
       $('qrbox').style.visibility = 'visible';
       $('shareurl').textContent = r.pageUrl;
-      $('sharemsg').textContent =
-        'The page opens for ten minutes. It is not encrypted: the token travels over your Wi-Fi, so use a network you trust.';
+      $('sharemsg').textContent = t(
+        'The page opens for ten minutes. It is not encrypted: the token travels over your Wi-Fi, so use a network you trust.'
+      );
     },
     function () {
-      $('sharemsg').textContent = 'The service did not answer.';
+      $('sharemsg').textContent = t('The service did not answer.');
     }
   );
 }
@@ -64,18 +81,20 @@ function openLivePair() {
   $('share').style.display = 'block';
   $('shareurl').textContent = '';
   $('qrbox').style.visibility = 'hidden';
-  $('share').querySelector('h2').textContent = 'Set up Live TV';
-  $('share').querySelector('ol').innerHTML =
-    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Enter the <b>code</b> below and your playlist address.</li>';
-  $('sharemsg').textContent = 'Preparing\u2026';
+  $('share').querySelector('h2').textContent = t('Set up Live TV');
+  $('share').querySelector('ol').innerHTML = t(
+    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Enter the <b>code</b> below and your playlist address.</li>'
+  );
+  $('sharemsg').textContent = t('Preparing\u2026');
   api('/api/live/pair', {}).then(
     function (r) {
       if (view !== 'share') return;
       drawQr(r.url);
       $('qrbox').style.visibility = 'visible';
-      $('shareurl').textContent = r.url + '   code ' + r.code;
-      $('sharemsg').textContent =
-        'The page stays open for ten minutes. It is not encrypted: the playlist address, which may hold an access key, travels over your Wi-Fi.';
+      $('shareurl').textContent = r.url + '   ' + t('code %s').replace('%s', r.code);
+      $('sharemsg').textContent = t(
+        'The page stays open for ten minutes. It is not encrypted: the playlist address, which may hold an access key, travels over your Wi-Fi.'
+      );
       (function poll(n) {
         if (view !== 'share' || shareMode !== 'live') return;
         api('/api/live/status').then(
@@ -83,7 +102,7 @@ function openLivePair() {
             if (s2.configured && (!lv || !lv.configured || s2.channels !== lv.channels)) {
               lv = s2;
               closeShare();
-              banner('Playlist saved', 'ok');
+              banner(t('Playlist saved'), 'ok');
               return;
             }
             if (n < 300)
@@ -100,12 +119,12 @@ function openLivePair() {
       })(0);
     },
     function () {
-      $('sharemsg').textContent = 'The service did not answer.';
+      $('sharemsg').textContent = t('The service did not answer.');
     }
   );
 }
 function openTheme() {
-  banner('Loading themes\u2026', 'work');
+  banner(t('Loading themes\u2026'), 'work');
   api('/api/theme/list').then(
     function (r) {
       if (r.error) {
@@ -113,28 +132,30 @@ function openTheme() {
         return;
       }
       banner(
-        r.catalogue && !r.catalogue.ok ? 'Could not reach GitHub (' + r.catalogue.error + '): showing the themes on this TV.' : '',
+        r.catalogue && !r.catalogue.ok
+          ? t('Could not reach GitHub (%s): showing the themes on this TV.').replace('%s', r.catalogue.error)
+          : '',
         r.catalogue && !r.catalogue.ok ? 'err' : ''
       );
       th = r;
       push('theme');
       for (var k = 0; k < rows.length; k++)
-        if (rows[k].sub && /^selected/.test(rows[k].sub)) {
+        if (rows[k].sel) {
           idx = k;
           draw();
           break;
         }
     },
     function () {
-      banner('The service did not answer', 'err');
+      banner(t('The service did not answer'), 'err');
     }
   );
 }
 function setTheme(b) {
   var n = b.name;
   delete b.name;
-  banner('Getting ' + n + '\u2026', 'work');
-  themeCall('/api/theme/set', b, n + ' applied. Open Home to see it.');
+  banner(t('Getting %s\u2026').replace('%s', n), 'work');
+  themeCall('/api/theme/set', b, t('%s applied. Open Home to see it.').replace('%s', n));
 }
 function themeCall(path, b, msg, back) {
   api(path, b, 60000).then(
@@ -152,31 +173,31 @@ function themeCall(path, b, msg, back) {
       }
     },
     function () {
-      banner('The service did not answer', 'err');
+      banner(t('The service did not answer'), 'err');
     }
   );
 }
 function openChannel() {
-  banner('Looking for test builds\u2026', 'work');
+  banner(t('Looking for test builds\u2026'), 'work');
   api('/api/manager/tests').then(
     function (r) {
       banner('');
       tst = r;
       push('channel');
       for (var k = 0; k < rows.length; k++)
-        if (rows[k].sub && /^selected/.test(rows[k].sub)) {
+        if (rows[k].sel) {
           idx = k;
           draw();
           break;
         }
     },
     function () {
-      banner('The service did not answer', 'err');
+      banner(t('The service did not answer'), 'err');
     }
   );
 }
 function setChannel(tag) {
-  banner('Switching\u2026', 'work');
+  banner(t('Switching\u2026'), 'work');
   api('/api/manager/channel', { tag: tag }).then(
     function (s) {
       if (s.error) {
@@ -187,18 +208,21 @@ function setChannel(tag) {
       pop();
       banner(
         tag
-          ? 'Following ' + tag.replace(/^test-/, '') + '. If the Launcher or Service row offers an update, that is the test build.'
-          : 'Back on the stable releases',
+          ? t('Following %s. If the Launcher or Service row offers an update, that is the test build.').replace(
+              '%s',
+              tag.replace(/^test-/, '')
+            )
+          : t('Back on the stable releases'),
         'ok'
       );
     },
     function () {
-      banner('The service did not answer', 'err');
+      banner(t('The service did not answer'), 'err');
     }
   );
 }
 function openModels() {
-  banner('Loading the model list\u2026', 'work');
+  banner(t('Loading the model list\u2026'), 'work');
   api('/api/voice/models').then(
     function (r) {
       if (r.error) {
@@ -206,7 +230,7 @@ function openModels() {
         return;
       }
       banner('');
-      mdl = [{ id: 'openrouter/auto', name: 'Auto (OpenRouter picks)', price: null }].concat(r.picks);
+      mdl = [{ id: 'openrouter/auto', name: t('Auto (OpenRouter picks)'), price: null }].concat(r.picks);
       var cur = ((vo || {}).llm || {}).model;
       if (
         cur &&
@@ -217,34 +241,34 @@ function openModels() {
         mdl.splice(1, 0, { id: cur, name: cur, price: null });
       push('models');
       for (var k = 0; k < rows.length; k++)
-        if (rows[k].sub && /selected$/.test(rows[k].sub)) {
+        if (rows[k].sel) {
           idx = k;
           draw();
           break;
         }
     },
     function () {
-      banner('The service did not answer', 'err');
+      banner(t('The service did not answer'), 'err');
     }
   );
 }
 function haTest() {
-  banner('Asking Home Assistant\u2026', 'work');
+  banner(t('Asking Home Assistant\u2026'), 'work');
   api('/api/voice/ha-test', {}).then(
     function (r) {
       if (r.error) {
         banner(r.error, 'err');
         return;
       }
-      banner('Connected to ' + (r.name || 'Home Assistant') + (r.version ? ' ' + r.version : ''), 'ok');
+      banner(t('Connected to %s').replace('%s', (r.name || 'Home Assistant') + (r.version ? ' ' + r.version : '')), 'ok');
     },
     function () {
-      banner('The service did not answer', 'err');
+      banner(t('The service did not answer'), 'err');
     }
   );
 }
 function openAgents() {
-  banner('Asking Home Assistant\u2026', 'work');
+  banner(t('Asking Home Assistant\u2026'), 'work');
   api('/api/voice/ha-agents').then(
     function (r) {
       if (r.error) {
@@ -256,14 +280,14 @@ function openAgents() {
       push('agents');
       var cur = ((vo || {}).ha || {}).agent;
       for (var k = 0; k < rows.length; k++)
-        if (rows[k].sub && /selected$/.test(rows[k].sub)) {
+        if (rows[k].sel) {
           idx = k;
           draw();
           break;
         }
     },
     function () {
-      banner('The service did not answer', 'err');
+      banner(t('The service did not answer'), 'err');
     }
   );
 }
@@ -275,11 +299,11 @@ function pickAgent(id) {
         return;
       }
       vo = x;
-      banner(id ? 'Agent: ' + id : 'Default agent', 'ok');
+      banner(id ? t('Agent: %s').replace('%s', id) : t('Default agent'), 'ok');
       pop();
     },
     function () {
-      banner('The service did not answer', 'err');
+      banner(t('The service did not answer'), 'err');
     }
   );
 }
@@ -291,11 +315,11 @@ function pickModel(id) {
         return;
       }
       vo = x;
-      banner('Model: ' + id, 'ok');
+      banner(t('Model: %s').replace('%s', id), 'ok');
       pop();
     },
     function () {
-      banner('The service did not answer', 'err');
+      banner(t('The service did not answer'), 'err');
     }
   );
 }
@@ -306,22 +330,24 @@ function openPair() {
   $('share').style.display = 'block';
   $('shareurl').textContent = '';
   $('qrbox').style.visibility = 'hidden';
-  $('share').querySelector('h2').textContent = 'Set up from your phone';
-  $('share').querySelector('ol').innerHTML =
-    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Enter your <b>OpenRouter key</b> and model, or your <b>Home Assistant</b> address and access token, and tap <b>Save</b>.</li>';
-  $('sharemsg').textContent = 'Preparing\u2026';
+  $('share').querySelector('h2').textContent = t('Set up from your phone');
+  $('share').querySelector('ol').innerHTML = t(
+    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Enter your <b>OpenRouter key</b> and model, or your <b>Home Assistant</b> address and access token, and tap <b>Save</b>.</li>'
+  );
+  $('sharemsg').textContent = t('Preparing\u2026');
   api('/api/voice/pair', {}).then(
     function (r) {
       if (view !== 'share') return;
       drawQr(r.url);
       $('qrbox').style.visibility = 'visible';
       $('shareurl').textContent = r.url;
-      $('sharemsg').textContent =
-        'The page stays open for ten minutes, or until you save. It is not encrypted: the key travels over your Wi-Fi, so use a network you trust.';
+      $('sharemsg').textContent = t(
+        'The page stays open for ten minutes, or until you save. It is not encrypted: the key travels over your Wi-Fi, so use a network you trust.'
+      );
       pollPair(0);
     },
     function () {
-      $('sharemsg').textContent = 'The service did not answer.';
+      $('sharemsg').textContent = t('The service did not answer.');
     }
   );
 }
@@ -332,11 +358,11 @@ function pollPair(n) {
       if (v.pairedAt > pairBase) {
         vo = v;
         closeShare();
-        banner('Saved', 'ok');
+        banner(t('Saved'), 'ok');
         return;
       }
       if (!v.pairing && n > 1) {
-        $('sharemsg').textContent = 'The page has closed. Close this and try again.';
+        $('sharemsg').textContent = t('The page has closed. Close this and try again.');
         return;
       }
       setTimeout(function () {
@@ -356,9 +382,9 @@ function voiceRefresh() {
     function (v) {
       vo = v;
       var j = v.job || {};
-      if (j.state === 'working') banner(j.message, 'work');
-      else if (j.state === 'error') banner(j.message, 'err');
-      else if (v.listening) banner('Listening…', 'work');
+      if (j.state === 'working') banner(tm(j.message), 'work');
+      else if (j.state === 'error') banner(tm(j.message), 'err');
+      else if (v.listening) banner(t('Listening…'), 'work');
       else banner('');
       if (view === 'voice') {
         build();

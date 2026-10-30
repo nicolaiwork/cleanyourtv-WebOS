@@ -151,4 +151,12 @@ run(async () => {
   ok(HL.maySlide({ inHero: false, moved: true, sinceKey: 5000 }), 'slide: the focus elsewhere');
   const none = HL.chanLine({ now: null, next: null }, d);
   ok(none.title === 'No guide' && none.times === '' && none.next === '' && none.prog === -1, 'channel card: no guide');
+
+  // on a Danish TV (clock.js's t() in the page)
+  const da = { Date, Math, isFinite, window: {}, navigator: { language: 'da-DK' } };
+  vm.createContext(da);
+  vm.runInContext(js('clock.js') + '\n' + js('vodlib.js') + '\n' + js('homelib.js') + '\nthis.HL = HL;', da);
+  const dl = da.HL.chanLine({ now: [d, d + 3300, 'Sommerdahl'], next: [d + 3300, d + 4000, 'Så kører bussen'] }, d + 2340);
+  ok(dl.times === '21:25–22:20' && dl.next === 'Derefter Så kører bussen', 'Danish: channel card times and next');
+  ok(da.HL.chanLine({ now: null, next: [d + 600, d + 1800, 'Debatten'] }, d).times === 'Fra 21:35', 'Danish: channel card in a gap');
 });

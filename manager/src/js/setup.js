@@ -1,6 +1,6 @@
 function doSetup(force) {
   forceOffer = false;
-  banner('Setting up\u2026 the screen blinks once while LG\u2019s system restarts', 'work');
+  banner(t('Setting up\u2026 the screen blinks once while LG\u2019s system restarts'), 'work');
   var flags =
     (setup.debloat ? '--debloat' : '--no-debloat') + ' ' + (setup.inputKey ? '--input-key' : '--no-input-key') + (force ? ' --force' : '');
   rootExec(
@@ -16,7 +16,10 @@ function doSetup(force) {
     } catch (e) {}
     if (o.returnValue === false) {
       banner(
-        'Could not start the setup: ' + (o.errorText || 'no answer from the Homebrew Channel service (is it installed and up to date?)'),
+        t('Could not start the setup: %s').replace(
+          '%s',
+          o.errorText || t('no answer from the Homebrew Channel service (is it installed and up to date?)')
+        ),
         'err'
       );
       return;
@@ -52,26 +55,33 @@ function waitUp(n) {
         }, 1500);
     },
     function () {
-      logTail(function (t) {
-        if (/ERROR|rolled back/.test(t)) {
-          forceOffer = /looks different/.test(t);
+      logTail(function (tail) {
+        if (/ERROR|rolled back/.test(tail)) {
+          forceOffer = /looks different/.test(tail);
           build();
           draw();
           banner(
-            'Setup stopped: ' +
-              t
+            t('Setup stopped: %s').replace(
+              '%s',
+              tail
                 .split('\n')
                 .pop()
-                .replace(/^ERROR: /, ''),
+                .replace(/^ERROR: /, '')
+            ),
             'err'
           );
           return;
         }
         if (n > 90) {
-          banner('The service did not start. Log: /media/developer/cytv-setup.log on the TV. ' + t.split('\n').pop(), 'err');
+          banner(
+            t('The service did not start. Log: %s on the TV.').replace('%s', '/media/developer/cytv-setup.log') +
+              ' ' +
+              tail.split('\n').pop(),
+            'err'
+          );
           return;
         }
-        if (t) banner('Setting up\u2026 ' + t.split('\n').pop(), 'work');
+        if (tail) banner(t('Setting up\u2026 %s').replace('%s', tail.split('\n').pop()), 'work');
         setTimeout(function () {
           waitUp(n + 1);
         }, 2000);

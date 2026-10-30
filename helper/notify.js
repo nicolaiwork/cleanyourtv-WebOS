@@ -4,6 +4,7 @@ const luna = require('./luna'),
   fetch = require('./fetch'),
   web = require('./web');
 const { URL } = require('./netcompat');
+const { language } = require('./config');
 
 const images = new Map(); // id -> {type, buf}; kept in memory, newest few only
 let seq = 0;
@@ -24,7 +25,7 @@ async function fetchImage(url) {
 // "topui" windows sit above every app and, unlike "overlay" ones, leave the remote with the app underneath (see tvprofile.js)
 const launch = params => luna('luna://com.webos.applicationManager/launch', { id: 'com.cleanyourtv.notify', params });
 
-async function show(b, internal) {
+async function show(b, internal, config) {
   // the voice function's own look; not available to network senders
   const kind = internal && /^(listening|thinking|answer)$/.test(b.kind) ? b.kind : '';
   const p = {
@@ -36,6 +37,9 @@ async function show(b, internal) {
   if (kind) {
     p.kind = kind;
     p.question = String(b.question || '').slice(0, 300);
+    // the voice card's own words in the language chosen in the launcher (the page follows the TV's otherwise)
+    const lang = config ? language(config.get()) : '';
+    if (lang) p.lang = lang;
   }
   if (b.image) {
     try {
@@ -65,7 +69,12 @@ async function handle(req, res, u, body) {
   web.notFound(res);
 }
 
-// ctx is not needed: this part keeps its own state
-const create = (/** @type {any} */ _ctx) => ({ name: 'notify', prefix: '/api/notify', handle, show });
+// ctx.config: the language of the voice cards
+const create = (/** @type {any} */ ctx) => ({
+  name: 'notify',
+  prefix: '/api/notify',
+  handle,
+  show: (/** @type {any} */ b, /** @type {boolean} */ internal) => show(b, internal, ctx && ctx.config),
+});
 
 module.exports = { create, handle, show };

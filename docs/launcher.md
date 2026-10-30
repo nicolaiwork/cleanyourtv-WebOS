@@ -10,7 +10,7 @@ same on every supported webOS version.
 In this fork Home opens on something to watch (it replaced the dock and app grid):
 
 - **The clock** and date, top left. There are no buttons at the top: Search is in Films & Series, the Inputs list is on the
-  remote's Input key (the [Inputs picker](input-key.md)), and Customise is at the bottom of **All apps**.
+  remote's Input key (the [Inputs picker](input-key.md)), and everything else is under **Settings**, the cog at the end of the strip.
 - **A Trending title.** One film from [Films & Series](vod.md)' Trending row over its backdrop, with its year, length,
   genres, rating and description, and three buttons: **Play** (or **Resume** with the time left, when you started it),
   **More info** (its page in Films & Series) and **+** (My list). Every 15 seconds it slides to the next of the first ten
@@ -23,7 +23,7 @@ In this fork Home opens on something to watch (it replaced the dock and app grid
   last, each with the programme on now, its times, how far it is and what follows (between two programmes: the next one and when
   it starts). OK tunes the channel.
 - **The strip.** Live TV and Films & Series, then up to six apps or inputs you put on Home, the other inputs on Home, and
-  **All apps** (every app that is not hidden, in the order chosen in Customise, then **Customise**).
+  a cog for **Settings** (with **All apps** as its first row).
 
 When Films & Series is not set up or its server cannot be reached, the top shows the channel you watched last with a
 **Watch** button instead, and Continue watching is left out. With Live TV switched off there are no channel cards and
@@ -35,10 +35,11 @@ Continue watching uses the whole width. Home appears at once from what it showed
 |---|---|
 | Play the Trending title, continue a title, tune a channel, open an app | OK |
 | Back from a title opened on Home | Back (from the player to the title's page, then Home) |
+| Every app | **Settings** > **All apps** |
 | App options (move, remove from Home, hide) | Hold OK on an app in the strip or in All apps |
-| Customise | **All apps**, then **Customise** at the bottom |
+| Settings (what Home shows, language, clock, order) | The cog, the last tile of the strip |
 | Switch input | The remote's Input key |
-| Put an input on Home | Customise > **Inputs on Home**, or hold OK on it in the Inputs picker |
+| Put an app or an input on Home | Settings > **Apps on Home** / **Inputs on Home**, or hold OK on an input in the Inputs picker |
 | Close running apps | Back on the home screen |
 
 Up or Down into the Trending title always lands on Play. The Home key brings the focus back to Play. The Magic Remote pointer
@@ -57,17 +58,20 @@ system apps are never in it. The list is read when it opens and closes when you 
 
 ![Running apps](screenshots/running.jpg)
 
-## Customise
+## Settings
 
-![Customise menu](screenshots/customise.jpg)
+**Settings** is the cog at the end of the strip. Each row shows its current value:
 
-**Customise** (at the bottom of **All apps**) holds:
-
-- **Inputs on Home**: every HDMI input, with **On Home** next to the ones in the strip; OK puts an input on Home or takes it off,
-- **hidden apps** (show them again),
-- the **app order** (most used first, or A to Z),
-- the **clock** format (automatic, 12 or 24 hour),
-- **Reset customisation**.
+- **All apps**: every app that is not hidden, as a grid of icons in the chosen order. OK opens an app; holding OK gives its
+  options.
+- **Apps on Home**: every app, with a tick on the ones in the strip; OK puts an app on Home (while there is room) or takes it off.
+- **Inputs on Home**: every HDMI input, with **On Home** next to the ones in the strip; OK puts an input on Home or takes it off.
+- **Hidden apps**: OK shows one again.
+- **Language**: **Follow the TV**, **Dansk** or **English** (see [Language](#language)).
+- **Clock**: automatic, 12 or 24 hour.
+- **App order**: most used first, or A to Z.
+- **More in the CleanYourTV app**: opens the [manager](manager.md) (theme, Live TV, voice, notifications, updates).
+- **Reset Home...**: puts the strip, hidden apps, order and clock back to the start after asking; the language stays.
 
 The strip holds up to six apps or inputs after Live TV and Films & Series. Hold OK on an app (in the strip or in **All apps**) and
 choose **Add to Home**, **Move left**, **Move right**, **Remove from Home** or **Hide app**.
@@ -79,7 +83,7 @@ which shows HDMI inputs by the names LG shows, with what is connected and a mark
 
 ### An input on Home
 
-In Customise, **Inputs on Home** lists every HDMI input; OK puts one on Home or takes it off again, and the menu stays open so
+In Settings, **Inputs on Home** lists every HDMI input; OK puts one on Home or takes it off again, and the menu stays open so
 you can choose several. The input then shows in the strip after the apps, with the HDMI symbol, the name the TV gives it (for
 example the name of the connected console) and a dot when something is connected; with nothing connected it is dimmed and still
 switches to it. OK switches to the input; holding OK on it offers **Remove from Home**, which is also in the Inputs list.
@@ -98,7 +102,13 @@ connector) have their own, drawn like the apps' icons: one solid mark on a dark 
 
 ## Language
 
-Menus follow the TV's language: English, Dutch, German, French and Spanish. Home's new texts and Films & Series are in English.
+Menus follow the TV's language: English, Dutch, German, French, Spanish and Danish. Home and Films & Series are in English and
+Danish (in the other languages they stay English). **Settings > Language** can choose **Dansk** or **English** instead of the TV's
+language, for example Danish on a TV whose own menus are in English; the date and the clock follow the choice too. The choice is kept by
+the service (`language` in `config.json`), so the Inputs picker, the voice cards and the manager follow it as well; Home redraws
+itself in the new language at once, the manager the next time it reads its status. On a Danish TV that includes the parts that come from the curator: its row titles
+(Trending now, Top rated…) and TMDB's genre names are translated on the TV, and an episode without a name of its own says
+"Afsnit 3". The Inputs picker and the voice cards follow the language as well, and so does the [manager](manager.md).
 
 ## Themes
 

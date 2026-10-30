@@ -134,7 +134,7 @@ function filmText(it) {
   /* (the title's size is set by heroText, from its height) */
   if (it.year) facts.push('<span>' + esc(it.year) + '</span>');
   if (len) facts.push('<span>' + esc(len) + '</span>');
-  if (it.genres && it.genres.length) facts.push('<span>' + esc(it.genres.slice(0, 2).join(', ')) + '</span>');
+  if (it.genres && it.genres.length) facts.push('<span>' + esc(it.genres.slice(0, 2).map(t).join(', ')) + '</span>');
   if (it.rating) facts.push('<b>' + esc(it.rating) + '</b>');
   var name = it.label || it.name || '';
   return (
@@ -376,11 +376,10 @@ function rebuild() {
     return d;
   });
   var all = document.createElement('div');
-  all.className = 'si ap fo';
-  all._k = 'strip:all';
-  all.innerHTML = svg('grid') + '<span></span>';
-  all.lastChild.textContent = t('All apps');
-  all._run = allAppsMenu;
+  all.className = 'si ap cog fo'; /* Settings: the cog alone */
+  all._k = 'strip:settings';
+  all.innerHTML = svg('gear');
+  all._run = settingsMenu;
   hit(all);
   row.appendChild(all);
   stripEls.push(all);

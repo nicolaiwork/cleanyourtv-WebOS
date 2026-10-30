@@ -2,6 +2,7 @@
 //   config.get()                 a copy of everything
 //   config.options()             {debloat, inputKey, liveTv} with their defaults
 //   config.keys()                the learned remote buttons with their defaults
+//   language(config.get())       the language chosen in the launcher ('da', 'en'), or '' for the TV's
 //   config.update(source, fn)    fn changes a copy, which is then written at once (atomically). The read, the change and the write
 //                                happen in one go, so two parts of the service can never overwrite each other's settings.
 // Every change of an option, a learned key or the Input-key mode is logged with its source ("manager", "launcher", "setup", ...),
@@ -12,7 +13,9 @@ const P = require('./paths');
 const OPTIONS = { debloat: true, inputKey: true, liveTv: true };
 const KEYS = { input: '', home: '', voice: '', guide: '', learned: false };
 // what the launcher saves with POST /api/config; everything else belongs to the service and the manager
-const LAUNCHER_KEYS = ['dock', 'hidden', 'sort', 'clock', 'topbar'];
+const LAUNCHER_KEYS = ['dock', 'hidden', 'sort', 'clock', 'topbar', 'language'];
+// the language of the launcher, the manager, the picker and the voice cards: the TV's, or one chosen in the launcher's Settings
+const LANGUAGES = ['auto', 'da', 'en'];
 
 // file: config.json; opts.log(line) for the change log; opts.memory: keep the settings in memory instead (tests)
 function create(file, opts) {
@@ -38,6 +41,7 @@ function create(file, opts) {
     options: Object.assign({}, OPTIONS, c.options),
     keys: Object.assign({}, KEYS, c.keys),
     picker: { mode: (c.picker || {}).mode },
+    launcher: { language: c.language || 'auto' },
   });
   function report(source, before, after) {
     const a = watched(before),
@@ -74,4 +78,7 @@ const main = () => shared || (shared = create(P.CONF));
 // settings kept in memory, for the tests
 const memory = (initial, log) => create('', { memory: initial || {}, log: log || (() => {}) });
 
-module.exports = { create, main, memory, OPTIONS, KEYS, LAUNCHER_KEYS };
+// the chosen language ('da', 'en'), or '' to follow the TV's
+const language = c => (LANGUAGES.indexOf(c && c.language) > 0 ? c.language : '');
+
+module.exports = { create, main, memory, OPTIONS, KEYS, LAUNCHER_KEYS, LANGUAGES, language };

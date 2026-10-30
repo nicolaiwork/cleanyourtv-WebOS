@@ -63,53 +63,51 @@ function draw() {
     return;
   }
   if (view === 'notifyapi') {
-    $('sub').textContent = 'Network notifications';
+    $('sub').textContent = t('Network notifications');
     return;
   }
   if (view === 'models') {
-    $('sub').textContent = 'Choose the model that answers';
+    $('sub').textContent = t('Choose the model that answers');
     return;
   }
   if (view === 'agents') {
-    $('sub').textContent = 'Choose the Home Assistant agent';
+    $('sub').textContent = t('Choose the Home Assistant agent');
     return;
   }
   if (view === 'channel') {
-    $('sub').textContent = 'Where updates come from';
+    $('sub').textContent = t('Where updates come from');
     return;
   }
   if (view === 'livetv') {
-    $('sub').textContent = 'Live TV: your own playlist';
+    $('sub').textContent = t('Live TV: your own playlist');
     return;
   }
   if (view === 'confirm-live-reset') {
-    $('sub').textContent = 'Remove the playlist?';
+    $('sub').textContent = t('Remove the playlist?');
     return;
   }
   if (view === 'themeopts') {
-    $('sub').textContent = 'Theme options';
+    $('sub').textContent = t('Theme options');
     return;
   }
   if (view === 'theme') {
-    $('sub').textContent = 'Choose how Home looks. The change shows the next time you open Home.';
+    $('sub').textContent = t('Choose how Home looks. The change shows the next time you open Home.');
     return;
   }
   if (view === 'accent') {
-    $('sub').textContent = 'The colour of the focus ring and highlights';
+    $('sub').textContent = t('The colour of the focus ring and highlights');
     return;
   }
   if (view === 'voice') {
     var vv = vo || {},
       ls = vv.last
         ? vv.last.text
-          ? 'Last heard: \u201C' +
-            vv.last.text +
-            '\u201D' +
+          ? t('Last heard: \u201C%s\u201D').replace('%s', vv.last.text) +
             (vv.last.ms ? ' (' + (vv.last.ms / 1000).toFixed(1) + ' s)' : '') +
-            (vv.last.error ? '\nNot sent: ' + vv.last.error : '')
-          : 'Last try: ' + vv.last.state + (vv.last.error ? '\n' + vv.last.error : '')
+            (vv.last.error ? '\n' + t('Not sent: %s').replace('%s', vv.last.error) : '')
+          : t('Last try: %s').replace('%s', t(vv.last.state)) + (vv.last.error ? '\n' + vv.last.error : '')
         : '';
-    $('sub').textContent = 'Voice \u00B7 ' + (vv.engine || '') + (ls ? '\n' + ls : '');
+    $('sub').textContent = t('Voice') + ' \u00B7 ' + (vv.engine || '') + (ls ? '\n' + ls : '');
     $('sub').style.whiteSpace = 'pre-line';
     if (inf) {
       var b2 = document.createElement('b');
@@ -131,23 +129,23 @@ function draw() {
     ie.appendChild(document.createTextNode(inf.d));
   }
   if (view === 'inputkey') {
-    $('sub').textContent = 'Input key';
+    $('sub').textContent = t('Input key');
     return;
   }
   if (view === 'confirm-home' || view === 'confirm-uninstall') {
-    $('sub').textContent = view === 'confirm-uninstall' ? 'Remove CleanYourTV?' : 'Switch Home?';
+    $('sub').textContent = view === 'confirm-uninstall' ? t('Remove CleanYourTV?') : t('Switch Home?');
     return;
   }
   if (!offline && st) {
     var m = [];
-    m.push('Launcher ' + st.frontend.version + ' · service ' + st.service.version);
-    if (st.checkError) m.push('Updates: ' + st.checkError);
-    else if (st.release) m.push('Latest release ' + st.release.version);
+    m.push(t('Launcher %s · service %s').replace('%s', st.frontend.version).replace('%s', st.service.version));
+    if (st.checkError) m.push(t('Updates: %s').replace('%s', st.checkError));
+    else if (st.release) m.push(t('Latest release %s').replace('%s', st.release.version));
     $('sub').textContent = m.join('\n');
     $('sub').style.whiteSpace = 'pre-line';
   } else
     $('sub').textContent = offline
-      ? 'The service is not running. Set it up to replace LG’s Home, take over the Input key and keep everything up to date.'
+      ? t('The service is not running. Set it up to replace LG’s Home, take over the Input key and keep everything up to date.')
       : '';
 }
 function next(dir) {

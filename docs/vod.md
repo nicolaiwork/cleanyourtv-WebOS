@@ -33,7 +33,8 @@ The screen opens on the tab it was left on (also after a reboot, kept in the lau
 ## Rows
 
 Above the rows, the focused title's name, year, rating, length, genres and what it is about, over its backdrop (which fades in once
-the focus rests). Names and overviews are TMDB's Danish ones where TMDB has them.
+the focus rests). Names and overviews are TMDB's Danish ones where TMDB has them. On a Danish TV the screen itself is Danish too,
+with the curator's row titles and TMDB's genres translated on the TV ([language](launcher.md#language)).
 
 - **Continue watching**: half-watched films, and series with an episode played in the last 90 days. A card shows what is left
   (`S02E05 · 12 min left`) or the episode that comes next. A series whose last episode was watched leaves the row.

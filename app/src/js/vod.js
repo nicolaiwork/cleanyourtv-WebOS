@@ -36,6 +36,8 @@ var VOD = (function () {
   var S = { q: '', results: [], fi: 0, els: [] };
   var KINDS = ['films', 'series'];
   var TABS = ['Films', 'Series', 'My list', 'Search'];
+  /* the end of a Continue watching line ("12 min left"), left off on a narrow card */
+  var LEFT = new RegExp(' ' + t('%s left').replace('%s', '').trim() + '$');
   var LIST = 2,
     FIND = 3;
   /* the My list tab: films and series together, newest first, as a grid */
@@ -114,12 +116,14 @@ var VOD = (function () {
   function drawTabs() {
     var h = '';
     for (var i = 0; i < TABS.length; i++)
-      h += '<div class="vtab' + (i === tab ? ' on' : '') + (area === 'tabs' && i === ti ? ' f' : '') + '">' + TABS[i] + '</div>';
+      h += '<div class="vtab' + (i === tab ? ' on' : '') + (area === 'tabs' && i === ti ? ' f' : '') + '">' + esc(t(TABS[i])) + '</div>';
     if (hasSort())
       h +=
         '<div class="vsort' +
         (area === 'sort' ? ' f' : '') +
-        '">Sort: <b>' +
+        '">' +
+        esc(t('Sort:')) +
+        ' <b>' +
         esc(VL.sortLabel(sortOf(KINDS[tab]) || 'added', sortsOffered())) +
         '</b></div>';
     $('vd-top').innerHTML = h;
@@ -135,8 +139,8 @@ var VOD = (function () {
       var keep = { row: rows[ri] ? VL.rowKey(rows[ri]) : '', fi: {} };
       keepMem();
       /* the category rows again in the new order; Continue watching, My list and Recently added stay as they are */
-      var t = T[kind];
-      t.box.parentNode.removeChild(t.box);
+      var tb = T[kind];
+      tb.box.parentNode.removeChild(tb.box);
       delete T[kind];
       showRows(keep);
       drawTabs();
@@ -192,7 +196,7 @@ var VOD = (function () {
       var sb = document.createElement('div');
       sb.className = 'vsub';
       sb.textContent =
-        it.sub.indexOf('·') > 0 ? it.sub.replace(/ left$/, '') : it.sub; /* the card is narrow; the details above say it in full */
+        it.sub.indexOf('·') > 0 ? it.sub.replace(LEFT, '') : it.sub; /* the card is narrow; the details above say it in full */
       d.appendChild(sb);
     }
     var mine = itemOf(kind, it.id),
@@ -215,18 +219,18 @@ var VOD = (function () {
     var items = list.map(function (x) {
       return { id: x.id, label: x.name, poster: x.poster, sub: VL.continueSub(x), prog: VL.continueProgress(x) };
     });
-    return { title: 'Continue watching', kind: kind, src: 'continue', items: items, total: items.length, done: true };
+    return { title: t('Continue watching'), kind: kind, src: 'continue', items: items, total: items.length, done: true };
   }
   function listRow(kind) {
     var items = VL.myList(ST.list, kind === 'films' ? 'film' : 'show').map(function (x) {
       return { id: x.id, label: x.name, poster: x.poster };
     });
-    return { title: 'My list', kind: kind, src: 'mylist', items: items, total: items.length, done: true };
+    return { title: t('My list'), kind: kind, src: 'mylist', items: items, total: items.length, done: true };
   }
   function becauseRow(kind) {
     var b = BEC[kind];
     return {
-      title: b ? 'Because you watched ' + b.name : '',
+      title: b ? t('Because you watched %s').replace('%s', b.name) : '',
       kind: kind,
       src: 'because',
       items: b ? b.items : [],
@@ -277,9 +281,9 @@ var VOD = (function () {
           CARDS[kind][c.id] = c;
         });
         if (o.on && tab === LIST) showList();
-        var t = T[kind];
-        if (!t) return;
-        t.rows.forEach(function (rw) {
+        var tb = T[kind];
+        if (!tb) return;
+        tb.rows.forEach(function (rw) {
           if (!isPersonal(rw)) return;
           rw.items.forEach(function (it) {
             merge(it, CARDS[kind][it.id]);
@@ -334,7 +338,7 @@ var VOD = (function () {
     for (var k in T) T[k].box.style.display = k === kind ? '' : 'none';
     rows = T[kind].rows;
     ri = T[kind].ri;
-    if (!rows.length) msg('<b>Nothing here yet</b>Tick some categories on the curator page.');
+    if (!rows.length) msg('<b>' + esc(t('Nothing here yet')) + '</b>' + esc(t('Tick some categories on the curator page.')));
     else msg('');
     drawRows();
   }
@@ -343,34 +347,34 @@ var VOD = (function () {
     if (HOME[kind])
       HOME[kind].forEach(function (r) {
         if (r.path)
-          list.push({ title: r.title, kind: kind, src: 'cat', cid: String(r.id).replace(/^cat-/, ''), items: [], total: r.count });
+          list.push({ title: t(r.title), kind: kind, src: 'cat', cid: String(r.id).replace(/^cat-/, ''), items: [], total: r.count });
         else if (r.items && r.items.length)
-          list.push({ title: r.title, kind: kind, src: 'home', cid: r.id, items: r.items, total: r.items.length, done: true });
+          list.push({ title: t(r.title), kind: kind, src: 'home', cid: r.id, items: r.items, total: r.items.length, done: true });
       });
     else {
-      list.push({ title: 'Recently added', kind: kind, src: 'recent', items: [], total: -1 });
+      list.push({ title: t('Recently added'), kind: kind, src: 'recent', items: [], total: -1 });
       ((lib && lib[kind]) || []).forEach(function (c) {
         if (c.count > 0) list.push({ title: c.name, kind: kind, src: 'cat', cid: c.id, items: [], total: c.count, sort: sortOf(kind) });
       });
     }
     needCards(kind);
     loadBecause(kind);
-    var t = (T[kind] = { rows: list, ri: 0, box: document.createElement('div') });
-    t.box.className = 'vbox';
-    t.rows.forEach(function (rw) {
-      t.box.appendChild(rowEl(rw));
+    var tb = (T[kind] = { rows: list, ri: 0, box: document.createElement('div') });
+    tb.box.className = 'vbox';
+    tb.rows.forEach(function (rw) {
+      tb.box.appendChild(rowEl(rw));
     });
     /* the same row after a new sort (a row loads far enough to reach its title, at most 12 pages) */
-    t.ri = VL.recall(keep, t.rows);
-    t.rows.forEach(function (rw) {
+    tb.ri = VL.recall(keep, tb.rows);
+    tb.rows.forEach(function (rw) {
       rw.want = Math.min(rw.want || 0, PAGE * 12);
     });
-    $('vd-rows').appendChild(t.box);
+    $('vd-rows').appendChild(tb.box);
   }
   /* a row still on one of the tabs (an answer can come after the screen was left) */
   function alive(rw) {
-    var t = T[rw.kind];
-    return !!t && t.rows.indexOf(rw) >= 0;
+    var tb = T[rw.kind];
+    return !!tb && tb.rows.indexOf(rw) >= 0;
   }
   function rowEl(rw) {
     rw.fi = rw.fi || 0;
@@ -404,7 +408,7 @@ var VOD = (function () {
         if (!alive(rw)) return; /* the screen was left meanwhile; switching tabs or opening a title doesn't drop the answer */
         rw.items = rw.items.concat(list);
         if (rw.src === 'recent' || list.length < PAGE || (rw.total > 0 && rw.items.length >= rw.total)) rw.done = true;
-        if (!rw.items.length) rw.strip.innerHTML = '<div class="vempty">Nothing here.</div>';
+        if (!rw.items.length) rw.strip.innerHTML = '<div class="vempty">' + esc(t('Nothing here.')) + '</div>';
         if (rw.want) {
           if (rw.want >= rw.items.length && !rw.done) return fill(rw); /* the next page, towards where the row was left */
           rw.fi = Math.min(rw.want, rw.items.length - 1);
@@ -416,7 +420,7 @@ var VOD = (function () {
         rw.loading = false;
         if (!alive(rw)) return;
         rw.done = true;
-        rw.strip.innerHTML = '<div class="vempty">' + esc('Could not load this row: ' + e.message) + '</div>';
+        rw.strip.innerHTML = '<div class="vempty">' + esc(t('Could not load this row: %s').replace('%s', e.message)) + '</div>';
       }
     );
   }
@@ -565,7 +569,7 @@ var VOD = (function () {
     if (it.year) a.push(esc(it.year));
     if (it.rating) a.push('<b>★ ' + esc(it.rating) + '</b>');
     if (it.runtime && kind === 'films') a.push(VL.fmtLength(it.runtime * 60));
-    if (it.genres && it.genres.length) a.push(esc(it.genres.join(', ')));
+    if (it.genres && it.genres.length) a.push(esc(it.genres.map(t).join(', ')));
     return a.join('  ·  ');
   }
   /* new elements rather than new text in old ones: webOS 5's compositor can keep showing the old text */
@@ -658,7 +662,7 @@ var VOD = (function () {
     });
     if (!L.items.length) {
       if (area === 'list') area = 'tabs';
-      msg('<b>My list is empty</b>Add films and series with + My list on their page.');
+      msg('<b>' + esc(t('My list is empty')) + '</b>' + esc(t('Add films and series with + My list on their page.')));
       showInfo(null);
       drawTabs();
     } else msg('');
@@ -713,16 +717,16 @@ var VOD = (function () {
       drawSearch();
       return;
     }
-    msg('Searching…');
+    msg(esc(t('Searching…')));
     vget('/vod/search.json', { q: q }).then(
       function (list) {
-        msg(list.length ? '' : '<b>No titles found</b>' + esc(q));
+        msg(list.length ? '' : '<b>' + esc(t('No titles found')) + '</b>' + esc(q));
         S.results = list;
         area = list.length ? 'results' : 'search';
         drawSearch();
       },
       function (e) {
-        msg('<b>Search failed</b>' + esc(e.message));
+        msg('<b>' + esc(t('Search failed')) + '</b>' + esc(e.message));
       }
     );
   }
@@ -784,10 +788,18 @@ var VOD = (function () {
   function facts(d) {
     var a = [];
     if (d.year) a.push(esc(d.year));
-    if (d.genres && d.genres.length) a.push(esc(d.genres.slice(0, 3).join(', ')));
-    else if (d.genre) a.push(esc(d.genre));
+    if (d.genres && d.genres.length) a.push(esc(d.genres.slice(0, 3).map(t).join(', ')));
+    else if (d.genre)
+      a.push(
+        esc(
+          d.genre
+            .split(/\s*,\s*/)
+            .map(t)
+            .join(', ')
+        )
+      );
     if (d.duration_secs) a.push(VL.fmtLength(d.duration_secs));
-    if (d.seasons && d.seasons.length) a.push(d.seasons.length + (d.seasons.length === 1 ? ' season' : ' seasons'));
+    if (d.seasons && d.seasons.length) a.push(esc(t(d.seasons.length === 1 ? '%s season' : '%s seasons').replace('%s', d.seasons.length)));
     if (d.rating) a.push('<b>★ ' + esc(d.rating) + '</b>');
     return a.join('  ·  ');
   }
@@ -827,7 +839,9 @@ var VOD = (function () {
         (c.poster ? '<img src="' + esc(img(c.poster)) + '" alt="">' : '') +
         '</div><div class="dmeta"><h1>' +
         esc(c.label || c.name) +
-        '</h1><div class="facts">Loading…</div></div>'
+        '</h1><div class="facts">' +
+        esc(t('Loading…')) +
+        '</div></div>'
     );
     loadSimilar(g); /* at the same time as the details, not after them */
     vget(kind === 'films' ? '/vod/film/' + c.id + '.json' : '/vod/show/' + c.id + '.json').then(
@@ -853,7 +867,7 @@ var VOD = (function () {
           '<div class="dmeta"><h1>' +
             esc(c.label || c.name) +
             '</h1><div class="facts">' +
-            esc('Could not load the details: ' + e.message) +
+            esc(t('Could not load the details: %s').replace('%s', e.message)) +
             '</div></div>'
         );
       }
@@ -881,35 +895,34 @@ var VOD = (function () {
     if (D.kind === 'films') {
       var at = VL.resumeAt(itemOf('films', d.id));
       if (at) {
-        out.push({ label: '▶  Resume from ' + VL.clock(at), play: { at: at } });
-        out.push({ label: 'From the start', play: { at: 0 } });
-      } else out.push({ label: '▶  Play', play: { at: 0 } });
+        out.push({ label: '▶  ' + t('Resume from %s').replace('%s', VL.clock(at)), play: { at: at } });
+        out.push({ label: t('From the start'), play: { at: 0 } });
+      } else out.push({ label: '▶  ' + t('Play'), play: { at: 0 } });
     } else {
       var nx = VL.nextEpisode(d.seasons, ST.items);
       if (nx) {
         var started = !!itemOf('series', nx.ep.id) || nx.resume > 0 || anyPlayed(d);
         out.push({
           label: nx.again
-            ? '▶  Watch again from ' + VL.epCode(nx.season, nx.ep.num)
+            ? '▶  ' + t('Watch again from %s').replace('%s', VL.epCode(nx.season, nx.ep.num))
             : '▶  ' +
-              (started ? 'Continue ' : 'Play ') +
-              VL.epCode(nx.season, nx.ep.num) +
+              t(started ? 'Continue %s' : 'Play %s').replace('%s', VL.epCode(nx.season, nx.ep.num)) +
               (nx.resume ? '  ·  ' + VL.clock(nx.resume) : ''),
           play: { ep: nx.ep, season: nx.season, at: nx.resume },
         });
       }
     }
     var mine = !!ST.list[listKey()];
-    out.push({ label: mine ? '✓  My list' : '+  My list', small: true, run: toggleList });
+    out.push({ label: (mine ? '✓  ' : '+  ') + t('My list'), small: true, run: toggleList });
     if (d.trailer && /^[\w-]{6,20}$/.test(d.trailer))
       out.push({
-        label: 'Trailer',
+        label: t('Trailer'),
         small: true,
         run: function () {
           openTrailer(d.trailer);
         },
       });
-    out.push({ label: 'More', small: true, run: openMenu });
+    out.push({ label: t('More'), small: true, run: openMenu });
     return out;
   }
   /* ---------- what can be done to a title by hand: My list, watched or not, off Continue watching ---------- */
@@ -932,12 +945,17 @@ var VOD = (function () {
       poster: posterOf(d),
     }).then(changed, changed);
   }
+  /* an episode's name; one without a name of its own is "Episode 3" from the curator, said in the TV's language */
+  function epName(ep) {
+    var l = String(ep.label || ep.title || '');
+    return /^Episode( \d+)?$/.test(l) ? t('Episode') + l.slice(7) : l;
+  }
   /* an episode as the service keeps it, with the one after it (null after the show's last) */
   function epItem(d, season, ep) {
     return {
       kind: 'episode',
       id: ep.id,
-      name: String(ep.label || ep.title || '').slice(0, 200),
+      name: epName(ep).slice(0, 200),
       poster: posterOf(d),
       show: { id: d.id, name: String(d.label || d.name || '').slice(0, 200), poster: posterOf(d) },
       season: season,
@@ -975,13 +993,13 @@ var VOD = (function () {
       out.push(
         it && it.watched
           ? {
-              label: 'Mark as unwatched',
+              label: t('Mark as unwatched'),
               run: function () {
                 mark([film], false);
               },
             }
           : {
-              label: 'Mark as watched',
+              label: t('Mark as watched'),
               run: function () {
                 mark([film], true);
               },
@@ -994,17 +1012,17 @@ var VOD = (function () {
       d.seasons.forEach(function (x, i) {
         all = all.concat(seasonItems(i));
       });
-      var name = 'season ' + d.seasons[si].season;
+      var sn = d.seasons[si].season;
       out.push(
         allWatched(sItems)
           ? {
-              label: 'Mark ' + name + ' as unwatched',
+              label: t('Mark season %s as unwatched').replace('%s', sn),
               run: function () {
                 mark(sItems, false);
               },
             }
           : {
-              label: 'Mark ' + name + ' as watched',
+              label: t('Mark season %s as watched').replace('%s', sn),
               run: function () {
                 mark(sItems, true);
               },
@@ -1014,13 +1032,13 @@ var VOD = (function () {
         out.push(
           allWatched(all)
             ? {
-                label: 'Mark every season as unwatched',
+                label: t('Mark every season as unwatched'),
                 run: function () {
                   mark(all, false);
                 },
               }
             : {
-                label: 'Mark every season as watched',
+                label: t('Mark every season as watched'),
                 run: function () {
                   mark(all, true);
                 },
@@ -1029,12 +1047,12 @@ var VOD = (function () {
     }
     if (inContinue())
       out.push({
-        label: 'Remove from Continue watching',
+        label: t('Remove from Continue watching'),
         run: function () {
           api('/api/vod/state', { op: 'hide', kind: D.kind === 'films' ? 'film' : 'show', id: d.id }).then(changed, changed);
         },
       });
-    out.push({ label: 'Close', run: function () {} });
+    out.push({ label: t('Close'), run: function () {} });
     return out;
   }
   function openMenu() {
@@ -1076,7 +1094,7 @@ var VOD = (function () {
     area = 'trailer';
     $('vd-trailer').classList.add('on');
     $('vd-tspin').classList.add('on');
-    trHint('OK pauses  ·  Left / Right skips  ·  Back returns to the title');
+    trHint(t('OK pauses  ·  Left / Right skips  ·  Back returns to the title'));
     /* nothing playing after 15 s (YouTube unreachable): its app instead */
     TR.failT = setTimeout(function () {
       if (TR && !TR.playing) trailerApp();
@@ -1144,7 +1162,7 @@ var VOD = (function () {
     if (isBack(k)) return backFromTrailer();
     if (k === 13) {
       trSend({ c: 'toggle' });
-      trHint('OK plays / pauses  ·  Back returns to the title');
+      trHint(t('OK plays / pauses  ·  Back returns to the title'));
     } else if (k === 37 || k === 39) trSend({ c: 'seek', d: k === 37 ? -10 : 10 });
   }
 
@@ -1195,8 +1213,8 @@ var VOD = (function () {
           '<div class="vseason' +
           (i === D.si ? ' on' : '') +
           (D.group === 'season' && i === D.si ? ' f' : '') +
-          '">Season ' +
-          esc(s.season) +
+          '">' +
+          esc(t('Season %s').replace('%s', s.season)) +
           '</div>';
       });
       h += '</div><div class="veps">';
@@ -1216,7 +1234,7 @@ var VOD = (function () {
             '<div class="vtog' +
             (D.group === 'eptog' ? ' f' : '') +
             '">' +
-            (mine && mine.watched ? 'Mark unwatched' : 'Mark watched') +
+            esc(t(mine && mine.watched ? 'Mark unwatched' : 'Mark watched')) +
             '</div>';
         h +=
           '<div class="vep' +
@@ -1225,7 +1243,7 @@ var VOD = (function () {
           '"><div class="n">' +
           esc(ep.num || i + 1) +
           '</div><div class="l">' +
-          esc(ep.label || ep.title) +
+          esc(epName(ep)) +
           '</div>' +
           right +
           '</div>';
@@ -1237,7 +1255,9 @@ var VOD = (function () {
       h +=
         '<div class="vsim' +
         (D.group === 'sim' ? ' on' : '') +
-        '"><h2>More like this</h2><div class="vsstrip" style="transform:translateX(' +
+        '"><h2>' +
+        esc(t('More like this')) +
+        '</h2><div class="vsstrip" style="transform:translateX(' +
         -Math.max(0, D.mi - 2) * CARD +
         'px)">';
       for (var m = sw[0]; m < sw[1]; m++) {
@@ -1366,11 +1386,11 @@ var VOD = (function () {
   }
   /* the personal rows come, go or change in place: every other row keeps its position, and the focus stays on its row */
   function syncPersonal(kind) {
-    var t = T[kind],
+    var tb = T[kind],
       n0 = 0;
-    while (n0 < t.rows.length && isPersonal(t.rows[n0])) n0++;
-    var focus = t.rows[t.ri],
-      old = t.rows.slice(0, n0),
+    while (n0 < tb.rows.length && isPersonal(tb.rows[n0])) n0++;
+    var focus = tb.rows[tb.ri],
+      old = tb.rows.slice(0, n0),
       now = personalRows(kind).map(function (nw) {
         for (var i = 0; i < old.length; i++)
           if (old[i].src === nw.src) {
@@ -1383,18 +1403,18 @@ var VOD = (function () {
         return nw;
       });
     old.forEach(function (rw) {
-      if (now.indexOf(rw) < 0) t.box.removeChild(rw.el);
+      if (now.indexOf(rw) < 0) tb.box.removeChild(rw.el);
     });
-    var first = t.rows[n0] ? t.rows[n0].el : null;
+    var first = tb.rows[n0] ? tb.rows[n0].el : null;
     now.forEach(function (rw) {
-      t.box.insertBefore(rw.el, first);
+      tb.box.insertBefore(rw.el, first);
     });
-    t.rows = now.concat(t.rows.slice(n0));
-    var at = t.rows.indexOf(focus);
+    tb.rows = now.concat(tb.rows.slice(n0));
+    var at = tb.rows.indexOf(focus);
     if (at < 0 && focus) for (var j = 0; j < now.length; j++) if (now[j].src === focus.src) at = j; /* the same row, rebuilt */
-    t.ri = at >= 0 ? at : Math.min(t.ri, t.rows.length - 1);
-    if (t.ri < 0) t.ri = 0;
-    for (var r = 0; r < t.rows.length; r++) clearRow(t.rows[r]); /* redrawn with the new marks */
+    tb.ri = at >= 0 ? at : Math.min(tb.ri, tb.rows.length - 1);
+    if (tb.ri < 0) tb.ri = 0;
+    for (var r = 0; r < tb.rows.length; r++) clearRow(tb.rows[r]); /* redrawn with the new marks */
   }
 
   /* ---------- the player: one <video> per playback, created on play and removed on stop, so nothing holds a connection ---------- */
@@ -1432,7 +1452,7 @@ var VOD = (function () {
       cur = {
         kind: 'episode',
         id: spec.ep.id,
-        name: spec.ep.label || spec.ep.title || '',
+        name: epName(spec.ep),
         poster: posterOf(d),
         show: { id: d.id, name: d.label || d.name || '', poster: posterOf(d) },
         season: spec.season,
@@ -1485,9 +1505,13 @@ var VOD = (function () {
     if (on)
       setHtml(
         $('vd-early'),
-        '<b>▶  Next episode</b>' +
-          esc(VL.epCode(P.after.season, P.after.ep.num) + '  ·  ' + (P.after.ep.label || P.after.ep.title || '')) +
-          '<div class="small">OK plays it  ·  Down hides this</div>'
+        '<b>▶  ' +
+          esc(t('Next episode')) +
+          '</b>' +
+          esc(VL.epCode(P.after.season, P.after.ep.num) + '  ·  ' + epName(P.after.ep)) +
+          '<div class="small">' +
+          esc(t('OK plays it  ·  Down hides this')) +
+          '</div>'
       );
     player('vd-early', on);
   }
@@ -1551,7 +1575,13 @@ var VOD = (function () {
     release(true);
     setHtml(
       $('vd-pmsg'),
-      '<b>' + esc(P.cur.name) + "</b>This title can't be played on the TV" + ext + '.<div class="small">Press Back.</div>'
+      '<b>' +
+        esc(P.cur.name) +
+        '</b>' +
+        esc(t("This title can't be played on the TV%s.")).replace('%s', ext) +
+        '<div class="small">' +
+        esc(t('Press Back.')) +
+        '</div>'
     );
     player('vd-pmsg', true);
   }
@@ -1615,8 +1645,8 @@ var VOD = (function () {
     $('vd-bfill').style.transform = 'scaleX(' + (dur ? Math.min(1, pos / dur) : 0) + ')';
     $('vd-btime').textContent =
       VL.clock(pos) +
-      (dur ? ' / ' + VL.clock(dur) + '    ends at ' + VL.endsAt(Date.now(), Math.max(0, dur - pos)) : '') +
-      (v && v.paused && P.seek === null ? '    ❚❚ Paused' : '');
+      (dur ? ' / ' + VL.clock(dur) + '    ' + t('ends at %s').replace('%s', VL.endsAt(Date.now(), Math.max(0, dur - pos))) : '') +
+      (v && v.paused && P.seek === null ? '    ❚❚ ' + t('Paused') : '');
   }
   function showBar(ms) {
     P.barOn = true;
@@ -1672,11 +1702,13 @@ var VOD = (function () {
   }
   function drawNext() {
     $('vd-next').innerHTML =
-      '<div class="small">Next in ' +
-      P.nextN +
-      ' s</div><b>' +
-      esc(VL.epCode(P.next.season, P.next.ep.num) + '  ·  ' + (P.next.ep.label || P.next.ep.title)) +
-      '</b><div class="small">OK plays it now, Back stops</div>';
+      '<div class="small">' +
+      esc(t('Next in %s s').replace('%s', P.nextN)) +
+      '</div><b>' +
+      esc(VL.epCode(P.next.season, P.next.ep.num) + '  ·  ' + epName(P.next.ep)) +
+      '</b><div class="small">' +
+      esc(t('OK plays it now, Back stops')) +
+      '</div>';
   }
   function playNext() {
     var n = P.next;
@@ -1810,21 +1842,21 @@ var VOD = (function () {
         list.map(function (x) {
           return x.language;
         }),
-        'Audio'
+        t('Audio')
       );
       var stepA = function (d) {
         var i = (audioNow(list) + d + list.length) % list.length;
         setAudio(i);
         setPref('audio', LT.lang(list[i].language));
       };
-      it.push({ label: 'Audio', sub: names[audioNow(list)], step: stepA });
+      it.push({ label: t('Audio'), sub: names[audioNow(list)], step: stepA });
     }
     if (P.subs.length) {
       var subNames = LT.labels(
         P.subs.map(function (x) {
           return x.lang;
         }),
-        'Subtitles'
+        t('Subtitles')
       );
       var stepS = function (d) {
         var n = P.subs.length + 1,
@@ -1832,10 +1864,10 @@ var VOD = (function () {
         setSub(i);
         setPref('subs', i < 0 ? '' : LT.lang(P.subs[i].lang));
       };
-      it.push({ label: 'Subtitles', sub: P.sub < 0 ? 'Off' : subNames[P.sub], step: stepS });
+      it.push({ label: t('Subtitles'), sub: P.sub < 0 ? t('Off') : subNames[P.sub], step: stepS });
     }
-    if (!it.length) it.push({ label: 'No audio or subtitle choices', sub: '' });
-    it.push({ label: 'Close', sub: '', close: true });
+    if (!it.length) it.push({ label: t('No audio or subtitle choices'), sub: '' });
+    it.push({ label: t('Close'), sub: '', close: true });
     return it;
   }
   function drawMenu() {
@@ -1915,9 +1947,10 @@ var VOD = (function () {
   /* ---------- entering and leaving ---------- */
   o.enter = function () {
     o.on = true;
+    $('vd-q').placeholder = t('Search films and series');
     $('vd').classList.add('on');
     area = 'rows';
-    msg('Loading…');
+    msg(esc(t('Loading…')));
     Promise.all([
       api('/api/vod/status'),
       loadState(),
@@ -1977,7 +2010,7 @@ var VOD = (function () {
         wantFind = false;
         area = 'tabs';
         drawTabs();
-        msg('<b>The film library is not reachable</b>' + esc(e && e.message));
+        msg('<b>' + esc(t('The film library is not reachable')) + '</b>' + esc(e && e.message));
       }
     );
   };
@@ -2127,7 +2160,7 @@ var VOD = (function () {
     fromHome = true;
     $('vd').classList.add('on');
     area = 'details';
-    msg('Loading…');
+    msg(esc(t('Loading…')));
     var g = ++gen;
     Promise.all([
       api('/api/vod/status'),

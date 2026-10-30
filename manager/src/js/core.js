@@ -37,11 +37,14 @@ function api(p, body, ms) {
     x.open(body ? 'POST' : 'GET', API + p);
     x.timeout = ms || 30000;
     x.onload = function () {
+      var j;
       try {
-        res(JSON.parse(x.responseText));
+        j = JSON.parse(x.responseText);
       } catch (e) {
-        rej(e);
+        return rej(e);
       }
+      if (j && j.language) followLang(j.language); /* the status: the language chosen in the launcher's Settings */
+      res(j);
     };
     x.onerror = x.ontimeout = function () {
       rej(new Error('no answer'));
@@ -70,7 +73,7 @@ function launch(id, params) {
   } catch (e) {}
 }
 function onoff(v) {
-  return v ? 'On' : 'Off';
+  return v ? t('On') : t('Off');
 }
 function banner(text, cls) {
   var b = $('banner');

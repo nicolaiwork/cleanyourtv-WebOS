@@ -8,7 +8,7 @@ function run(path, body) {
       else poll();
     },
     function () {
-      banner('The service did not answer', 'err');
+      banner(t('The service did not answer'), 'err');
     }
   );
 }
@@ -20,7 +20,7 @@ function opt(o) {
       draw();
     },
     function () {
-      banner('The service did not answer', 'err');
+      banner(t('The service did not answer'), 'err');
     }
   );
 }
@@ -31,20 +31,20 @@ function poll() {
       st = s;
       var j = s.job || {};
       if (j.state === 'working') {
-        banner(j.message, 'work');
+        banner(tm(j.message), 'work');
         build();
         draw();
         pollT = setTimeout(poll, 1000);
       } else {
-        if (j.state === 'error') banner(j.message, 'err');
-        else if (j.state === 'done') banner(j.message, 'ok');
+        if (j.state === 'error') banner(tm(j.message), 'err');
+        else if (j.state === 'done') banner(tm(j.message), 'ok');
         else banner('');
         build();
         draw();
       }
     },
     function () {
-      banner('Waiting for the service…', 'work');
+      banner(t('Waiting for the service…'), 'work');
       pollT = setTimeout(poll, 2000);
     }
   );

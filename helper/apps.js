@@ -9,7 +9,7 @@ const fs = require('fs'),
 const P = require('./paths'),
   web = require('./web'),
   exec = require('./exec'),
-  { LAUNCHER_KEYS } = require('./config');
+  { LAUNCHER_KEYS, LANGUAGES } = require('./config');
 
 const HALF_LIFE = 30 * 24 * 3600 * 1000; // usage counts halve every 30 days
 const HOME = 'com.webos.app.home';
@@ -163,6 +163,7 @@ function create(ctx) {
     if (strs(b.hidden)) out.hidden = strs(b.hidden);
     if (b.sort === 'usage' || b.sort === 'alpha') out.sort = b.sort;
     if (['auto', '24', '12'].includes(b.clock)) out.clock = b.clock;
+    if (LANGUAGES.includes(b.language)) out.language = b.language;
     if (Array.isArray(b.topbar))
       out.topbar = b.topbar
         .slice(0, 12)

@@ -154,4 +154,18 @@ run(async () => {
   ok(VL.windowOf(0, 3, 12, 16).join() === '0,3' && VL.windowOf(100, 2489, 12, 16).join() === '88,116', 'window');
   ok(VL.windowOf(2488, 2489, 12, 16).join() === '2476,2489' && VL.windowOf(0, 0, 12, 16).join() === '0,0', 'window: clamped');
   ok(VL.epCode(1, 3) === 'S01E03' && VL.epCode(12, 104) === 'S12E104', 'episode code');
+
+  // on a Danish TV the page's t() (clock.js) gives the Danish words; English above is the same code without it
+  const da = { Date, Math, isFinite, window: {}, navigator: { language: 'da-DK' } };
+  vm.createContext(da);
+  vm.runInContext(fs.readFileSync(path.join(root, 'app', 'src', 'js', 'clock.js'), 'utf8') + '\n' + src + '\nthis.VL = VL;', da);
+  const DL = da.VL;
+  ok(DL.fmtLeft(3600) === '1 t 0 min tilbage' && DL.fmtLength(2520) === '42 min', 'Danish: time left and length');
+  ok(DL.epCode(1, 3) === 'S01E03', 'Danish: the episode code stays S01E03');
+  ok(
+    DL.continueSub({ ep: { season: 1, num: 3, watched: true, next: { season: 2, num: 1 } } }) === 'Næste: S02E01' &&
+      DL.continueSub({ ep: { season: 1, num: 3, pos: 600, dur: 2520 } }) === 'S01E03  ·  32 min tilbage',
+    'Danish: Continue watching lines'
+  );
+  ok(DL.sortLabel('name', ['added', 'name']) === 'A–Å' && DL.sortLabel('added', ['added']) === 'Nyeste', 'Danish: sort labels');
 });

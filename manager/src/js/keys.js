@@ -17,98 +17,120 @@ function closeKeys() {
   pop();
   load(true);
 }
-function kName(n) {
-  return n === 'input' ? 'Input' : n === 'voice' ? 'voice' : n === 'guide' ? 'Guide' : 'Home';
+/* whole sentences per key, so a translation does not have to fit a key name into one sentence */
+function kPress(n) {
+  return n === 'input'
+    ? t('Press the Input button now\u2026')
+    : n === 'voice'
+      ? t('Press the voice button now\u2026')
+      : n === 'guide'
+        ? t('Press the Guide button now\u2026')
+        : t('Press the Home button now\u2026');
+}
+function kGot(n, code) {
+  return (
+    n === 'input'
+      ? t('Input key learned: code %s.')
+      : n === 'voice'
+        ? t('Voice button learned: code %s.')
+        : n === 'guide'
+          ? t('Guide key learned: code %s.')
+          : t('Home key learned: code %s.')
+  ).replace('%s', code);
 }
 function kStep(n) {
   clearTimeout(kTimer);
   var k = (st && st.keys) || { input: '241', home: '' };
   if (n === 'input')
-    return kShow('The Input key.\nChoose Start, then press the Input button on your remote.', [
+    return kShow(t('The Input key.\nChoose Start, then press the Input button on your remote.'), [
       {
-        label: 'Start',
-        sub: k.inputIsDefault ? 'default: ' + k.input : 'learned: ' + k.input,
+        label: t('Start'),
+        sub: (k.inputIsDefault ? t('default: %s') : t('learned: %s')).replace('%s', k.input),
         fn: function () {
           kLearn('input');
         },
       },
       {
-        label: 'Skip',
+        label: t('Skip'),
         fn: function () {
           kStep('test');
         },
       },
       {
-        label: 'Clear',
-        sub: 'back to the default (241)',
+        label: t('Clear'),
+        sub: t('back to the default (%s)').replace('%s', '241'),
         dim: k.inputIsDefault,
         fn: function () {
           if (!k.inputIsDefault) kClear('input');
         },
       },
-      { label: 'Close', fn: closeKeys },
+      { label: t('Close'), fn: closeKeys },
     ]);
   if (n === 'home')
-    return kShow('The Home key (optional).\nChoose Start, then press the Home button on your remote.', [
+    return kShow(t('The Home key (optional).\nChoose Start, then press the Home button on your remote.'), [
       {
-        label: 'Start',
-        sub: k.home ? 'now: ' + k.home : '',
+        label: t('Start'),
+        sub: k.home ? t('now: %s').replace('%s', k.home) : '',
         fn: function () {
           kLearn('home');
         },
       },
       {
-        label: 'Clear',
-        sub: 'forget the code',
+        label: t('Clear'),
+        sub: t('forget the code'),
         dim: !k.home,
         fn: function () {
           if (k.home) kClear('home');
         },
       },
-      { label: 'Close', fn: closeKeys },
+      { label: t('Close'), fn: closeKeys },
     ]);
   if (n === 'voice')
     return kShow(
-      'The voice button.\nChoose Start, then press the button you want to use for voice. The remote\u2019s microphone button may not reach the hook; any spare button works.',
+      t(
+        'The voice button.\nChoose Start, then press the button you want to use for voice. The remote\u2019s microphone button may not reach the hook; any spare button works.'
+      ),
       [
         {
-          label: 'Start',
-          sub: k.voice ? 'now: ' + k.voice : '',
+          label: t('Start'),
+          sub: k.voice ? t('now: %s').replace('%s', k.voice) : '',
           fn: function () {
             kLearn('voice');
           },
         },
         {
-          label: 'Clear',
-          sub: 'forget the code',
+          label: t('Clear'),
+          sub: t('forget the code'),
           dim: !k.voice,
           fn: function () {
             if (k.voice) kClear('voice');
           },
         },
-        { label: 'Close', fn: closeKeys },
+        { label: t('Close'), fn: closeKeys },
       ]
     );
   if (n === 'guide')
     return kShow(
-      'The Guide key.\nChoose Start, then press the Guide button on your remote. It then opens the Live TV channel guide instead of LG\u2019s guide. Clear it to get LG\u2019s guide back.',
+      t(
+        'The Guide key.\nChoose Start, then press the Guide button on your remote. It then opens the Live TV channel guide instead of LG\u2019s guide. Clear it to get LG\u2019s guide back.'
+      ),
       [
         {
-          label: 'Start',
-          sub: k.guide ? 'now: ' + k.guide : '',
+          label: t('Start'),
+          sub: k.guide ? t('now: %s').replace('%s', k.guide) : '',
           fn: function () {
             kLearn('guide');
           },
         },
         {
-          label: 'Clear',
-          sub: 'LG\u2019s guide again',
+          label: t('Clear'),
+          sub: t('LG\u2019s guide again'),
           dim: !k.guide,
           fn: function () {
             if (k.guide) kClear('guide');
           },
         },
-        { label: 'Close', fn: closeKeys },
+        { label: t('Close'), fn: closeKeys },
       ]
     );
   if (n === 'test') return kTest();
@@ -121,10 +143,11 @@ function kStep(n) {
         function (s) {
           st = s;
           kShow(
-            'Done.\nInput key ' +
-              ((s.keys || {}).input || '241') +
-              '.\nThe Home key is optional: learn it from the main list if you want it recorded.',
-            [{ label: 'Close', fn: closeKeys }]
+            t('Done.\nInput key %s.\nThe Home key is optional: learn it from the main list if you want it recorded.').replace(
+              '%s',
+              (s.keys || {}).input || '241'
+            ),
+            [{ label: t('Close'), fn: closeKeys }]
           );
         },
         function () {
@@ -142,13 +165,13 @@ function kClear(name) {
         st = s;
         kShow(
           name === 'input'
-            ? 'Input key cleared.\nIt uses the default code (' + ((s.keys || {}).input || '241') + ').'
+            ? t('Input key cleared.\nIt uses the default code (%s).').replace('%s', (s.keys || {}).input || '241')
             : name === 'voice'
-              ? 'Voice button cleared.'
+              ? t('Voice button cleared.')
               : name === 'guide'
-                ? 'Guide key cleared. LG\u2019s guide is back.'
-                : 'Home key cleared.',
-          [{ label: 'Close', fn: closeKeys }]
+                ? t('Guide key cleared. LG\u2019s guide is back.')
+                : t('Home key cleared.'),
+          [{ label: t('Close'), fn: closeKeys }]
         );
       },
       function () {
@@ -158,9 +181,9 @@ function kClear(name) {
 }
 function kLearn(name) {
   api('/api/manager/learn-key', { name: name }).then(function () {
-    kShow('Press the ' + kName(name) + ' button now\u2026', [
+    kShow(kPress(name), [
       {
-        label: 'Cancel',
+        label: t('Cancel'),
         fn: function () {
           kStep(name);
         },
@@ -172,9 +195,9 @@ function kLearn(name) {
           function (l) {
             if (view !== 'keys') return;
             if (l.state === 'got') {
-              kShow(kName(name) + ' key learned: code ' + l.code + '.', [
+              kShow(kGot(name, l.code), [
                 {
-                  label: name === 'input' ? 'Continue to the test' : 'Close',
+                  label: name === 'input' ? t('Continue to the test') : t('Close'),
                   fn: function () {
                     api('/api/manager/status').then(function (s) {
                       st = s;
@@ -189,21 +212,23 @@ function kLearn(name) {
             if (l.state === 'unsupported') {
               api('/api/manager/options', { inputKey: false });
               kShow(
-                'The hook did not attach on this firmware, so keys cannot be learned. The Input key stays with LG\u2019s picker.\nUse Share log to report this.',
-                [{ label: 'Close', fn: closeKeys }]
+                t(
+                  'The hook did not attach on this firmware, so keys cannot be learned. The Input key stays with LG\u2019s picker.\nUse Share log to report this.'
+                ),
+                [{ label: t('Close'), fn: closeKeys }]
               );
               return;
             }
             if (l.state === 'timeout') {
-              kShow('Nothing was pressed.', [
+              kShow(t('Nothing was pressed.'), [
                 {
-                  label: 'Try again',
+                  label: t('Try again'),
                   fn: function () {
                     kLearn(name);
                   },
                 },
                 {
-                  label: name === 'input' ? 'Skip' : 'Close',
+                  label: name === 'input' ? t('Skip') : t('Close'),
                   fn: function () {
                     if (name === 'input') kStep('test');
                     else closeKeys();
@@ -224,9 +249,9 @@ function kLearn(name) {
 }
 function kTest() {
   api('/api/manager/test-key').then(function (t0) {
-    kShow('Test.\nPress the Input button once more. Our Inputs list should open over this screen.', [
+    kShow(t('Test.\nPress the Input button once more. Our Inputs list should open over this screen.'), [
       {
-        label: 'Skip',
+        label: t('Skip'),
         fn: function () {
           kStep('done');
         },
@@ -236,12 +261,12 @@ function kTest() {
     (function poll() {
       kTimer = setTimeout(function () {
         api('/api/manager/test-key').then(
-          function (t) {
+          function (r) {
             if (view !== 'keys') return;
-            if (t.pickerShownAt > t0.now) {
-              kShow('The Inputs list opened: the Input key works.', [
+            if (r.pickerShownAt > t0.now) {
+              kShow(t('The Inputs list opened: the Input key works.'), [
                 {
-                  label: 'Continue',
+                  label: t('Continue'),
                   fn: function () {
                     kStep('done');
                   },
@@ -251,16 +276,18 @@ function kTest() {
             }
             if (Date.now() > until) {
               kShow(
-                'The Inputs list did not open.\nIf LG\u2019s own picker showed, the Input key is not mapped: learn it again or switch the Input key off.',
+                t(
+                  'The Inputs list did not open.\nIf LG\u2019s own picker showed, the Input key is not mapped: learn it again or switch the Input key off.'
+                ),
                 [
                   {
-                    label: 'Learn again',
+                    label: t('Learn again'),
                     fn: function () {
                       kStep('input');
                     },
                   },
                   {
-                    label: 'Skip',
+                    label: t('Skip'),
                     fn: function () {
                       kStep('done');
                     },

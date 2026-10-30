@@ -524,6 +524,15 @@ body {
   background: none;
   box-shadow: inset 0 0 0 2px var(--pill-ring);
 }
+.si.cog {
+  width: 64px;
+  padding: 0;
+  justify-content: center;
+}
+.si.cog svg {
+  width: 32px;
+  height: 32px;
+}
 .si.f {
   background: var(--acc);
   color: var(--acc-ink);
@@ -633,6 +642,70 @@ body {
   text-align: center;
   font-size: 20px;
   color: var(--ink2);
+}
+/* All apps: a grid of icons over the whole screen (spaced with margins: Chromium before 84 has no flex gap) */
+#ov.grid {
+  align-items: flex-start;
+}
+#ov .gpanel {
+  width: 1560px;
+  padding-top: 110px;
+}
+#ov .gpanel .hint {
+  font-size: 24px;
+  color: var(--ink2);
+  margin: -6px 0 18px;
+}
+#ov .grid {
+  display: flex;
+  flex-wrap: wrap;
+  height: 744px;
+  align-content: flex-start;
+}
+.gt {
+  width: 240px;
+  height: 232px;
+  margin: 0 24px 16px 0;
+  border-radius: var(--row-r);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  transition: transform calc(0.12s * var(--spd)) ease-out;
+}
+.gt:nth-child(6n) {
+  margin-right: 0;
+}
+.gt .gi {
+  width: 120px;
+  height: 120px;
+  border-radius: 28px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gt .gi svg {
+  width: 56px;
+  height: 56px;
+}
+.gt .lb {
+  margin-top: 18px;
+  max-width: 210px;
+  font-size: calc(24px * var(--fs));
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gt.f {
+  background: var(--acc);
+  color: var(--acc-ink);
+  box-shadow: none;
+  transform: scale(1.06);
 }
 /* Live TV (inside the launcher) */
 #lv {
@@ -2036,21 +2109,36 @@ var DEFAULTS = {
 var ICONS = {
   edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   grid: '<path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/>',
+  gear: '<path d="M19.3 10.5L21.5 10.8L21.5 13.2L19.3 13.5L18.2 16.1L19.6 17.9L17.9 19.6L16.1 18.2L13.5 19.3L13.2 21.5L10.8 21.5L10.5 19.3L7.9 18.2L6.1 19.6L4.4 17.9L5.8 16.1L4.7 13.5L2.5 13.2L2.5 10.8L4.7 10.5L5.8 7.9L4.4 6.1L6.1 4.4L7.9 5.8L10.5 4.7L10.8 2.5L13.2 2.5L13.5 4.7L16.1 5.8L17.9 4.4L19.6 6.1L18.2 7.9Z"/><circle cx="12" cy="12" r="3"/>',
   hdmi: '<path d="M4 8h16v7l-3 3H7l-3-3z"/><path d="M9 11v3M12 11v3M15 11v3"/>',
   restore: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  none: '' /* an empty mark: lines up a row without a tick with the ones that have one */,
 };
 function svg(name) {
   return (
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
-    (ICONS[name] || ICONS.grid) +
+    (Object.prototype.hasOwnProperty.call(ICONS, name) ? ICONS[name] : ICONS.grid) +
     '</svg>'
   );
 }
-/* ---------- language and clock follow the TV ---------- */
-var LOC = (window.webOSSystem && webOSSystem.locale) || navigator.language || 'en-GB',
+/* ---------- language and clock: the TV's, or the language chosen in Settings (cfg.language, read from the launcher's cache so the
+   first drawing is already in it; layout.js reloads the page when the service has another) ---------- */
+var TV_LOC = (window.webOSSystem && webOSSystem.locale) || navigator.language || 'en-GB';
+function locFor(pref) {
+  return pref === 'da' ? 'da-DK' : pref === 'en' ? (/^en/.test(TV_LOC) ? TV_LOC : 'en-GB') : TV_LOC;
+}
+function cachedLang() {
+  try {
+    var c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+    return (c && c.cfg && c.cfg.language) || '';
+  } catch (e) {
+    return '';
+  }
+}
+var LOC = locFor(cachedLang()),
   LANG = LOC.slice(0, 2);
 var TX = {
   nl: {
@@ -2100,6 +2188,17 @@ var TX = {
     'Automatic': 'Automatisch',
     '24-hour': '24-uurs',
     '12-hour': '12-uurs',
+    'Settings': 'Instellingen',
+    'All apps': 'Alle apps',
+    'Follow the TV': 'Zoals de tv',
+    'None': 'Geen',
+    'More in the CleanYourTV app': 'Meer in de CleanYourTV-app',
+    'Reset Home...': 'Home herstellen...',
+    'Reset Home?': 'Home herstellen?',
+    'Reset': 'Herstellen',
+    'Cancel': 'Annuleren',
+    'Hold OK on an app for its options': 'Houd OK ingedrukt op een app voor de opties',
+    'Home is full: take an app off first': 'Home is vol: haal eerst een app weg',
   },
   de: {
     'Running apps': 'Geöffnete Apps',
@@ -2148,6 +2247,17 @@ var TX = {
     'Automatic': 'Automatisch',
     '24-hour': '24 Stunden',
     '12-hour': '12 Stunden',
+    'Settings': 'Einstellungen',
+    'All apps': 'Alle Apps',
+    'Follow the TV': 'Wie der Fernseher',
+    'None': 'Keine',
+    'More in the CleanYourTV app': 'Mehr in der CleanYourTV-App',
+    'Reset Home...': 'Home zurücksetzen...',
+    'Reset Home?': 'Home zurücksetzen?',
+    'Reset': 'Zurücksetzen',
+    'Cancel': 'Abbrechen',
+    'Hold OK on an app for its options': 'OK auf einer App gedrückt halten für ihre Optionen',
+    'Home is full: take an app off first': 'Home ist voll: zuerst eine App entfernen',
   },
   fr: {
     'Running apps': 'Apps ouvertes',
@@ -2196,6 +2306,17 @@ var TX = {
     'Automatic': 'Automatique',
     '24-hour': '24 heures',
     '12-hour': '12 heures',
+    'Settings': 'Réglages',
+    'All apps': 'Toutes les apps',
+    'Follow the TV': 'Comme le téléviseur',
+    'None': 'Aucune',
+    'More in the CleanYourTV app': 'Plus dans l’app CleanYourTV',
+    'Reset Home...': 'Réinitialiser l’accueil...',
+    'Reset Home?': 'Réinitialiser l’accueil ?',
+    'Reset': 'Réinitialiser',
+    'Cancel': 'Annuler',
+    'Hold OK on an app for its options': 'Maintenez OK sur une app pour ses options',
+    'Home is full: take an app off first': 'L’accueil est plein : retirez d’abord une app',
   },
   es: {
     'Running apps': 'Apps abiertas',
@@ -2244,6 +2365,75 @@ var TX = {
     'Automatic': 'Automático',
     '24-hour': '24 horas',
     '12-hour': '12 horas',
+    'Settings': 'Ajustes',
+    'All apps': 'Todas las apps',
+    'Follow the TV': 'Como el televisor',
+    'None': 'Ninguna',
+    'More in the CleanYourTV app': 'Más en la app CleanYourTV',
+    'Reset Home...': 'Restablecer Inicio...',
+    'Reset Home?': '¿Restablecer Inicio?',
+    'Reset': 'Restablecer',
+    'Cancel': 'Cancelar',
+    'Hold OK on an app for its options': 'Mantén OK en una app para ver sus opciones',
+    'Home is full: take an app off first': 'Inicio está lleno: quita primero una app',
+  },
+  da: {
+    'Running apps': 'Åbne apps',
+    'Close': 'Luk',
+    'Close all': 'Luk alle',
+    'No apps are running': 'Ingen apps er åbne',
+    'Could not close': 'Kunne ikke lukke',
+    'Could not read the running apps': 'Kunne ikke læse de åbne apps',
+    'Inputs': 'Indgange',
+    'Customise': 'Tilpas',
+    'Open': 'Åbn',
+    'All apps': 'Alle apps',
+    'Move left': 'Flyt til venstre',
+    'Move right': 'Flyt til højre',
+    'Replace which app?': 'Hvilken app skal erstattes?',
+    'Hide app': 'Skjul app',
+    'Add to Home': 'Føj til startskærmen',
+    'Add to Home...': 'Føj til startskærmen...',
+    'Remove from Home': 'Fjern fra startskærmen',
+    '%s added to Home': '%s er føjet til startskærmen',
+    '%s removed from Home': '%s er fjernet fra startskærmen',
+    'Could not change Home': 'Kunne ikke ændre startskærmen',
+    'hold OK on an app': 'hold OK nede på en app',
+    'Hold OK on an app in the strip or in All apps to change Home':
+      'Hold OK nede på en app i bjælken eller i Alle apps for at ændre startskærmen',
+    'Apps on Home': 'Apps på startskærmen',
+    'On Home': 'På startskærmen',
+    'Inputs on Home': 'Indgange på startskærmen',
+    'No inputs': 'Ingen indgange',
+    'Could not read the inputs': 'Kunne ikke læse indgangene',
+    'Hidden apps': 'Skjulte apps',
+    'App order': 'Rækkefølge',
+    'Most used first': 'Mest brugte først',
+    'A to Z': 'A til Å',
+    'Reset customisation': 'Nulstil tilpasning',
+    'Hidden apps (OK to show again)': 'Skjulte apps (OK viser dem igen)',
+    'No hidden apps': 'Ingen skjulte apps',
+    'Restore LG Home': 'Gendan LG Home',
+    'Switching to LG Home: the TV restarts...': "Skifter til LG Home: tv'et genstarter...",
+    'Could not open': 'Kunne ikke åbne',
+    'Could not save settings': 'Kunne ikke gemme indstillingerne',
+    'Helper not reachable, retrying...': 'Tjenesten svarer ikke, prøver igen...',
+    'Connected': 'Tilsluttet',
+    'Active': 'Aktiv',
+    'Clock': 'Ur',
+    'Automatic': 'Automatisk',
+    '24-hour': '24 timer',
+    '12-hour': '12 timer',
+    'Settings': 'Indstillinger',
+    'Follow the TV': "Som tv'et",
+    'None': 'Ingen',
+    'More in the CleanYourTV app': 'Mere i CleanYourTV-appen',
+    'Reset Home...': 'Nulstil startskærmen...',
+    'Reset Home?': 'Nulstil startskærmen?',
+    'Reset': 'Nulstil',
+    'Cancel': 'Annuller',
+    'Hold OK on an app for its options': 'Hold OK nede på en app for at se dens muligheder',
+    'Home is full: take an app off first': 'Startskærmen er fuld: fjern en app først',
   },
 };
 var TXL = {
@@ -2307,6 +2497,22 @@ var TXL = {
     'Next': 'Después',
     'Later': 'Más tarde',
     'No guide data': 'Sin guía',
+  },
+  da: {
+    'Live TV': 'Live-tv',
+    'All channels': 'Alle kanaler',
+    'Loading channels...': 'Indlæser kanaler...',
+    'Set up Live TV': 'Opsæt Live-tv',
+    'Open this address on your phone or computer:': 'Åbn denne adresse på din telefon eller computer:',
+    'and enter this code:': 'og indtast denne kode:',
+    'Then paste your M3U playlist address. This page closes by itself.':
+      'Indsæt derefter adressen på din M3U-playliste. Siden lukker af sig selv.',
+    'This channel is not available.': 'Kanalen er ikke tilgængelig.',
+    'Press OK to try again.': 'Tryk på OK for at prøve igen.',
+    'The helper is not reachable.': 'Tjenesten svarer ikke.',
+    'Next': 'Derefter',
+    'Later': 'Senere',
+    'No guide data': 'Ingen programoplysninger',
   },
 };
 (function () {
@@ -2479,6 +2685,169 @@ var TXL = {
       'The stream is too slow to start.': 'La emisión tarda demasiado en empezar.',
       'The stream answers, but the TV could not play it: probably a format it cannot decode.':
         'La emisión responde, pero el televisor no pudo reproducirla: probablemente un formato que no sabe decodificar.',
+    },
+    da: {
+      'Favourites': 'Favoritter',
+      'Recent': 'Seneste',
+      'Search...': 'Søg...',
+      'Filters': 'Filtre',
+      'Country': 'Land',
+      'Language': 'Sprog',
+      'Quality': 'Kvalitet',
+      'All': 'Alle',
+      'Clear filters': 'Ryd filtre',
+      'Added to favourites': 'Føjet til favoritter',
+      'Removed from favourites': 'Fjernet fra favoritter',
+      'Favourite': 'Favorit',
+      'On': 'Til',
+      'Off': 'Fra',
+      'Stream': 'Stream',
+      'streams': 'streams',
+      'Statistics': 'Statistik',
+      'Audio': 'Lyd',
+      'Subtitles': 'Undertekster',
+      'Close': 'Luk',
+      'Tuning...': 'Stiller ind...',
+      'Checking why...': 'Undersøger årsagen...',
+      'buffer': 'buffer',
+      'frames': 'billeder',
+      'dropped': 'tabt',
+      'reloaded': 'genindlæst',
+      'no picture': 'intet billede',
+      'No channels': 'Ingen kanaler',
+      'No favourites yet. Press the green button on a channel.': 'Ingen favoritter endnu. Tryk på den grønne knap på en kanal.',
+      'Nothing watched yet.': 'Du har ikke set noget endnu.',
+      'No channels match.': 'Ingen kanaler passer.',
+      'The server refused the stream: it may be blocked in your country or need special request headers.':
+        'Serveren afviser streamen: den er måske blokeret i dit land eller kræver særlige headers.',
+      'The stream was not found (404): the channel is offline or its address has changed.':
+        'Streamen blev ikke fundet (404): kanalen er offline, eller dens adresse er ændret.',
+      'The stream server reported an error.': 'Streamserveren melder en fejl.',
+      'The address answers with a web page, not a video.': 'Adressen svarer med en webside, ikke en video.',
+      'This stream is protected by DRM and cannot be played here.': 'Streamen er beskyttet med DRM og kan ikke afspilles her.',
+      'The stream server cannot be reached.': 'Streamserveren kan ikke nås.',
+      'The stream is too slow to start.': 'Streamen er for langsom til at starte.',
+      'The stream answers, but the TV could not play it: probably a format it cannot decode.':
+        "Streamen svarer, men tv'et kunne ikke afspille den: sandsynligvis et format, det ikke kan afkode.",
+      'The service (%s) is older than this launcher needs: update it in the CleanYourTV manager':
+        'Tjenesten (%s) er ældre, end denne launcher kræver: opdater den i CleanYourTV-manageren',
+      /* Home (fork) */
+      'Films & Series': 'Film og serier',
+      'Trending in Films & Series': 'Populært i Film og serier',
+      'Last watched': 'Senest set',
+      'More info': 'Mere info',
+      'Watch': 'Se',
+      'Resume': 'Fortsæt',
+      'Play': 'Afspil',
+      'On your channels now': 'Nu på dine kanaler',
+      'No guide': 'Ingen programinfo',
+      'From %s': 'Fra %s',
+      '%s to %s': '%s–%s',
+      'Then %s': 'Derefter %s',
+      '%s added to My list': '%s er føjet til Min liste',
+      '%s removed from My list': '%s er fjernet fra Min liste',
+      /* Films & Series (fork) */
+      'Films': 'Film',
+      'Series': 'Serier',
+      'My list': 'Min liste',
+      'Search': 'Søg',
+      'Search films and series': 'Søg i film og serier',
+      'Sort:': 'Sortér:',
+      'Newest': 'Nyeste',
+      'A–Z': 'A–Å',
+      'Year': 'År',
+      'Rating': 'Bedømmelse',
+      'Continue watching': 'Fortsæt med at se',
+      'Because you watched %s': 'Fordi du så %s',
+      'Recently added': 'Senest tilføjet',
+      'Nothing here yet': 'Intet her endnu',
+      'Tick some categories on the curator page.': 'Vælg nogle kategorier på curatorens side.',
+      'Nothing here.': 'Intet her.',
+      'Could not load this row: %s': 'Kunne ikke indlæse rækken: %s',
+      'My list is empty': 'Min liste er tom',
+      'Add films and series with + My list on their page.': 'Tilføj film og serier med + Min liste på deres side.',
+      'Searching…': 'Søger…',
+      'No titles found': 'Ingen titler fundet',
+      'Search failed': 'Søgningen mislykkedes',
+      'Loading…': 'Indlæser…',
+      'Could not load the details: %s': 'Kunne ikke indlæse oplysningerne: %s',
+      '%s season': '%s sæson',
+      '%s seasons': '%s sæsoner',
+      'Season %s': 'Sæson %s',
+      'h': 't',
+      '%s left': '%s tilbage',
+      'Next: %s': 'Næste: %s',
+      'After %s': 'Efter %s',
+      'Resume from %s': 'Fortsæt fra %s',
+      'From the start': 'Fra begyndelsen',
+      'Watch again from %s': 'Se igen fra %s',
+      'Continue %s': 'Fortsæt %s',
+      'Play %s': 'Afspil %s',
+      'Trailer': 'Trailer',
+      'More': 'Mere',
+      'More like this': 'Mere som dette',
+      'Mark as watched': 'Markér som set',
+      'Mark as unwatched': 'Markér som ikke set',
+      'Mark watched': 'Markér som set',
+      'Mark unwatched': 'Markér som ikke set',
+      'Mark season %s as watched': 'Markér sæson %s som set',
+      'Mark season %s as unwatched': 'Markér sæson %s som ikke set',
+      'Mark every season as watched': 'Markér alle sæsoner som set',
+      'Mark every season as unwatched': 'Markér alle sæsoner som ikke set',
+      'Remove from Continue watching': 'Fjern fra Fortsæt med at se',
+      'OK pauses  ·  Left / Right skips  ·  Back returns to the title':
+        'OK sætter på pause  ·  Venstre / højre spoler  ·  Tilbage går til titlen',
+      'OK plays / pauses  ·  Back returns to the title': 'OK afspiller / sætter på pause  ·  Tilbage går til titlen',
+      'Next episode': 'Næste afsnit',
+      'Episode': 'Afsnit',
+      'OK plays it  ·  Down hides this': 'OK afspiller det  ·  Ned skjuler dette',
+      'Next in %s s': 'Næste om %s sek.',
+      'OK plays it now, Back stops': 'OK afspiller det nu, Tilbage stopper',
+      "This title can't be played on the TV%s.": "Titlen kan ikke afspilles på tv'et%s.",
+      'Press Back.': 'Tryk på Tilbage.',
+      'ends at %s': 'slutter %s',
+      'Paused': 'Pause',
+      'No audio or subtitle choices': 'Ingen valg af lyd eller undertekster',
+      'The film library is not reachable': 'Filmbiblioteket kan ikke nås',
+      /* the curator's rows (iptv_curator/tmdb.py home_rows) */
+      'Trending now': 'Populært lige nu',
+      'Popular': 'Populære',
+      'New releases': 'Nye film',
+      'New series': 'Nye serier',
+      'Top rated': 'Bedst bedømte',
+      'Danish films': 'Danske film',
+      'Danish series': 'Danske serier',
+      'Nordic films': 'Nordiske film',
+      'Nordic series': 'Nordiske serier',
+      'Kids & family': 'Børn og familie',
+      /* TMDB's genres as the curator names them (iptv_curator/tmdb.py GENRES), in TMDB's Danish */
+      'Action': 'Action',
+      'Adventure': 'Eventyr',
+      'Animation': 'Animation',
+      'Comedy': 'Komedie',
+      'Crime': 'Krimi',
+      'Documentary': 'Dokumentar',
+      'Drama': 'Drama',
+      'Family': 'Familie',
+      'Fantasy': 'Fantasy',
+      'History': 'Historie',
+      'Horror': 'Gyser',
+      'Music': 'Musik',
+      'Mystery': 'Mysterium',
+      'Romance': 'Romantik',
+      'Science Fiction': 'Science fiction',
+      'TV Movie': 'Tv-film',
+      'Thriller': 'Thriller',
+      'War': 'Krig',
+      'Western': 'Western',
+      'Action & Adventure': 'Action og eventyr',
+      'Kids': 'Børn',
+      'News': 'Nyheder',
+      'Reality': 'Reality',
+      'Sci-Fi & Fantasy': 'Sci-fi og fantasy',
+      'Soap': 'Sæbeopera',
+      'Talk': 'Talkshow',
+      'War & Politics': 'Krig og politik',
     },
   };
   for (var l in add) {
@@ -2686,8 +3055,10 @@ function setHtml(el, h) {
   el.parentNode.replaceChild(n, el);
   return n;
 }
-function openMenu(title, items) {
-  stack.push({ title: title, items: items, idx: 0 });
+/* o: {grid: a grid of app icons (item.app), hint: a line under the title, settings: the Settings menu (redrawSettings)} */
+function openMenu(title, items, o) {
+  o = o || {};
+  stack.push({ title: title, items: items, idx: 0, grid: !!o.grid, hint: o.hint || '', settings: !!o.settings });
   drawMenu();
 }
 function closeMenus() {
@@ -2703,8 +3074,9 @@ function backMenu() {
   else closeMenus();
 }
 function drawMenu() {
-  var m = stack[stack.length - 1],
-    N = 8,
+  var m = stack[stack.length - 1];
+  if (m.grid) return drawGrid(m);
+  var N = 8,
     start = Math.max(0, Math.min(m.idx - 3, m.items.length - N));
   if (!ovEl) {
     ovEl = document.createElement('div');
@@ -2728,31 +3100,80 @@ function drawMenu() {
   }
   h += '<div class="more">' + (start + N < m.items.length ? '▼' : '') + '</div></div>';
   ovEl = setHtml(ovEl, h);
+  ovEl.className = '';
+  ovEl._grid = null;
   ovEl.querySelector('h2').textContent = m.title;
   [].forEach.call(ovEl.querySelectorAll('.row'), function (row) {
     var it = m.items[+row.getAttribute('data-i')];
     row.querySelector('.lb').textContent = it.label;
     if (it.sub) row.querySelector('.st').textContent = it.sub;
-    var pt = 0,
+    wire(row, it, m);
+  });
+}
+/* the pointer: a click picks the item, a long press gives its options */
+function wire(row, it, m) {
+  var pt = 0,
+    rowHeld = false;
+  if (it.hold) {
+    row.addEventListener('mousedown', function () {
       rowHeld = false;
-    if (it.hold) {
-      row.addEventListener('mousedown', function () {
-        rowHeld = false;
-        clearTimeout(pt);
-        pt = setTimeout(function () {
-          rowHeld = true;
-          it.hold();
-        }, 650);
-      });
-      row.addEventListener('mouseup', function () {
-        clearTimeout(pt);
-      });
-    }
-    row.addEventListener('click', function () {
-      if (rowHeld) return void (rowHeld = false);
-      m.idx = +row.getAttribute('data-i');
-      pickMenu();
+      clearTimeout(pt);
+      pt = setTimeout(function () {
+        rowHeld = true;
+        it.hold();
+      }, 650);
     });
+    row.addEventListener('mouseup', function () {
+      clearTimeout(pt);
+    });
+  }
+  row.addEventListener('click', function () {
+    if (rowHeld) return void (rowHeld = false);
+    m.idx = +row.getAttribute('data-i');
+    pickMenu();
+  });
+}
+/* All apps: six icons a row, three rows on screen; moving within them only moves the focus (no new elements) */
+var GRID_COLS = 6,
+  GRID_ROWS = 3;
+function drawGrid(m) {
+  var n = m.items.length,
+    top = Math.max(0, Math.min(Math.floor(m.idx / GRID_COLS) - 1, Math.ceil(n / GRID_COLS) - GRID_ROWS)),
+    start = top * GRID_COLS,
+    end = Math.min(n, start + GRID_COLS * GRID_ROWS);
+  if (ovEl && ovEl._grid === m && ovEl._top === top) {
+    [].forEach.call(ovEl.querySelectorAll('.gt'), function (g) {
+      g.classList.toggle('f', +g.getAttribute('data-i') === m.idx);
+    });
+    return;
+  }
+  if (!ovEl) {
+    ovEl = document.createElement('div');
+    ovEl.id = 'ov';
+    document.body.appendChild(ovEl);
+  }
+  var h = '<div class="gpanel"><h2></h2><div class="hint"></div><div class="more">' + (top > 0 ? '▲' : '') + '</div><div class="grid">';
+  for (var i = start; i < end; i++)
+    h += '<div class="gt' + (i === m.idx ? ' f' : '') + '" data-i="' + i + '"><img class="gi" alt=""><span class="lb"></span></div>';
+  h += '</div><div class="more">' + (end < n ? '▼' : '') + '</div></div>';
+  ovEl = setHtml(ovEl, h);
+  ovEl.className = 'grid';
+  ovEl._grid = m;
+  ovEl._top = top;
+  ovEl.querySelector('h2').textContent = m.title;
+  ovEl.querySelector('.hint').textContent = m.hint;
+  [].forEach.call(ovEl.querySelectorAll('.gt'), function (g) {
+    var it = m.items[+g.getAttribute('data-i')],
+      im = g.querySelector('img');
+    g.querySelector('.lb').textContent = it.label;
+    im.onerror = function () {
+      var s = document.createElement('span');
+      s.className = 'gi';
+      s.innerHTML = svg('grid');
+      if (im.parentNode) im.parentNode.replaceChild(s, im);
+    };
+    im.src = API + '/icon/' + encodeURIComponent(it.app);
+    wire(g, it, m);
   });
 }
 function pickMenu() {
@@ -2766,6 +3187,16 @@ function pickMenu() {
 }
 function menuKey(k) {
   var m = stack[stack.length - 1];
+  if (m.grid && k >= 37 && k <= 40) {
+    var n = m.items.length,
+      C = GRID_COLS;
+    if (k === 37 && m.idx % C > 0) m.idx--;
+    else if (k === 39 && m.idx % C < C - 1 && m.idx < n - 1) m.idx++;
+    else if (k === 38 && m.idx >= C) m.idx -= C;
+    else if (k === 40 && Math.floor(m.idx / C) < Math.floor((n - 1) / C)) m.idx = Math.min(n - 1, m.idx + C);
+    drawMenu();
+    return true;
+  }
   if (k === 38 && m.idx > 0) {
     m.idx--;
     drawMenu();
@@ -3007,9 +3438,91 @@ function appMenu(a) {
     });
   openMenu(a.title, items);
 }
-/* every app that is not hidden, in the chosen order (hold OK on one for its options), then Customise */
+/* ---------- Settings: the one tile at the end of Home's strip. Every app, what Home shows, the language, the clock, the order;
+   the rest is in the CleanYourTV app (the manager) ---------- */
+var LANGS = [
+  ['auto', 'Follow the TV'],
+  ['da', 'Dansk'],
+  ['en', 'English'],
+];
+function langName(l) {
+  for (var i = 0; i < LANGS.length; i++) if (LANGS[i][0] === (l || 'auto')) return t(LANGS[i][1]);
+  return t(LANGS[0][1]);
+}
+/* "Netflix, YouTube +3" */
+function namesOf(list) {
+  if (!list.length) return t('None');
+  return list.slice(0, 2).join(', ') + (list.length > 2 ? ' +' + (list.length - 2) : '');
+}
+function settingsItems() {
+  var pinned = apps
+      .filter(function (a) {
+        return a.input;
+      })
+      .map(function (a) {
+        return a.title;
+      }),
+    hidden = (cfg.hidden || []).filter(function (id) {
+      return apps.some(function (a) {
+        return a.id === id;
+      });
+    });
+  return [
+    { icon: 'grid', label: t('All apps'), stay: true, fn: allAppsMenu },
+    { label: t('Apps on Home'), sub: namesOf(dockIds().filter(not(isInput)).map(title)), stay: true, fn: homeAppsMenu },
+    { label: t('Inputs on Home'), sub: namesOf(pinned), stay: true, fn: inputsHomeMenu },
+    { label: t('Hidden apps'), sub: hidden.length ? String(hidden.length) : t('None'), stay: true, fn: hiddenMenu },
+    { label: t('Language'), sub: langName(cfg.language), stay: true, fn: languageMenu },
+    {
+      label: t('Clock'),
+      sub: cfg.clock === '24' ? t('24-hour') : cfg.clock === '12' ? t('12-hour') : t('Automatic'),
+      stay: true,
+      fn: function () {
+        cfg.clock = cfg.clock === '24' ? '12' : cfg.clock === '12' ? 'auto' : '24';
+        saveCfg();
+        tick();
+        redrawSettings();
+      },
+    },
+    {
+      label: t('App order'),
+      sub: cfg.sort === 'alpha' ? t('A to Z') : t('Most used first'),
+      stay: true,
+      fn: function () {
+        cfg.sort = cfg.sort === 'alpha' ? 'usage' : 'alpha';
+        saveCfg();
+        redrawSettings();
+      },
+    },
+    {
+      label: t('More in the CleanYourTV app'),
+      fn: function () {
+        launch('com.cleanyourtv.manager');
+      },
+    },
+    { label: t('Reset Home...'), stay: true, fn: resetMenu },
+  ];
+}
+function settingsMenu() {
+  openMenu(t('Settings'), settingsItems(), { settings: true });
+}
+/* the Settings rows again with their new values, wherever Settings is in the stack */
+function redrawSettings() {
+  for (var i = 0; i < stack.length; i++) if (stack[i].settings) stack[i].items = settingsItems();
+  if (stack.length) drawMenu();
+}
+function not(f) {
+  return function (x) {
+    return !f(x);
+  };
+}
+function isInput(id) {
+  return apps.some(function (a) {
+    return a.id === id && a.input;
+  });
+}
+/* every app that is not hidden, as a grid of icons in the chosen order: OK opens one, holding OK gives its options */
 function allAppsMenu() {
-  var di = dockIds();
   openMenu(
     t('All apps'),
     apps
@@ -3019,8 +3532,8 @@ function allAppsMenu() {
       .sort(byOrder)
       .map(function (a) {
         return {
+          app: a.id,
           label: a.title,
-          sub: di.indexOf(a.id) >= 0 ? t('On Home') : '',
           fn: function () {
             launch(a.id);
           },
@@ -3028,47 +3541,81 @@ function allAppsMenu() {
             appMenu(a);
           },
         };
-      })
-      .concat([{ icon: 'edit', label: t('Customise'), stay: true, fn: customizeMenu }])
+      }),
+    { grid: true, hint: t('Hold OK on an app for its options') }
   );
 }
-
-function customizeMenu() {
-  openMenu(t('Customise'), [
+/* the apps, each on Home or not: OK puts it on Home (while there is room) or takes it off */
+function homeAppsMenu() {
+  var list = apps
+    .filter(function (a) {
+      return !a.input && a.id !== '__live' && a.id !== '__vod' && !isHidden(a.id);
+    })
+    .sort(byOrder);
+  function items() {
+    var di = dockIds();
+    return list.map(function (a) {
+      var on = di.indexOf(a.id) >= 0;
+      return {
+        icon: on ? 'check' : 'none',
+        label: a.title,
+        sub: on ? t('On Home') : '',
+        stay: true,
+        fn: function () {
+          var d = dockIds();
+          if (d.indexOf(a.id) >= 0)
+            setDock(
+              d.filter(function (i) {
+                return i !== a.id;
+              })
+            );
+          else if (d.length < HOME_DOCK) setDock(d.concat(a.id));
+          else return toast(t('Home is full: take an app off first'));
+          stack[stack.length - 1].items = items();
+          redrawSettings();
+        },
+      };
+    });
+  }
+  openMenu(t('Apps on Home'), items());
+}
+function languageMenu() {
+  openMenu(
+    t('Language'),
+    LANGS.map(function (l) {
+      var on = (cfg.language || 'auto') === l[0];
+      return {
+        icon: on ? 'check' : 'none',
+        label: t(l[1]),
+        fn: function () {
+          if (on) return;
+          /* saved, then the page again in the new language (layout.js would reload it as well) */
+          cfg.language = l[0];
+          store();
+          api('/api/config', cfg).then(
+            function () {
+              location.reload();
+            },
+            function () {
+              toast(t('Could not save settings'));
+            }
+          );
+        },
+      };
+    })
+  );
+}
+/* Home's layout back to the start (the strip, hidden apps, order, clock); the language stays */
+function resetMenu() {
+  openMenu(t('Reset Home?'), [
     {
-      label: t('Apps on Home'),
-      sub: t('hold OK on an app'),
-      stay: true,
+      label: t('Reset'),
       fn: function () {
-        toast(t('Hold OK on an app in the strip or in All apps to change Home'));
-      },
-    },
-    { label: t('Inputs on Home'), stay: true, fn: inputsHomeMenu },
-    { label: t('Hidden apps'), stay: true, fn: hiddenMenu },
-    {
-      label: t('App order'),
-      sub: cfg.sort === 'alpha' ? t('A to Z') : t('Most used first'),
-      fn: function () {
-        cfg.sort = cfg.sort === 'alpha' ? 'usage' : 'alpha';
+        cfg = { language: cfg.language };
         saveCfg();
       },
     },
-    {
-      label: t('Clock'),
-      sub: cfg.clock === '24' ? t('24-hour') : cfg.clock === '12' ? t('12-hour') : t('Automatic'),
-      fn: function () {
-        cfg.clock = cfg.clock === '24' ? '12' : cfg.clock === '12' ? 'auto' : '24';
-        saveCfg();
-        tick();
-      },
-    },
-    {
-      label: t('Reset customisation'),
-      fn: function () {
-        cfg = {};
-        saveCfg();
-      },
-    },
+    { label: t('Cancel'), fn: function () {} },
   ]);
 }
 /* the HDMI inputs, each on Home (in the strip, after the apps) or not: OK switches it */
@@ -3132,7 +3679,7 @@ function load() {
       VOD.check(); /* fork */
       if (x.version && oldSvc(x.version) && !warned) {
         warned = true;
-        toast('The service (' + x.version + ') is older than this launcher needs: update it in the CleanYourTV manager');
+        toast(t('The service (%s) is older than this launcher needs: update it in the CleanYourTV manager').replace('%s', x.version));
       }
       slideLater();
       usage = x.usage || {};
@@ -3153,9 +3700,16 @@ function load() {
         return a.input ? { id: a.id, title: a.title, input: a.input, off: !!a.off } : { id: a.id, title: a.title };
       });
       cfg = x.config || {};
+      if (locFor(cfg.language) !== LOC) {
+        /* a language chosen in Settings (here or before a boot): the page again, drawn in it */
+        store();
+        if (cachedLang() === (cfg.language || '')) return void location.reload();
+        LOC = locFor(cfg.language); /* no cache to read it from: the texts drawn from now on */
+        LANG = LOC.slice(0, 2);
+      }
       applyTheme(cfg.theme);
       if (liveOn()) apps.push({ id: '__live', title: t('Live TV') });
-      if (VOD.ready) apps.push({ id: '__vod', title: 'Films & Series' }); /* fork */
+      if (VOD.ready) apps.push({ id: '__vod', title: t('Films & Series') }); /* fork */
       store();
       rebuild();
       homeData(); /* after the settings: Live TV may have been switched on or off */
@@ -3305,7 +3859,7 @@ function filmText(it) {
   /* (the title's size is set by heroText, from its height) */
   if (it.year) facts.push('<span>' + esc(it.year) + '</span>');
   if (len) facts.push('<span>' + esc(len) + '</span>');
-  if (it.genres && it.genres.length) facts.push('<span>' + esc(it.genres.slice(0, 2).join(', ')) + '</span>');
+  if (it.genres && it.genres.length) facts.push('<span>' + esc(it.genres.slice(0, 2).map(t).join(', ')) + '</span>');
   if (it.rating) facts.push('<b>' + esc(it.rating) + '</b>');
   var name = it.label || it.name || '';
   return (
@@ -3547,11 +4101,10 @@ function rebuild() {
     return d;
   });
   var all = document.createElement('div');
-  all.className = 'si ap fo';
-  all._k = 'strip:all';
-  all.innerHTML = svg('grid') + '<span></span>';
-  all.lastChild.textContent = t('All apps');
-  all._run = allAppsMenu;
+  all.className = 'si ap cog fo'; /* Settings: the cog alone */
+  all._k = 'strip:settings';
+  all.innerHTML = svg('gear');
+  all._run = settingsMenu;
   hit(all);
   row.appendChild(all);
   stripEls.push(all);
@@ -3998,6 +4551,10 @@ var LT = (function () {
 })();
 /* ---------- Films & Series (fork): the rules behind resume, watched marks and the rows, without the page (tools/test/vodlib.test.js) ---------- */
 var VL = (function () {
+  /* the page's translation (clock.js); English where there is none (the tests) */
+  function tx(k) {
+    return typeof t === 'function' ? t(k) : k;
+  }
   /* watched: less than 5 minutes or 5 % left */
   function watched(pos, dur) {
     return dur > 0 && (dur - pos < 300 || pos / dur >= 0.95);
@@ -4056,16 +4613,18 @@ var VL = (function () {
       })
       .sort(newestFirst);
   }
+  function hmin(m) {
+    return m >= 60 ? Math.floor(m / 60) + ' ' + tx('h') + ' ' + (m % 60) + ' min' : m + ' min';
+  }
   function fmtLeft(sec) {
-    var m = Math.max(1, Math.round((sec || 0) / 60));
-    return (m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min') + ' left';
+    return tx('%s left').replace('%s', hmin(Math.max(1, Math.round((sec || 0) / 60))));
   }
   /* the line on a Continue watching card: what is left of a film; for a show the episode and what is left, or the one after */
   function continueSub(x) {
     var e = x.ep;
     if (!e) return x.dur > x.pos ? fmtLeft(x.dur - x.pos) : '';
     if (!e.watched) return epCode(e.season, e.num) + (e.dur > e.pos ? '  ·  ' + fmtLeft(e.dur - e.pos) : '');
-    return e.next ? 'Next: ' + epCode(e.next.season, e.next.num) : 'After ' + epCode(e.season, e.num);
+    return e.next ? tx('Next: %s').replace('%s', epCode(e.next.season, e.next.num)) : tx('After %s').replace('%s', epCode(e.season, e.num));
   }
   /* how far into a Continue watching card (0..1), or -1 for none */
   function continueProgress(x) {
@@ -4149,8 +4708,8 @@ var VL = (function () {
   }
   function sortLabel(cur, offered) {
     var list = sorts(offered);
-    for (var i = 0; i < list.length; i++) if (list[i][0] === cur) return list[i][1];
-    return list.length ? list[0][1] : '';
+    for (var i = 0; i < list.length; i++) if (list[i][0] === cur) return tx(list[i][1]);
+    return list.length ? tx(list[0][1]) : '';
   }
   /* seconds per keypress while Left/Right is held: 10, then 30, then a minute */
   function skipStep(count) {
@@ -4167,8 +4726,7 @@ var VL = (function () {
   }
   function fmtLength(sec) {
     var m = Math.round((sec || 0) / 60);
-    if (!(m > 0)) return '';
-    return m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min';
+    return m > 0 ? hmin(m) : '';
   }
   function endsAt(nowMs, remainingSec) {
     var d = new Date(nowMs + remainingSec * 1000);
@@ -4179,7 +4737,7 @@ var VL = (function () {
     return [Math.max(0, Math.min(focus - before, total)), Math.max(0, Math.min(focus + ahead, total))];
   }
   function epCode(season, num) {
-    return 'S' + two(season) + 'E' + two(num);
+    return tx('S%sE%s').replace('%s', two(season)).replace('%s', two(num));
   }
   return {
     watched: watched,
@@ -4208,6 +4766,10 @@ var VL = (function () {
 })();
 /* ---------- Home (fork): what the screen shows, without the page (tools/test/homelib.test.js) ---------- */
 var HL = (function () {
+  /* the page's translation (clock.js); English where there is none (the tests) */
+  function tx(k) {
+    return typeof t === 'function' ? t(k) : k;
+  }
   /* the hero: the films Trending row's titles with a backdrop, without those Home's Continue watching row already shows */
   function heroPicks(rows, skipIds, max) {
     var tr = null;
@@ -4294,12 +4856,12 @@ var HL = (function () {
   function chanLine(ch, nowSec) {
     var n = ch.now;
     /* between two programmes: the next one */
-    if (!n && ch.next) return { title: ch.next[2], times: 'From ' + hm(ch.next[0]), next: '', prog: 0 };
+    if (!n && ch.next) return { title: ch.next[2], times: tx('From %s').replace('%s', hm(ch.next[0])), next: '', prog: 0 };
     if (!n) return { title: 'No guide', times: '', next: '', prog: -1 };
     return {
       title: n[2],
-      times: hm(n[0]) + ' to ' + hm(n[1]),
-      next: ch.next ? 'Then ' + ch.next[2] : '',
+      times: tx('%s to %s').replace('%s', hm(n[0])).replace('%s', hm(n[1])),
+      next: ch.next ? tx('Then %s').replace('%s', ch.next[2]) : '',
       prog: progress(nowSec, n),
     };
   }
@@ -5284,7 +5846,7 @@ var LIVE = (function () {
       if (v.buffered && v.buffered.length) ahead = v.buffered.end(v.buffered.length - 1) - v.currentTime;
     } catch (e) {}
     return (
-      (v.videoWidth ? v.videoWidth + '×' + v.videoHeight : 'no picture') +
+      (v.videoWidth ? v.videoWidth + '×' + v.videoHeight : t('no picture')) +
       '\n' +
       t('buffer') +
       ' ' +
@@ -5423,7 +5985,7 @@ var LIVE = (function () {
           api('/api/live/channels').then(function (x) {
             if (!x.channels.length) {
               if (++tries > 40) {
-                msg('<div>' + lesc(s.error || 'No channels') + '</div>');
+                msg('<div>' + lesc(s.error || t('No channels')) + '</div>');
                 return;
               }
               setTimeout(load, 2000);
@@ -5685,6 +6247,8 @@ var VOD = (function () {
   var S = { q: '', results: [], fi: 0, els: [] };
   var KINDS = ['films', 'series'];
   var TABS = ['Films', 'Series', 'My list', 'Search'];
+  /* the end of a Continue watching line ("12 min left"), left off on a narrow card */
+  var LEFT = new RegExp(' ' + t('%s left').replace('%s', '').trim() + '$');
   var LIST = 2,
     FIND = 3;
   /* the My list tab: films and series together, newest first, as a grid */
@@ -5763,12 +6327,14 @@ var VOD = (function () {
   function drawTabs() {
     var h = '';
     for (var i = 0; i < TABS.length; i++)
-      h += '<div class="vtab' + (i === tab ? ' on' : '') + (area === 'tabs' && i === ti ? ' f' : '') + '">' + TABS[i] + '</div>';
+      h += '<div class="vtab' + (i === tab ? ' on' : '') + (area === 'tabs' && i === ti ? ' f' : '') + '">' + esc(t(TABS[i])) + '</div>';
     if (hasSort())
       h +=
         '<div class="vsort' +
         (area === 'sort' ? ' f' : '') +
-        '">Sort: <b>' +
+        '">' +
+        esc(t('Sort:')) +
+        ' <b>' +
         esc(VL.sortLabel(sortOf(KINDS[tab]) || 'added', sortsOffered())) +
         '</b></div>';
     $('vd-top').innerHTML = h;
@@ -5784,8 +6350,8 @@ var VOD = (function () {
       var keep = { row: rows[ri] ? VL.rowKey(rows[ri]) : '', fi: {} };
       keepMem();
       /* the category rows again in the new order; Continue watching, My list and Recently added stay as they are */
-      var t = T[kind];
-      t.box.parentNode.removeChild(t.box);
+      var tb = T[kind];
+      tb.box.parentNode.removeChild(tb.box);
       delete T[kind];
       showRows(keep);
       drawTabs();
@@ -5841,7 +6407,7 @@ var VOD = (function () {
       var sb = document.createElement('div');
       sb.className = 'vsub';
       sb.textContent =
-        it.sub.indexOf('·') > 0 ? it.sub.replace(/ left$/, '') : it.sub; /* the card is narrow; the details above say it in full */
+        it.sub.indexOf('·') > 0 ? it.sub.replace(LEFT, '') : it.sub; /* the card is narrow; the details above say it in full */
       d.appendChild(sb);
     }
     var mine = itemOf(kind, it.id),
@@ -5864,18 +6430,18 @@ var VOD = (function () {
     var items = list.map(function (x) {
       return { id: x.id, label: x.name, poster: x.poster, sub: VL.continueSub(x), prog: VL.continueProgress(x) };
     });
-    return { title: 'Continue watching', kind: kind, src: 'continue', items: items, total: items.length, done: true };
+    return { title: t('Continue watching'), kind: kind, src: 'continue', items: items, total: items.length, done: true };
   }
   function listRow(kind) {
     var items = VL.myList(ST.list, kind === 'films' ? 'film' : 'show').map(function (x) {
       return { id: x.id, label: x.name, poster: x.poster };
     });
-    return { title: 'My list', kind: kind, src: 'mylist', items: items, total: items.length, done: true };
+    return { title: t('My list'), kind: kind, src: 'mylist', items: items, total: items.length, done: true };
   }
   function becauseRow(kind) {
     var b = BEC[kind];
     return {
-      title: b ? 'Because you watched ' + b.name : '',
+      title: b ? t('Because you watched %s').replace('%s', b.name) : '',
       kind: kind,
       src: 'because',
       items: b ? b.items : [],
@@ -5926,9 +6492,9 @@ var VOD = (function () {
           CARDS[kind][c.id] = c;
         });
         if (o.on && tab === LIST) showList();
-        var t = T[kind];
-        if (!t) return;
-        t.rows.forEach(function (rw) {
+        var tb = T[kind];
+        if (!tb) return;
+        tb.rows.forEach(function (rw) {
           if (!isPersonal(rw)) return;
           rw.items.forEach(function (it) {
             merge(it, CARDS[kind][it.id]);
@@ -5983,7 +6549,7 @@ var VOD = (function () {
     for (var k in T) T[k].box.style.display = k === kind ? '' : 'none';
     rows = T[kind].rows;
     ri = T[kind].ri;
-    if (!rows.length) msg('<b>Nothing here yet</b>Tick some categories on the curator page.');
+    if (!rows.length) msg('<b>' + esc(t('Nothing here yet')) + '</b>' + esc(t('Tick some categories on the curator page.')));
     else msg('');
     drawRows();
   }
@@ -5992,34 +6558,34 @@ var VOD = (function () {
     if (HOME[kind])
       HOME[kind].forEach(function (r) {
         if (r.path)
-          list.push({ title: r.title, kind: kind, src: 'cat', cid: String(r.id).replace(/^cat-/, ''), items: [], total: r.count });
+          list.push({ title: t(r.title), kind: kind, src: 'cat', cid: String(r.id).replace(/^cat-/, ''), items: [], total: r.count });
         else if (r.items && r.items.length)
-          list.push({ title: r.title, kind: kind, src: 'home', cid: r.id, items: r.items, total: r.items.length, done: true });
+          list.push({ title: t(r.title), kind: kind, src: 'home', cid: r.id, items: r.items, total: r.items.length, done: true });
       });
     else {
-      list.push({ title: 'Recently added', kind: kind, src: 'recent', items: [], total: -1 });
+      list.push({ title: t('Recently added'), kind: kind, src: 'recent', items: [], total: -1 });
       ((lib && lib[kind]) || []).forEach(function (c) {
         if (c.count > 0) list.push({ title: c.name, kind: kind, src: 'cat', cid: c.id, items: [], total: c.count, sort: sortOf(kind) });
       });
     }
     needCards(kind);
     loadBecause(kind);
-    var t = (T[kind] = { rows: list, ri: 0, box: document.createElement('div') });
-    t.box.className = 'vbox';
-    t.rows.forEach(function (rw) {
-      t.box.appendChild(rowEl(rw));
+    var tb = (T[kind] = { rows: list, ri: 0, box: document.createElement('div') });
+    tb.box.className = 'vbox';
+    tb.rows.forEach(function (rw) {
+      tb.box.appendChild(rowEl(rw));
     });
     /* the same row after a new sort (a row loads far enough to reach its title, at most 12 pages) */
-    t.ri = VL.recall(keep, t.rows);
-    t.rows.forEach(function (rw) {
+    tb.ri = VL.recall(keep, tb.rows);
+    tb.rows.forEach(function (rw) {
       rw.want = Math.min(rw.want || 0, PAGE * 12);
     });
-    $('vd-rows').appendChild(t.box);
+    $('vd-rows').appendChild(tb.box);
   }
   /* a row still on one of the tabs (an answer can come after the screen was left) */
   function alive(rw) {
-    var t = T[rw.kind];
-    return !!t && t.rows.indexOf(rw) >= 0;
+    var tb = T[rw.kind];
+    return !!tb && tb.rows.indexOf(rw) >= 0;
   }
   function rowEl(rw) {
     rw.fi = rw.fi || 0;
@@ -6053,7 +6619,7 @@ var VOD = (function () {
         if (!alive(rw)) return; /* the screen was left meanwhile; switching tabs or opening a title doesn't drop the answer */
         rw.items = rw.items.concat(list);
         if (rw.src === 'recent' || list.length < PAGE || (rw.total > 0 && rw.items.length >= rw.total)) rw.done = true;
-        if (!rw.items.length) rw.strip.innerHTML = '<div class="vempty">Nothing here.</div>';
+        if (!rw.items.length) rw.strip.innerHTML = '<div class="vempty">' + esc(t('Nothing here.')) + '</div>';
         if (rw.want) {
           if (rw.want >= rw.items.length && !rw.done) return fill(rw); /* the next page, towards where the row was left */
           rw.fi = Math.min(rw.want, rw.items.length - 1);
@@ -6065,7 +6631,7 @@ var VOD = (function () {
         rw.loading = false;
         if (!alive(rw)) return;
         rw.done = true;
-        rw.strip.innerHTML = '<div class="vempty">' + esc('Could not load this row: ' + e.message) + '</div>';
+        rw.strip.innerHTML = '<div class="vempty">' + esc(t('Could not load this row: %s').replace('%s', e.message)) + '</div>';
       }
     );
   }
@@ -6214,7 +6780,7 @@ var VOD = (function () {
     if (it.year) a.push(esc(it.year));
     if (it.rating) a.push('<b>★ ' + esc(it.rating) + '</b>');
     if (it.runtime && kind === 'films') a.push(VL.fmtLength(it.runtime * 60));
-    if (it.genres && it.genres.length) a.push(esc(it.genres.join(', ')));
+    if (it.genres && it.genres.length) a.push(esc(it.genres.map(t).join(', ')));
     return a.join('  ·  ');
   }
   /* new elements rather than new text in old ones: webOS 5's compositor can keep showing the old text */
@@ -6307,7 +6873,7 @@ var VOD = (function () {
     });
     if (!L.items.length) {
       if (area === 'list') area = 'tabs';
-      msg('<b>My list is empty</b>Add films and series with + My list on their page.');
+      msg('<b>' + esc(t('My list is empty')) + '</b>' + esc(t('Add films and series with + My list on their page.')));
       showInfo(null);
       drawTabs();
     } else msg('');
@@ -6362,16 +6928,16 @@ var VOD = (function () {
       drawSearch();
       return;
     }
-    msg('Searching…');
+    msg(esc(t('Searching…')));
     vget('/vod/search.json', { q: q }).then(
       function (list) {
-        msg(list.length ? '' : '<b>No titles found</b>' + esc(q));
+        msg(list.length ? '' : '<b>' + esc(t('No titles found')) + '</b>' + esc(q));
         S.results = list;
         area = list.length ? 'results' : 'search';
         drawSearch();
       },
       function (e) {
-        msg('<b>Search failed</b>' + esc(e.message));
+        msg('<b>' + esc(t('Search failed')) + '</b>' + esc(e.message));
       }
     );
   }
@@ -6433,10 +6999,18 @@ var VOD = (function () {
   function facts(d) {
     var a = [];
     if (d.year) a.push(esc(d.year));
-    if (d.genres && d.genres.length) a.push(esc(d.genres.slice(0, 3).join(', ')));
-    else if (d.genre) a.push(esc(d.genre));
+    if (d.genres && d.genres.length) a.push(esc(d.genres.slice(0, 3).map(t).join(', ')));
+    else if (d.genre)
+      a.push(
+        esc(
+          d.genre
+            .split(/\s*,\s*/)
+            .map(t)
+            .join(', ')
+        )
+      );
     if (d.duration_secs) a.push(VL.fmtLength(d.duration_secs));
-    if (d.seasons && d.seasons.length) a.push(d.seasons.length + (d.seasons.length === 1 ? ' season' : ' seasons'));
+    if (d.seasons && d.seasons.length) a.push(esc(t(d.seasons.length === 1 ? '%s season' : '%s seasons').replace('%s', d.seasons.length)));
     if (d.rating) a.push('<b>★ ' + esc(d.rating) + '</b>');
     return a.join('  ·  ');
   }
@@ -6476,7 +7050,9 @@ var VOD = (function () {
         (c.poster ? '<img src="' + esc(img(c.poster)) + '" alt="">' : '') +
         '</div><div class="dmeta"><h1>' +
         esc(c.label || c.name) +
-        '</h1><div class="facts">Loading…</div></div>'
+        '</h1><div class="facts">' +
+        esc(t('Loading…')) +
+        '</div></div>'
     );
     loadSimilar(g); /* at the same time as the details, not after them */
     vget(kind === 'films' ? '/vod/film/' + c.id + '.json' : '/vod/show/' + c.id + '.json').then(
@@ -6502,7 +7078,7 @@ var VOD = (function () {
           '<div class="dmeta"><h1>' +
             esc(c.label || c.name) +
             '</h1><div class="facts">' +
-            esc('Could not load the details: ' + e.message) +
+            esc(t('Could not load the details: %s').replace('%s', e.message)) +
             '</div></div>'
         );
       }
@@ -6530,35 +7106,34 @@ var VOD = (function () {
     if (D.kind === 'films') {
       var at = VL.resumeAt(itemOf('films', d.id));
       if (at) {
-        out.push({ label: '▶  Resume from ' + VL.clock(at), play: { at: at } });
-        out.push({ label: 'From the start', play: { at: 0 } });
-      } else out.push({ label: '▶  Play', play: { at: 0 } });
+        out.push({ label: '▶  ' + t('Resume from %s').replace('%s', VL.clock(at)), play: { at: at } });
+        out.push({ label: t('From the start'), play: { at: 0 } });
+      } else out.push({ label: '▶  ' + t('Play'), play: { at: 0 } });
     } else {
       var nx = VL.nextEpisode(d.seasons, ST.items);
       if (nx) {
         var started = !!itemOf('series', nx.ep.id) || nx.resume > 0 || anyPlayed(d);
         out.push({
           label: nx.again
-            ? '▶  Watch again from ' + VL.epCode(nx.season, nx.ep.num)
+            ? '▶  ' + t('Watch again from %s').replace('%s', VL.epCode(nx.season, nx.ep.num))
             : '▶  ' +
-              (started ? 'Continue ' : 'Play ') +
-              VL.epCode(nx.season, nx.ep.num) +
+              t(started ? 'Continue %s' : 'Play %s').replace('%s', VL.epCode(nx.season, nx.ep.num)) +
               (nx.resume ? '  ·  ' + VL.clock(nx.resume) : ''),
           play: { ep: nx.ep, season: nx.season, at: nx.resume },
         });
       }
     }
     var mine = !!ST.list[listKey()];
-    out.push({ label: mine ? '✓  My list' : '+  My list', small: true, run: toggleList });
+    out.push({ label: (mine ? '✓  ' : '+  ') + t('My list'), small: true, run: toggleList });
     if (d.trailer && /^[\w-]{6,20}$/.test(d.trailer))
       out.push({
-        label: 'Trailer',
+        label: t('Trailer'),
         small: true,
         run: function () {
           openTrailer(d.trailer);
         },
       });
-    out.push({ label: 'More', small: true, run: openMenu });
+    out.push({ label: t('More'), small: true, run: openMenu });
     return out;
   }
   /* ---------- what can be done to a title by hand: My list, watched or not, off Continue watching ---------- */
@@ -6581,12 +7156,17 @@ var VOD = (function () {
       poster: posterOf(d),
     }).then(changed, changed);
   }
+  /* an episode's name; one without a name of its own is "Episode 3" from the curator, said in the TV's language */
+  function epName(ep) {
+    var l = String(ep.label || ep.title || '');
+    return /^Episode( \d+)?$/.test(l) ? t('Episode') + l.slice(7) : l;
+  }
   /* an episode as the service keeps it, with the one after it (null after the show's last) */
   function epItem(d, season, ep) {
     return {
       kind: 'episode',
       id: ep.id,
-      name: String(ep.label || ep.title || '').slice(0, 200),
+      name: epName(ep).slice(0, 200),
       poster: posterOf(d),
       show: { id: d.id, name: String(d.label || d.name || '').slice(0, 200), poster: posterOf(d) },
       season: season,
@@ -6624,13 +7204,13 @@ var VOD = (function () {
       out.push(
         it && it.watched
           ? {
-              label: 'Mark as unwatched',
+              label: t('Mark as unwatched'),
               run: function () {
                 mark([film], false);
               },
             }
           : {
-              label: 'Mark as watched',
+              label: t('Mark as watched'),
               run: function () {
                 mark([film], true);
               },
@@ -6643,17 +7223,17 @@ var VOD = (function () {
       d.seasons.forEach(function (x, i) {
         all = all.concat(seasonItems(i));
       });
-      var name = 'season ' + d.seasons[si].season;
+      var sn = d.seasons[si].season;
       out.push(
         allWatched(sItems)
           ? {
-              label: 'Mark ' + name + ' as unwatched',
+              label: t('Mark season %s as unwatched').replace('%s', sn),
               run: function () {
                 mark(sItems, false);
               },
             }
           : {
-              label: 'Mark ' + name + ' as watched',
+              label: t('Mark season %s as watched').replace('%s', sn),
               run: function () {
                 mark(sItems, true);
               },
@@ -6663,13 +7243,13 @@ var VOD = (function () {
         out.push(
           allWatched(all)
             ? {
-                label: 'Mark every season as unwatched',
+                label: t('Mark every season as unwatched'),
                 run: function () {
                   mark(all, false);
                 },
               }
             : {
-                label: 'Mark every season as watched',
+                label: t('Mark every season as watched'),
                 run: function () {
                   mark(all, true);
                 },
@@ -6678,12 +7258,12 @@ var VOD = (function () {
     }
     if (inContinue())
       out.push({
-        label: 'Remove from Continue watching',
+        label: t('Remove from Continue watching'),
         run: function () {
           api('/api/vod/state', { op: 'hide', kind: D.kind === 'films' ? 'film' : 'show', id: d.id }).then(changed, changed);
         },
       });
-    out.push({ label: 'Close', run: function () {} });
+    out.push({ label: t('Close'), run: function () {} });
     return out;
   }
   function openMenu() {
@@ -6725,7 +7305,7 @@ var VOD = (function () {
     area = 'trailer';
     $('vd-trailer').classList.add('on');
     $('vd-tspin').classList.add('on');
-    trHint('OK pauses  ·  Left / Right skips  ·  Back returns to the title');
+    trHint(t('OK pauses  ·  Left / Right skips  ·  Back returns to the title'));
     /* nothing playing after 15 s (YouTube unreachable): its app instead */
     TR.failT = setTimeout(function () {
       if (TR && !TR.playing) trailerApp();
@@ -6793,7 +7373,7 @@ var VOD = (function () {
     if (isBack(k)) return backFromTrailer();
     if (k === 13) {
       trSend({ c: 'toggle' });
-      trHint('OK plays / pauses  ·  Back returns to the title');
+      trHint(t('OK plays / pauses  ·  Back returns to the title'));
     } else if (k === 37 || k === 39) trSend({ c: 'seek', d: k === 37 ? -10 : 10 });
   }
 
@@ -6844,8 +7424,8 @@ var VOD = (function () {
           '<div class="vseason' +
           (i === D.si ? ' on' : '') +
           (D.group === 'season' && i === D.si ? ' f' : '') +
-          '">Season ' +
-          esc(s.season) +
+          '">' +
+          esc(t('Season %s').replace('%s', s.season)) +
           '</div>';
       });
       h += '</div><div class="veps">';
@@ -6865,7 +7445,7 @@ var VOD = (function () {
             '<div class="vtog' +
             (D.group === 'eptog' ? ' f' : '') +
             '">' +
-            (mine && mine.watched ? 'Mark unwatched' : 'Mark watched') +
+            esc(t(mine && mine.watched ? 'Mark unwatched' : 'Mark watched')) +
             '</div>';
         h +=
           '<div class="vep' +
@@ -6874,7 +7454,7 @@ var VOD = (function () {
           '"><div class="n">' +
           esc(ep.num || i + 1) +
           '</div><div class="l">' +
-          esc(ep.label || ep.title) +
+          esc(epName(ep)) +
           '</div>' +
           right +
           '</div>';
@@ -6886,7 +7466,9 @@ var VOD = (function () {
       h +=
         '<div class="vsim' +
         (D.group === 'sim' ? ' on' : '') +
-        '"><h2>More like this</h2><div class="vsstrip" style="transform:translateX(' +
+        '"><h2>' +
+        esc(t('More like this')) +
+        '</h2><div class="vsstrip" style="transform:translateX(' +
         -Math.max(0, D.mi - 2) * CARD +
         'px)">';
       for (var m = sw[0]; m < sw[1]; m++) {
@@ -7015,11 +7597,11 @@ var VOD = (function () {
   }
   /* the personal rows come, go or change in place: every other row keeps its position, and the focus stays on its row */
   function syncPersonal(kind) {
-    var t = T[kind],
+    var tb = T[kind],
       n0 = 0;
-    while (n0 < t.rows.length && isPersonal(t.rows[n0])) n0++;
-    var focus = t.rows[t.ri],
-      old = t.rows.slice(0, n0),
+    while (n0 < tb.rows.length && isPersonal(tb.rows[n0])) n0++;
+    var focus = tb.rows[tb.ri],
+      old = tb.rows.slice(0, n0),
       now = personalRows(kind).map(function (nw) {
         for (var i = 0; i < old.length; i++)
           if (old[i].src === nw.src) {
@@ -7032,18 +7614,18 @@ var VOD = (function () {
         return nw;
       });
     old.forEach(function (rw) {
-      if (now.indexOf(rw) < 0) t.box.removeChild(rw.el);
+      if (now.indexOf(rw) < 0) tb.box.removeChild(rw.el);
     });
-    var first = t.rows[n0] ? t.rows[n0].el : null;
+    var first = tb.rows[n0] ? tb.rows[n0].el : null;
     now.forEach(function (rw) {
-      t.box.insertBefore(rw.el, first);
+      tb.box.insertBefore(rw.el, first);
     });
-    t.rows = now.concat(t.rows.slice(n0));
-    var at = t.rows.indexOf(focus);
+    tb.rows = now.concat(tb.rows.slice(n0));
+    var at = tb.rows.indexOf(focus);
     if (at < 0 && focus) for (var j = 0; j < now.length; j++) if (now[j].src === focus.src) at = j; /* the same row, rebuilt */
-    t.ri = at >= 0 ? at : Math.min(t.ri, t.rows.length - 1);
-    if (t.ri < 0) t.ri = 0;
-    for (var r = 0; r < t.rows.length; r++) clearRow(t.rows[r]); /* redrawn with the new marks */
+    tb.ri = at >= 0 ? at : Math.min(tb.ri, tb.rows.length - 1);
+    if (tb.ri < 0) tb.ri = 0;
+    for (var r = 0; r < tb.rows.length; r++) clearRow(tb.rows[r]); /* redrawn with the new marks */
   }
 
   /* ---------- the player: one <video> per playback, created on play and removed on stop, so nothing holds a connection ---------- */
@@ -7081,7 +7663,7 @@ var VOD = (function () {
       cur = {
         kind: 'episode',
         id: spec.ep.id,
-        name: spec.ep.label || spec.ep.title || '',
+        name: epName(spec.ep),
         poster: posterOf(d),
         show: { id: d.id, name: d.label || d.name || '', poster: posterOf(d) },
         season: spec.season,
@@ -7134,9 +7716,13 @@ var VOD = (function () {
     if (on)
       setHtml(
         $('vd-early'),
-        '<b>▶  Next episode</b>' +
-          esc(VL.epCode(P.after.season, P.after.ep.num) + '  ·  ' + (P.after.ep.label || P.after.ep.title || '')) +
-          '<div class="small">OK plays it  ·  Down hides this</div>'
+        '<b>▶  ' +
+          esc(t('Next episode')) +
+          '</b>' +
+          esc(VL.epCode(P.after.season, P.after.ep.num) + '  ·  ' + epName(P.after.ep)) +
+          '<div class="small">' +
+          esc(t('OK plays it  ·  Down hides this')) +
+          '</div>'
       );
     player('vd-early', on);
   }
@@ -7200,7 +7786,13 @@ var VOD = (function () {
     release(true);
     setHtml(
       $('vd-pmsg'),
-      '<b>' + esc(P.cur.name) + "</b>This title can't be played on the TV" + ext + '.<div class="small">Press Back.</div>'
+      '<b>' +
+        esc(P.cur.name) +
+        '</b>' +
+        esc(t("This title can't be played on the TV%s.")).replace('%s', ext) +
+        '<div class="small">' +
+        esc(t('Press Back.')) +
+        '</div>'
     );
     player('vd-pmsg', true);
   }
@@ -7264,8 +7856,8 @@ var VOD = (function () {
     $('vd-bfill').style.transform = 'scaleX(' + (dur ? Math.min(1, pos / dur) : 0) + ')';
     $('vd-btime').textContent =
       VL.clock(pos) +
-      (dur ? ' / ' + VL.clock(dur) + '    ends at ' + VL.endsAt(Date.now(), Math.max(0, dur - pos)) : '') +
-      (v && v.paused && P.seek === null ? '    ❚❚ Paused' : '');
+      (dur ? ' / ' + VL.clock(dur) + '    ' + t('ends at %s').replace('%s', VL.endsAt(Date.now(), Math.max(0, dur - pos))) : '') +
+      (v && v.paused && P.seek === null ? '    ❚❚ ' + t('Paused') : '');
   }
   function showBar(ms) {
     P.barOn = true;
@@ -7321,11 +7913,13 @@ var VOD = (function () {
   }
   function drawNext() {
     $('vd-next').innerHTML =
-      '<div class="small">Next in ' +
-      P.nextN +
-      ' s</div><b>' +
-      esc(VL.epCode(P.next.season, P.next.ep.num) + '  ·  ' + (P.next.ep.label || P.next.ep.title)) +
-      '</b><div class="small">OK plays it now, Back stops</div>';
+      '<div class="small">' +
+      esc(t('Next in %s s').replace('%s', P.nextN)) +
+      '</div><b>' +
+      esc(VL.epCode(P.next.season, P.next.ep.num) + '  ·  ' + epName(P.next.ep)) +
+      '</b><div class="small">' +
+      esc(t('OK plays it now, Back stops')) +
+      '</div>';
   }
   function playNext() {
     var n = P.next;
@@ -7459,21 +8053,21 @@ var VOD = (function () {
         list.map(function (x) {
           return x.language;
         }),
-        'Audio'
+        t('Audio')
       );
       var stepA = function (d) {
         var i = (audioNow(list) + d + list.length) % list.length;
         setAudio(i);
         setPref('audio', LT.lang(list[i].language));
       };
-      it.push({ label: 'Audio', sub: names[audioNow(list)], step: stepA });
+      it.push({ label: t('Audio'), sub: names[audioNow(list)], step: stepA });
     }
     if (P.subs.length) {
       var subNames = LT.labels(
         P.subs.map(function (x) {
           return x.lang;
         }),
-        'Subtitles'
+        t('Subtitles')
       );
       var stepS = function (d) {
         var n = P.subs.length + 1,
@@ -7481,10 +8075,10 @@ var VOD = (function () {
         setSub(i);
         setPref('subs', i < 0 ? '' : LT.lang(P.subs[i].lang));
       };
-      it.push({ label: 'Subtitles', sub: P.sub < 0 ? 'Off' : subNames[P.sub], step: stepS });
+      it.push({ label: t('Subtitles'), sub: P.sub < 0 ? t('Off') : subNames[P.sub], step: stepS });
     }
-    if (!it.length) it.push({ label: 'No audio or subtitle choices', sub: '' });
-    it.push({ label: 'Close', sub: '', close: true });
+    if (!it.length) it.push({ label: t('No audio or subtitle choices'), sub: '' });
+    it.push({ label: t('Close'), sub: '', close: true });
     return it;
   }
   function drawMenu() {
@@ -7564,9 +8158,10 @@ var VOD = (function () {
   /* ---------- entering and leaving ---------- */
   o.enter = function () {
     o.on = true;
+    $('vd-q').placeholder = t('Search films and series');
     $('vd').classList.add('on');
     area = 'rows';
-    msg('Loading…');
+    msg(esc(t('Loading…')));
     Promise.all([
       api('/api/vod/status'),
       loadState(),
@@ -7626,7 +8221,7 @@ var VOD = (function () {
         wantFind = false;
         area = 'tabs';
         drawTabs();
-        msg('<b>The film library is not reachable</b>' + esc(e && e.message));
+        msg('<b>' + esc(t('The film library is not reachable')) + '</b>' + esc(e && e.message));
       }
     );
   };
@@ -7776,7 +8371,7 @@ var VOD = (function () {
     fromHome = true;
     $('vd').classList.add('on');
     area = 'details';
-    msg('Loading…');
+    msg(esc(t('Loading…')));
     var g = ++gen;
     Promise.all([
       api('/api/vod/status'),
