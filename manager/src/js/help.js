@@ -18,6 +18,9 @@ var INFO = {
   'Debloat LG\u2019s ads and telemetry': t(
     'Stops LG\u2019s ad, recommendation and telemetry services and blocks a few ad servers. Nothing is uninstalled, and it only applies while this launcher is Home.'
   ),
+  'Hide the Magic Remote pointer': t(
+    'The pointer never appears, not on the Home button and not when the remote moves. The buttons work as before; apps that need the pointer, such as the web browser, cannot be used while this is on. Nothing is stored on the TV: switching off brings the pointer back at once.'
+  ),
 
   'Theme': t(
     'Choose how the home screen looks: colours, the size of tiles and text, the number of columns, the clock, the ambient glow, animation speed and a wallpaper. Themes are small data files bundled with the package; the accent colour can be changed on top of any of them.'

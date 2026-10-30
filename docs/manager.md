@@ -18,6 +18,7 @@ The manager follows the language: the TV's (Danish on a TV set to Danish, Englis
 | Voice | Optional. Installs the speech recogniser (about 80 MB), learns the voice button, tries it, sets where the text goes. See [Voice](voice.md). |
 | Network notifications | Switch, address, token (also as a QR code for a phone) and an example for sending [picture notifications](notifications.md) from other devices. |
 | Debloat | Turns the [debloat](debloat.md) on or off. |
+| Hide the Magic Remote pointer | Off by default. On, the pointer never appears and the remote works with its buttons only. See [The pointer](input-key.md#the-pointer). |
 | Share log | A QR code that opens a masked diagnostic report on a phone, with a **Copy** button. |
 | Uninstall | Removes everything and restarts the TV. |
 
