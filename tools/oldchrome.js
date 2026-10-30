@@ -1,6 +1,6 @@
 // Runs the launcher, the manager and the Inputs picker in the browser engines of older TVs: Chromium 68 (webOS 5) and Chromium 79
 // (webOS 6), headless, against a stand-in for the TV's service on 127.0.0.1:8765. It fails when a page throws a script error or does
-// not draw what it should (tiles, rows, inputs). A current Chrome hides such problems: these versions lack features it has.
+// not draw what it should (the strip, rows, inputs). A current Chrome hides such problems: these versions lack features it has.
 //   node tools/oldchrome.js                 both engines
 //   node tools/oldchrome.js --shots <dir>   also saves a screenshot of each page per engine
 // The engines are Chromium snapshots from Google's storage, downloaded once (about 100 MB each), checked against pinned SHA-256 sums
@@ -96,7 +96,9 @@ const PROBE =
 const page = f => fs.readFileSync(path.join(ROOT, f), 'utf8').replace('<script>', PROBE + '<script>');
 // [name, file, what it draws, how many at least, milliseconds of page time to wait]
 const PAGES = [
-  ['launcher', 'app/index.html', /class="tile[ "]/g, 8, 8000],
+  // the launcher (fork): this stand-in has no Films & Series or Live TV, so Home is the clock and the strip (Live TV, the four dock
+  // apps, All apps)
+  ['launcher', 'app/index.html', /class="si[ "]/g, 6, 8000],
   ['manager', 'manager/app/index.html', /class="row[ "]/g, 5, 8000],
   ['picker', 'picker/app/index.html', /class="chip[ "]/g, 2, 3000],
 ];
