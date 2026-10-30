@@ -155,9 +155,7 @@ function chanText(ch) {
     esc(t('Last watched')) +
     '</div><h1>' +
     esc(ch.name) +
-    '</h1><div class="facts"><b>' +
-    esc(ch.num) +
-    '</b><span>' +
+    '</h1><div class="facts"><span>' +
     esc(l.title === 'No guide' ? t('No guide') : l.title) +
     '</span>' +
     (l.times ? '<span>' + esc(l.times) + '</span>' : '') +
@@ -311,10 +309,9 @@ function drawBand() {
     d.className = 'ch card fo' + (ch.now || ch.next ? '' : ' ng');
     d._k = 'ch:' + ch.key;
     d.innerHTML =
-      '<div class="cn"><b></b><span></span></div><div class="pt"></div><div class="tm"></div><div class="bar"><i style="width:' +
+      '<div class="cn"><span></span></div><div class="pt"></div><div class="tm"></div><div class="bar"><i style="width:' +
       Math.round(100 * Math.max(0, l.prog)) +
       '%"></i></div><div class="nx"></div>';
-    d.querySelector('.cn b').textContent = ch.num;
     d.querySelector('.cn span').textContent = ch.name;
     if (ch.fav) d.querySelector('.cn').insertAdjacentHTML('beforeend', STAR_SVG);
     d.querySelector('.pt').textContent = l.title === 'No guide' ? t('No guide') : l.title;

@@ -370,12 +370,6 @@ body {
   white-space: nowrap;
   overflow: hidden;
 }
-.ch .cn b {
-  font-weight: 700;
-  color: var(--ink);
-  margin-right: 12px;
-  font-variant-numeric: tabular-nums;
-}
 .ch .cn span {
   overflow: hidden;
   text-overflow: ellipsis;
