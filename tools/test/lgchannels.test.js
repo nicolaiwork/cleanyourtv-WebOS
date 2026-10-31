@@ -1,6 +1,14 @@
 // LG Channels kept out of the background (lgchannels.js): the preload manager's switch for the app, never saved by LG; a copy in the
 // background closed and one in front left alone; switching off gives LG its policy back; TVs without the app or the preload manager.
-const { ok, req, run, memoryConfig } = require('./lib');
+// LG's stream service for it (lgchannelurl) gets the do-nothing program mounted over it, and back. Mounts are a file here.
+const fs = require('fs'),
+  path = require('path');
+const { ok, req, run, tmp, memoryConfig } = require('./lib');
+const BIN = path.join(tmp, 'lgchannelurl');
+process.env.CYTV_LGCHANNELURL = BIN; // before paths.js is read
+const MOUNTS = path.join(process.env.CYTV_PROC, 'mounts');
+fs.writeFileSync(MOUNTS, '/dev/root / ext4 ro 0 0\n');
+const stubbed = () => fs.readFileSync(MOUNTS, 'utf8').indexOf(' ' + BIN + ' ') >= 0;
 
 const APP = 'com.webos.app.lgchannels';
 
@@ -32,6 +40,23 @@ function tv(o) {
     }
     return { returnValue: false, errorText: 'unknown ' + m };
   };
+  // the shell: mount and umount change the mounts file
+  t.scripts = [];
+  t.sh = async script => {
+    t.scripts.push(script);
+    if (t.shFails) return { ok: false, code: 1, out: '', err: 'mount: permission denied\n', error: 'exit 1' };
+    if (/mount --bind /.test(script)) fs.appendFileSync(MOUNTS, '/dev/x ' + BIN + ' ext4 ro 0 0\n');
+    else if (/^umount /.test(script))
+      fs.writeFileSync(
+        MOUNTS,
+        fs
+          .readFileSync(MOUNTS, 'utf8')
+          .split('\n')
+          .filter(l => l.indexOf(' ' + BIN + ' ') < 0)
+          .join('\n')
+      );
+    return { ok: true, code: 0, out: '', err: '', error: '' };
+  };
   t.did = m => t.calls.filter(c => c.m === m);
   return t;
 }
@@ -41,7 +66,7 @@ run(async () => {
   const lgch = req('lgchannels');
 
   let t = tv();
-  let l = lgch.create({ config: memoryConfig({}), luna: t.luna });
+  let l = lgch.create({ config: memoryConfig({}), luna: t.luna, sh: t.sh });
   await l.sync();
   const set = t.did('com.webos.service.preloadmanager/setPreloadPolicy');
   ok(l.status().enabled && l.status().state === 'stopped', 'on by default: stopped');
@@ -63,13 +88,13 @@ run(async () => {
   ok(t.enabled === false, 'a restarted preload manager gets it again');
 
   t = tv({ front: APP });
-  l = lgch.create({ config: opts(true), luna: t.luna });
+  l = lgch.create({ config: opts(true), luna: t.luna, sh: t.sh });
   await l.sync();
   ok(t.running && !t.did('com.webos.applicationManager/closeByAppId').length, 'LG Channels in front (opened on purpose) is left open');
 
   t = tv();
   const config = opts(true);
-  l = lgch.create({ config, luna: t.luna });
+  l = lgch.create({ config, luna: t.luna, sh: t.sh });
   await l.sync();
   config.update('test', c => {
     c.options = { stopLgChannels: false };
@@ -83,12 +108,12 @@ run(async () => {
   ok(!t.calls.length, 'off: the regular check asks and closes nothing');
 
   t = tv();
-  l = lgch.create({ config: opts(false), luna: t.luna });
+  l = lgch.create({ config: opts(false), luna: t.luna, sh: t.sh });
   await l.start();
   ok(!t.calls.length && t.enabled && l.status().state === 'off', 'off from the start: LG’s policy is not touched');
 
   t = tv({ listed: false });
-  l = lgch.create({ config: opts(true), luna: t.luna });
+  l = lgch.create({ config: opts(true), luna: t.luna, sh: t.sh });
   await l.sync();
   ok(l.status().state === 'absent' && t.running, 'a TV whose preload manager does not list LG Channels: reported, nothing closed');
   ok(l.delay() === lgch.RETRY_MS, 'not listed (early in the boot the list can come late): asked again soon');
@@ -100,7 +125,7 @@ run(async () => {
   ok(l.delay() === lgch.CHECK_MS, 'never listed: after a while only the regular check');
 
   t = tv({ pm: false });
-  l = lgch.create({ config: opts(true), luna: t.luna });
+  l = lgch.create({ config: opts(true), luna: t.luna, sh: t.sh });
   await l.sync();
   ok(l.status().state === 'waiting' && /does not exist/.test(l.status().detail), 'no preload manager (yet): waits for it');
   ok(l.delay() === lgch.RETRY_MS, 'and asks again soon');
@@ -109,7 +134,33 @@ run(async () => {
   ok(l.status().state === 'stopped' && t.enabled === false, 'the preload manager comes up: stopped');
 
   t = tv({ setFails: true });
-  l = lgch.create({ config: opts(true), luna: t.luna });
+  l = lgch.create({ config: opts(true), luna: t.luna, sh: t.sh });
   await l.sync();
   ok(l.status().state === 'error' && t.running, 'the policy cannot be changed: reported, the app is not closed');
+
+  // lgchannelurl: none on this "TV" yet, so nothing was mounted above
+  ok(!stubbed() && !t.scripts.length, 'no lgchannelurl on the TV: nothing is mounted');
+  fs.writeFileSync(BIN, '#!/bin/sh\n');
+  t = tv();
+  const c2 = opts(true);
+  l = lgch.create({ config: c2, luna: t.luna, sh: t.sh });
+  await l.sync();
+  const up = t.scripts[0] || '';
+  ok(
+    stubbed() && /stub-noop' '/.test(up) && up.indexOf("pkill -9 -f '^" + BIN + "'") >= 0,
+    'on: the do-nothing program is mounted over lgchannelurl and the running one stopped'
+  );
+  await l.sync();
+  ok(t.scripts.length === 1, 'already mounted: not mounted twice');
+  c2.update('test', c => {
+    c.options = { stopLgChannels: false };
+  });
+  await l.sync();
+  ok(!stubbed() && /^umount /.test(t.scripts[1] || ''), 'switched off: unmounted');
+  await l.start();
+  ok(t.scripts.length === 2, 'off: left alone');
+  t = tv({ shFails: true });
+  l = lgch.create({ config: opts(true), luna: t.luna, sh: t.sh });
+  await l.sync();
+  ok(!stubbed() && l.status().state === 'stopped', 'the mount fails: logged, LG Channels is stopped all the same');
 });

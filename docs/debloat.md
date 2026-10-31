@@ -27,9 +27,12 @@ whether or not the launcher is Home) keeps it from starting there:
   the preload manager's memory changes, never LG's preferences file);
 - it closes a copy that is already running in the background (preloaded before the service got there, or left there); LG Channels
   in front, opened on purpose, is left alone;
+- it keeps LG's service for LG Channels' stream addresses (`lgchannelurl`, which an LG activity starts once the TV is online) from
+  running, the way the debloat stops its services: a do-nothing program is mounted over `/usr/sbin/lgchannelurl` (in RAM) and the
+  running one is stopped. LG Channels' channels in LG's own channel list do not play while it is on;
 - it checks again every five minutes, since a restart of the preload manager forgets the change.
 
-LG Channels stays installed and can still be opened. Switching it off gives the preload manager LG's own policy back at once (the app
+LG Channels stays installed and can still be opened. Switching it off gives the preload manager LG's own policy back and unmounts the do-nothing program at once (the app
 is not started again until LG's preload manager next decides to); a reboot without the service does the same. On a TV whose preload
 manager does not list LG Channels, the manager app shows "not possible on this TV".
 

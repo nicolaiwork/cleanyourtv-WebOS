@@ -33,6 +33,7 @@ module.exports = {
   PROC: env.CYTV_PROC || '/proc',
   HOME_APP: '/usr/palm/applications/com.webos.app.home',
   FULLHOME_APP: '/usr/palm/applications/com.webos.app.fullhome',
+  LGCHANNELURL: env.CYTV_LGCHANNELURL || '/usr/sbin/lgchannelurl', // fork: LG Channels' stream service (lgchannels.js)
   STANDIN: env.CYTV_STANDIN || '/tmp/cleanyourtv-home-standin', // LG's Home program while scripts/home-standin.sh is mounted over it
   // child processes find the system tools first, as in a login shell on the TV
   ENV: Object.assign({}, env, { PATH: '/usr/bin:/usr/sbin:/bin:/sbin:' + (env.PATH || '') }),
