@@ -382,6 +382,11 @@ svg.st {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+#lv-pill .clk {
+  display: inline-block;
+  min-width: 2.6em;
+  font-variant-numeric: tabular-nums;
+}
 #lv-pill .l2 {
   font-size: 26px;
   color: var(--ink2);

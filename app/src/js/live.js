@@ -639,7 +639,9 @@ var LIVE = (function () {
       $('lv-pill'),
       (c.logo ? '<img class="logo" src="' + lesc(c.logo) + '" alt="">' : '') +
         '<div class="txt"><div class="l1">' +
-        lesc(t('Ads on') + ' ' + c.name + (clk ? ' · ' + clk : '')) +
+        lesc(t('Ads on') + ' ' + c.name) +
+        /* the counter in a box of its own width: the pill is anchored on the right, so a narrower digit must not move it */
+        (clk ? ' · <span class="clk">' + lesc(clk) + '</span>' : '') +
         '</div><div class="l2">' +
         lesc(prog + ' ' + t('continues · switching back by itself')) +
         '</div></div>'

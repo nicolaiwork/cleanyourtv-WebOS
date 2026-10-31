@@ -297,8 +297,10 @@ run(async () => {
     await playing(pg);
     await poll(pg, brk(1, 5));
     ok(
-      pg.$('lv-onum').textContent === 2 && pg.$('lv-pill').has('on') && /Ads on Kanal A · 0:05/.test(pg.$('lv-pill').innerHTML),
-      'live: a break shows the partner channel with the pill'
+      pg.$('lv-onum').textContent === 2 &&
+        pg.$('lv-pill').has('on') &&
+        /Ads on Kanal A · <span class="clk">0:05<\/span>/.test(pg.$('lv-pill').innerHTML),
+      'live: a break shows the partner channel with the pill, its counter in a box of its own'
     );
     ok(
       /Kanal A continues · switching back by itself/.test(pg.$('lv-pill').innerHTML),
