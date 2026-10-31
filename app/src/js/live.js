@@ -47,6 +47,16 @@ var LIVE = (function () {
     o = { on: false };
   var TR = { subs: [], sub: -1, tries: 0, t: 0 }; /* the playing stream's subtitle tracks (from the TV's player) and the one shown */
   var tuneAt = 0; /* when the channel was chosen, for the timing in perfMark */
+  /* ad breaks (fork): the setting, the break state (LB, livebreaks.js), the poll, and what the break code changed */
+  var BR = { mode: 'off', partner: '', available: false },
+    BS = LB.fresh(),
+    brT = 0,
+    brSeq = 0 /* the newest poll; an older reply is ignored */,
+    brAt = 0 /* when the poll in flight was sent (0: none) */,
+    brDim = false /* the picture is dimmed */,
+    brMuted = false /* the break code muted the video (only then is it unmuted) */,
+    brOwn = false /* play() is called by the break code, not the viewer */,
+    origin = null; /* the channel in a break while the partner channel is shown */
   var MENU_KEY = 1062; /* the 123 button of the 2025 Magic Remote (MR25GA), which has no colour keys */
   var START_MS = 15000,
     STALL_MS = 8000;
@@ -268,6 +278,7 @@ var LIVE = (function () {
     if (video) return video;
     var v = document.createElement('video');
     v.autoplay = true;
+    if (brMuted) v.muted = true;
     video = v;
     /* Not every TV fires 'playing' again after 'waiting' (or at all for some streams), so moving picture time counts as playing too */
     function onPlaying() {
@@ -280,7 +291,7 @@ var LIVE = (function () {
         perfMark('live playing ' + (Date.now() - tuneAt) + ' variant ' + vi + (variants[vi] && variants[vi].type ? ' typed' : ' src'));
         tracksStart();
         clearTimeout(playedT);
-        var c = byNum[cur];
+        var c = origin === null ? byNum[cur] : null; /* the partner channel shown in a break is not the viewer's recent one */
         playedT = setTimeout(function () {
           markPlayed(c);
         }, 3000);
@@ -430,11 +441,12 @@ var LIVE = (function () {
   function play(num, quiet, defer) {
     var c = byNum[num];
     if (!c) return;
+    if (!brOwn) brStop(num); /* the viewer's channel change ends what a break changed */
     gen++;
     tracksReset();
     cur = num;
     try {
-      localStorage.setItem('live.last', String(num));
+      if (!brOwn) localStorage.setItem('live.last', String(num)); /* the partner channel is not where Live TV opens next time */
     } catch (e) {}
     tuneAt = Date.now();
     streams = [{ url: c.url, q: c.q }].concat(c.alt);
@@ -498,7 +510,7 @@ var LIVE = (function () {
     var c = byNum[cur];
     if (!c) return;
     $('lv-onum').textContent = c.num;
-    $('lv-oname').textContent = c.name;
+    $('lv-oname').textContent = brDim ? t('Ads') + ' · ' + c.name : c.name;
     var lg = $('lv-ologo');
     if (c.logo) {
       lg.src = c.logo;
@@ -522,7 +534,7 @@ var LIVE = (function () {
     layer('lv-osd', true);
     clearTimeout(osdT);
     osdT = setTimeout(function () {
-      layer('lv-osd', false);
+      if (!brDim) layer('lv-osd', false); /* the banner stays up while the picture is dimmed for a break */
     }, 5500);
   }
   function loadEpg(ids, cb) {
@@ -543,9 +555,157 @@ var LIVE = (function () {
         cb && cb();
       });
   }
-  setInterval(function () {
+  TICK.every(30000, function () {
     if (o.on && byNum[cur]) loadEpg([byNum[cur].id]);
-  }, 30000);
+  });
+
+  /* ---------- ad breaks (fork; needs the iptv-curator, docs/live-tv.md) ---------- */
+  /* Once a second the service is asked whether the channel is in a break (/api/breaks/now). A break dims and mutes the picture
+     with the banner up, or shows the partner channel until the break ends. The viewer's own channel change ends both at once. */
+  function brSched() {
+    TICK.stop(brT);
+    brT = 0;
+    if (o.on && BR.mode !== 'off') brT = TICK.every(1000, brPoll);
+  }
+  /* the channel whose break is followed: the one in the break while the partner channel is shown, else the one playing */
+  function brWatch() {
+    return origin !== null ? byNum[origin] : byNum[cur];
+  }
+  function brPoll() {
+    var c = brWatch();
+    if (!o.on || !loaded || BR.mode === 'off' || !c || !c.key) return;
+    /* asked only while a channel plays (not while zapping), or a break is on (its end must be seen even when the stream stalls) */
+    if ((!started || pend) && !BS.on && origin === null) return;
+    if (brAt) {
+      if (Date.now() - brAt < 5000) return; /* one request at a time */
+      brAt = 0;
+      brReply(null); /* a poll that never came back counts as a failed one */
+    }
+    var n = ++brSeq;
+    brAt = Date.now();
+    api('/api/breaks/now?key=' + encodeURIComponent(c.key)).then(
+      function (r) {
+        if (n !== brSeq) return;
+        brAt = 0;
+        if (o.on) brReply(r && typeof r === 'object' ? r : null);
+      },
+      function () {
+        if (n !== brSeq) return;
+        brAt = 0;
+        if (o.on) brReply(null);
+      }
+    );
+  }
+  function brReply(r) {
+    var ev = LB.next(BS, r);
+    if (ev === 'start') brStart(r);
+    else if (ev === 'end') brEnd();
+    else if (BS.on) brTick(r);
+  }
+  function brStart(r) {
+    var c = byNum[cur],
+      p = byKey[BR.partner];
+    if (!c) return;
+    if (LB.how(BR.mode, BR.partner, c.key, !!p) === 'partner') {
+      origin = cur;
+      brPlay(p.num, true);
+      brTick(r);
+      layer('lv-pill', true);
+      return;
+    }
+    brDim = true;
+    brMuted = true;
+    if (video) video.muted = true;
+    layer('lv-dim', true);
+    $('lv-osd').classList.add('brk');
+    $('lv-ohint').textContent = t('Watch the ads');
+    brTick(r);
+    clearTimeout(osdT);
+    fillOsd();
+    layer('lv-osd', true);
+  }
+  /* each reply: the counter on the banner, or the pill on the partner channel */
+  function brTick(r) {
+    var clk = r ? LB.clock(r.elapsed) : '';
+    if (brDim) {
+      if (r) $('lv-oclock').textContent = clk;
+      return;
+    }
+    var c = byNum[origin];
+    if (origin === null || !c || (!r && $('lv-pill').innerHTML)) return;
+    var e = epgNow[c.id],
+      prog = e && e.now ? e.now[2] : c.name;
+    setHtml(
+      $('lv-pill'),
+      (c.logo ? '<img class="logo" src="' + lesc(c.logo) + '" alt="">' : '') +
+        '<div class="txt"><div class="l1">' +
+        lesc(t('Ads on') + ' ' + c.name) +
+        /* the counter in a box of its own width: the pill is anchored on the right, so a narrower digit must not move it */
+        (clk ? ' · <span class="clk">' + lesc(clk) + '</span>' : '') +
+        '</div><div class="l2">' +
+        lesc(prog + ' ' + t('continues · switching back by itself')) +
+        '</div></div>'
+    );
+  }
+  /* picture and sound back; the banner goes back to normal and hides as usual */
+  function brUndim() {
+    if (brMuted) {
+      brMuted = false;
+      if (video) video.muted = false;
+    }
+    if (!brDim) return;
+    brDim = false;
+    layer('lv-dim', false);
+    $('lv-osd').classList.remove('brk');
+    fillOsd();
+    if ($('lv-osd').classList.contains('on')) showOsd();
+  }
+  function brEnd() {
+    brUndim();
+    if (origin === null) return;
+    var n = origin;
+    origin = null;
+    layer('lv-pill', false);
+    if (n !== cur && byNum[n]) brPlay(n, true);
+  }
+  /* play() for the break code (or a retry of the same channel): not a channel change by the viewer, so what a break changed stays */
+  function brPlay(num, quiet) {
+    brOwn = true;
+    try {
+      play(num, quiet);
+    } finally {
+      brOwn = false;
+    }
+  }
+  /* everything the break code changed is undone; num: the channel the viewer chose (none when leaving or turning it off) */
+  function brStop(num) {
+    var back = origin !== null && num === origin;
+    brUndim();
+    origin = null;
+    layer('lv-pill', false);
+    brSeq++;
+    brAt = 0;
+    /* back on the channel in the break from the partner: this break is not followed again (it would switch straight back) */
+    if (back && BS.id !== null) LB.cancel(BS);
+    else LB.reset(BS);
+  }
+  function brSet(mode, partner) {
+    BR.mode = mode;
+    BR.partner = partner;
+    if (mode === 'off') brStop();
+    brSched();
+    api('/api/breaks/settings', { mode: mode, partner: partner }).catch(function () {});
+  }
+  function brLoad() {
+    api('/api/breaks/settings').then(
+      function (r) {
+        if (!r || !o.on) return;
+        BR = { mode: r.mode || 'off', partner: r.partner || '', available: !!r.available };
+        brSched();
+      },
+      function () {}
+    );
+  }
 
   /* ---------- the guide: tabs, favourites, recents, filters, search ---------- */
   var full = {};
@@ -888,6 +1048,7 @@ var LIVE = (function () {
         });
       });
     it = it.concat(trackItems());
+    if (BR.available) it = it.concat(breakItems(c));
     it.push({
       label: t('Statistics'),
       sub: t(stats ? 'On' : 'Off'),
@@ -906,6 +1067,36 @@ var LIVE = (function () {
     });
     return it;
   }
+  /* ad breaks (fork): the mode, and the partner channel, chosen as the channel being watched */
+  function breakItems(c) {
+    var modes = ['off', 'dim', 'partner'],
+      names = { off: t('Off'), dim: t('Dim'), partner: t('Partner channel') },
+      p = byKey[BR.partner];
+    var stepB = function (d) {
+      var i = (modes.indexOf(BR.mode) + d + modes.length) % modes.length;
+      brSet(modes[i], BR.partner);
+      drawMenu();
+    };
+    return [
+      {
+        label: t('Ad breaks'),
+        sub: names[BR.mode] || names.off,
+        step: stepB,
+        fn: function () {
+          stepB(1);
+        },
+      },
+      {
+        label: t('Partner channel'),
+        sub: p ? p.name : '—',
+        hint: c && c.key && c.key !== BR.partner ? t('Use this channel as partner') : '',
+        fn: function () {
+          if (c && c.key) brSet(BR.mode, c.key);
+          drawMenu();
+        },
+      },
+    ];
+  }
   function drawMenu() {
     M.items = menuItems();
     if (M.i >= M.items.length) M.i = M.items.length - 1;
@@ -914,8 +1105,10 @@ var LIVE = (function () {
       h +=
         '<div class="mrow' +
         (i === M.i ? ' f' : '') +
+        (M.items[i].hint ? ' h' : '') +
         '"><div class="ml">' +
         lesc(M.items[i].label) +
+        (M.items[i].hint ? '<div class="mh"><span class="key">OK</span>' + lesc(M.items[i].hint) + '</div>' : '') +
         '</div><div class="mv">' +
         lesc(M.items[i].sub) +
         '</div></div>';
@@ -1003,13 +1196,13 @@ var LIVE = (function () {
   }
   function setStats(on) {
     stats = on;
-    clearInterval(statsT);
+    TICK.stop(statsT);
     layer('lv-stats', on);
     if (on) {
       $('lv-stats').textContent = statsText();
-      statsT = setInterval(function () {
+      statsT = TICK.every(1000, function () {
         $('lv-stats').textContent = statsText();
-      }, 1000);
+      });
     }
   }
 
@@ -1044,19 +1237,19 @@ var LIVE = (function () {
           t('Then paste your M3U playlist address. This page closes by itself.') +
           '</div>'
       );
-      clearInterval(setupT);
-      setupT = setInterval(function () {
+      TICK.stop(setupT);
+      setupT = TICK.every(2500, function () {
         if (!o.on) {
-          clearInterval(setupT);
+          TICK.stop(setupT);
           return;
         }
         api('/api/live/status').then(function (s) {
           if (s.configured) {
-            clearInterval(setupT);
+            TICK.stop(setupT);
             boot();
           }
         });
-      }, 2500);
+      });
     });
   }
   function facets() {
@@ -1173,6 +1366,7 @@ var LIVE = (function () {
     guideNext = !!guide;
     wantKey = key || '';
     $('lv').classList.add('on');
+    brLoad();
     if (loaded && byNum[cur]) {
       var want = byKey[wantKey];
       wantKey = '';
@@ -1193,17 +1387,22 @@ var LIVE = (function () {
     }
   };
   o.exit = function () {
+    /* left on the partner channel during a break: Live TV opens on the channel the viewer was watching */
+    if (origin !== null && byNum[origin]) cur = origin;
     o.on = false;
     closeList();
     M.open = false;
     layer('lv-menu', false);
     setStats(false);
     full = {};
+    TICK.stop(brT);
+    brT = 0;
+    brStop(); /* before release(): the picture is unmuted if the break code muted it */
     release();
     clearTimeout(osdT);
     clearTimeout(numT);
     clearTimeout(toastT);
-    clearInterval(setupT);
+    TICK.stop(setupT);
     layer('lv-osd', false);
     layer('lv-numin', false);
     layer('lv-msg', false);
@@ -1304,8 +1503,12 @@ var LIVE = (function () {
       return;
     }
     if (k === 13) {
-      if (failed) play(cur);
-      else openList();
+      if (brDim) {
+        LB.cancel(BS); /* "Watch the ads": picture and sound back for the rest of this break */
+        brUndim();
+      } else if (failed) {
+        brPlay(cur); /* a retry of the same channel: on the partner the break's return, after "Watch the ads" its skip, both stay */
+      } else openList();
     } else if (k === 404) toggleFav(byNum[cur]);
     else if (k === 405 || k === MENU_KEY) openMenu();
     else if (k === 406) setStats(!stats);

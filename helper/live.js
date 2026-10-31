@@ -726,4 +726,9 @@ function start() {
 // ctx is not needed: this part keeps its own state
 const create = (/** @type {any} */ _ctx) => ({ name: 'live', prefix: '/api/live/', handle, start });
 
-module.exports = { create, handle, parseM3U, parseEpg, probe, derivedEpgUrl, nameKey };
+// the main stream address of the channel with this key in the loaded playlist ('' if none); never sent to the page
+const streamOf = key => {
+  const ch = validKey(key) && playlist && playlist.channels.find(c => c.key === key);
+  return (ch && ch.url) || '';
+};
+module.exports = { create, handle, streamOf, parseM3U, parseEpg, probe, derivedEpgUrl, nameKey };

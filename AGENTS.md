@@ -103,4 +103,6 @@ sh tools/perf-tv.sh <tv-ip>        # read-only timings from a TV: launcher, Inpu
   every change of an option or key with its source.
 - A per-TV rule written in a module or a script drifts from the others: put it in `helper/tvprofile.js`.
 - Edit the pages in `app/src` and `manager/src`, then `node tools/build-pages.js`; the built files are what the TV loads.
+- On the launcher page, repeating timers go through `TICK.every` (`app/src/js/tick.js`), never `setInterval`: the page started at boot
+  counts as hidden, and after five minutes its own intervals run once a minute (in this fork, ad breaks stopped being followed).
 - Themes are data; a theme must never contain CSS or script. The schema in `helper/themeschema.js` is the only source of what a theme can set.

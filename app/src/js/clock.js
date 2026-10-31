@@ -722,6 +722,15 @@ var TXL = {
       'Soap': 'Sæbeopera',
       'Talk': 'Talkshow',
       'War & Politics': 'Krig og politik',
+      /* Live TV's ad breaks */
+      'Ad breaks': 'Reklamer',
+      'Dim': 'Dæmp',
+      'Partner channel': 'Partnerkanal',
+      'Use this channel as partner': 'Brug denne kanal som partner',
+      'Ads': 'Reklamer',
+      'Watch the ads': 'Se reklamerne',
+      'Ads on': 'Reklamer på',
+      'continues · switching back by itself': 'fortsætter · skifter tilbage selv',
     },
   };
   for (var l in add) {

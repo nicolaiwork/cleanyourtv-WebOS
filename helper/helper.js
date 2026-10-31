@@ -55,6 +55,7 @@ const notify = load('notify', () => require('./notify').create(ctx));
 if (notify) load('voice', () => require('./voice').create(ctx));
 load('live', () => require('./live').create(ctx));
 load('vod', () => require('./vod').create(ctx)); // fork: Films & Series (docs/vod.md)
+load('breaks', () => require('./breaks').create(ctx)); // fork: ad breaks in Live TV
 load('theme', () => require('./theme').create(ctx));
 const inputkey = load('inputkey', () => require('./inputkey').create(ctx));
 load('pointer', () => require('./pointer').create(ctx));

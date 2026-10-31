@@ -29,19 +29,19 @@ The playlist and your favourites are kept, so switching it on again brings them 
 
 ## Keys
 
-| Key | Watching | In the guide (OK) |
-|---|---|---|
-| Up / Down, CH+ / CH- | Next / previous channel | Move; CH+ / CH- page |
-| Left / Right | Channel banner (now and next) | Previous / next tab |
-| Digits | Jump to a channel number (playlist order) | Same |
-| OK | Open the guide | Play the channel |
-| Guide | Open the guide | Close the guide |
-| Green | Add / remove favourite | Add / remove favourite |
-| Yellow, or 123 | Player menu (favourite, stream, audio, subtitles, statistics) | Filters |
-| Blue | Statistics | |
-| Red | | Search (the TV's keyboard) |
-| Back | Return to the launcher | Clear filters and search, then close the guide |
-| Home | Return to the launcher, once the Home key is learned ([below](input-key.md#the-home-key)) | Same |
+| Key                  | Watching                                                                                                            | In the guide (OK)                              |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Up / Down, CH+ / CH- | Next / previous channel                                                                                             | Move; CH+ / CH- page                           |
+| Left / Right         | Channel banner (now and next)                                                                                       | Previous / next tab                            |
+| Digits               | Jump to a channel number (playlist order)                                                                           | Same                                           |
+| OK                   | Open the guide; during a dimmed ad break, picture and sound back ([below](#ad-breaks-this-fork-needs-iptv-curator)) | Play the channel                               |
+| Guide                | Open the guide                                                                                                      | Close the guide                                |
+| Green                | Add / remove favourite                                                                                              | Add / remove favourite                         |
+| Yellow, or 123       | Player menu (favourite, stream, audio, subtitles, ad breaks, statistics)                                            | Filters                                        |
+| Blue                 | Statistics                                                                                                          |                                                |
+| Red                  |                                                                                                                     | Search (the TV's keyboard)                     |
+| Back                 | Return to the launcher                                                                                              | Clear filters and search, then close the guide |
+| Home                 | Return to the launcher, once the Home key is learned ([below](input-key.md#the-home-key))                           | Same                                           |
 
 The tabs are **All channels**, **Favourites**, **Recent** and one per category of your playlist. Channels show badges for country,
 language and quality when the playlist names them (for example `NL`, `EN`, `HD`). Filters narrow the list by country, language and
@@ -90,6 +90,51 @@ with it too (for example Danish audio on channels that put Swedish first). A cha
   appear and the stream plays as before.
 
 There is no recording and no pause.
+
+## Ad breaks (this fork, needs iptv-curator)
+
+When the playlist comes from iptv-curator (the same server Films & Series reads), the player menu (Yellow, or **123**) has two
+more rows:
+
+- **Ad breaks**: **Off** (the default), **Dim** or **Partner channel**. OK or Right picks the next one, Left the previous one.
+- **Partner channel**: the channel shown during breaks in **Partner channel** mode, one for all channels. OK makes the channel you
+  are watching the partner; the row shows the partner's name, or `—` when there is none.
+
+The rows are not there when the Live TV playlist is not the curator's (`http://<curator>/playlist.m3u`): the curator's
+Films & Series address alone is not enough, since the channels it would be asked about are the playlist's.
+
+What happens when a break starts:
+
+- **Dim**: the picture fades to 20 % and is muted. The channel banner stays up for as long as the break lasts, with
+  "Reklamer · <channel>", now and next from the guide, the progress bar, and a counter of how long the break has run (from
+  when the logo went, so it starts at about 0:15). **OK**
+  ("Se reklamerne") brings picture and sound back for the rest of this break; the next break dims again. When the programme
+  returns, the picture fades back in with sound and the banner hides as usual.
+- **Partner channel**: the TV switches to the partner channel, which plays normally. A small pill top right says
+  "Reklamer på <channel> · m:ss" and "<programme> fortsætter · skifter tilbage selv". When the programme returns, the TV switches
+  back. If you change channel yourself in the meantime, nothing switches back and the pill goes; if you go back to the channel in
+  the break yourself, that break is shown. If the partner's stream fails, **OK** tries it again and the TV still switches back
+  when the break ends. Without a partner, with a partner that is no longer in the playlist, or on the partner channel itself, a
+  break dims instead.
+- Changing channel or leaving Live TV during a break brings picture and sound back at once. Leaving while the partner channel is
+  shown opens Live TV next time on the channel in the break, and the partner is not added to the recent channels.
+- A break ends by itself after 10 minutes (counted from when the logo went), so a programme without its logo, or a wrong logo,
+  never leaves the picture dimmed and muted; such a long break does not count as one the curator has seen.
+
+How breaks are found: the curator watches the channel you are on with its own connection to the provider (one connection more
+than the TV's own, also in partner mode, where it keeps watching the channel in the break). It looks for the channel's logo in the
+corners of the picture: a break starts when the logo has been gone for about 15 seconds, and ends when it has been back for 2
+seconds. A faint or flickering logo counts as there: the 15 seconds start again whenever the logo is seen twice in a row. The logo is learned for each channel by itself, and a channel acts on breaks only after the curator has seen its logo go
+and come back at least once; until then it is _learning_ and nothing happens. On a channel without a steady logo, or whose logo
+stays on during ads, nothing happens either: the feature never guesses. The curator's web page shows each channel's status
+(learning, works, does not work here) with the learned logo.
+
+The page asks the service once a second while a channel plays (`GET /api/breaks/now?key=<channel>`), and only when the mode is
+not **Off**; the service asks the curator with the channel's stream number only, never the stream address, which holds the
+provider's credentials. The curator opens the provider's stream only while the TV asks and closes it within about 30 seconds
+after. When the curator stops answering, three failed asks end the break: a dimmed picture comes back, and in partner mode the TV
+switches back to the channel in the break. The setting is kept on the TV in
+`/media/developer/cleanyourtv/live/breaks.json` (`GET` and `POST /api/breaks/settings`).
 
 ## Where it is stored
 

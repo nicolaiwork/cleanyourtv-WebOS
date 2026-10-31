@@ -341,7 +341,7 @@ function homeTick() {
   var hc = HL.heroMode(H.picks, H.chans) === 'channel' && heroChannel();
   if (ended || (hc && HL.stale(hc, nowS))) homeData();
 }
-setInterval(homeTick, 15000);
+TICK.every(15000, homeTick);
 
 /* ---------- the strip, from the apps and settings ---------- */
 function rebuild() {
