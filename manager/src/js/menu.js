@@ -882,6 +882,16 @@ function build() {
       opt({ hidePointer: !st.options.hidePointer });
     },
   });
+  var lgch = st.lgChannels || {};
+  rows.push({
+    label: t('Stop LG Channels in the background'),
+    sub:
+      onoff(st.options.stopLgChannels) +
+      (st.options.stopLgChannels && (lgch.state === 'absent' || lgch.state === 'error') ? ' · ' + t('not possible on this TV') : ''),
+    fn: function () {
+      opt({ stopLgChannels: !st.options.stopLgChannels });
+    },
+  });
   rows.push({ sep: true });
   rows.push({ label: t('Share log'), sub: t('QR code for your phone'), fn: openShare });
   rows.push({

@@ -18,6 +18,9 @@ var INFO = {
   'Debloat LG\u2019s ads and telemetry': t(
     'Stops LG\u2019s ad, recommendation and telemetry services and blocks a few ad servers. Nothing is uninstalled, and it only applies while this launcher is Home.'
   ),
+  'Stop LG Channels in the background': t(
+    'LG starts its LG Channels app hidden after every start of the TV, where it takes up memory. On, it is kept from starting there, and closed when it is left in the background. You can still open LG Channels yourself. Nothing is stored on the TV: switching off lets LG start it again.'
+  ),
   'Hide the Magic Remote pointer': t(
     'The pointer never appears, not on the Home button and not when the remote moves. The buttons work as before; apps that need the pointer, such as the web browser, cannot be used while this is on. Nothing is stored on the TV: switching off brings the pointer back at once.'
   ),

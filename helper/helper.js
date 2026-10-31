@@ -59,6 +59,7 @@ load('breaks', () => require('./breaks').create(ctx)); // fork: ad breaks in Liv
 load('theme', () => require('./theme').create(ctx));
 const inputkey = load('inputkey', () => require('./inputkey').create(ctx));
 load('pointer', () => require('./pointer').create(ctx));
+load('lgchannels', () => require('./lgchannels').create(ctx)); // fork: LG Channels kept out of the background
 if (notify) load('notifyapi', () => require('./notifyapi').create(ctx));
 const manager = load('manager', () => require('./manager').create(ctx));
 load('apps', () => require('./apps').create(ctx));

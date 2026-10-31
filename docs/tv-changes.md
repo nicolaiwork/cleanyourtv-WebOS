@@ -53,6 +53,7 @@ Either bind mount lives in RAM. A reboot without the boot scripts, or the Homebr
 | The service (`node helper.js`), running as root | `127.0.0.1:8765` |
 | The input hook, injected into LG's input service (`lginput2`; other input processes only on firmware without it) | none |
 | With **Hide the Magic Remote pointer** on: one 2-byte value in the running `lginput2` ("cursor on" becomes "cursor off"), in memory only; see [The pointer](input-key.md#the-pointer) | none |
+| With **Stop LG Channels in the background** on (the default): LG Channels' entry in the preload manager's policy is switched off in its memory (`permanent: false`); see [LG Channels](debloat.md#lg-channels) | none |
 | Short-lived pages (Live TV pairing, share log, voice setup) and the optional notification endpoint | [Security](security.md#what-this-changes-on-a-tv) |
 
 ## What the uninstall removes

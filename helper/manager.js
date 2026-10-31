@@ -124,6 +124,7 @@ function create(ctx) {
       home: { enabled: !fs.existsSync(P.DISABLE), fullhome: fs.existsSync(P.FULLHOME_APP), ours },
       inputhook: inputhook.status(keys().input),
       pointer: (p => (p ? p.status() : null))(ctx.feature('pointer')),
+      lgChannels: (l => (l ? l.status() : null))(ctx.feature('lgchannels')),
       keys: keys(),
       buttons: buttonList(),
       job: updates.job(),
@@ -135,7 +136,7 @@ function create(ctx) {
   async function setOptions(o) {
     const cur = config.options();
     const next = Object.assign({}, cur);
-    for (const k of ['debloat', 'inputKey', 'liveTv', 'hidePointer']) if (typeof o[k] === 'boolean') next[k] = o[k];
+    for (const k of ['debloat', 'inputKey', 'liveTv', 'hidePointer', 'stopLgChannels']) if (typeof o[k] === 'boolean') next[k] = o[k];
     config.update('manager', c => {
       if (typeof o.pickerPrewarm === 'boolean')
         c.picker = Object.assign(
@@ -156,6 +157,8 @@ function create(ctx) {
     if (next.debloat !== cur.debloat) await debloat.apply(next.debloat);
     const pointer = ctx.feature('pointer');
     if (pointer && next.hidePointer !== cur.hidePointer) pointer.sync();
+    const lgch = ctx.feature('lgchannels');
+    if (lgch && next.stopLgChannels !== cur.stopLgChannels) lgch.sync();
     ensureHook();
     return next;
   }
