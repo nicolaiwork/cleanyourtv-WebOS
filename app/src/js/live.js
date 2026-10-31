@@ -555,17 +555,17 @@ var LIVE = (function () {
         cb && cb();
       });
   }
-  setInterval(function () {
+  TICK.every(30000, function () {
     if (o.on && byNum[cur]) loadEpg([byNum[cur].id]);
-  }, 30000);
+  });
 
   /* ---------- ad breaks (fork; needs the iptv-curator, docs/live-tv.md) ---------- */
   /* Once a second the service is asked whether the channel is in a break (/api/breaks/now). A break dims and mutes the picture
      with the banner up, or shows the partner channel until the break ends. The viewer's own channel change ends both at once. */
   function brSched() {
-    clearInterval(brT);
+    TICK.stop(brT);
     brT = 0;
-    if (o.on && BR.mode !== 'off') brT = setInterval(brPoll, 1000);
+    if (o.on && BR.mode !== 'off') brT = TICK.every(1000, brPoll);
   }
   /* the channel whose break is followed: the one in the break while the partner channel is shown, else the one playing */
   function brWatch() {
@@ -1194,13 +1194,13 @@ var LIVE = (function () {
   }
   function setStats(on) {
     stats = on;
-    clearInterval(statsT);
+    TICK.stop(statsT);
     layer('lv-stats', on);
     if (on) {
       $('lv-stats').textContent = statsText();
-      statsT = setInterval(function () {
+      statsT = TICK.every(1000, function () {
         $('lv-stats').textContent = statsText();
-      }, 1000);
+      });
     }
   }
 
@@ -1235,19 +1235,19 @@ var LIVE = (function () {
           t('Then paste your M3U playlist address. This page closes by itself.') +
           '</div>'
       );
-      clearInterval(setupT);
-      setupT = setInterval(function () {
+      TICK.stop(setupT);
+      setupT = TICK.every(2500, function () {
         if (!o.on) {
-          clearInterval(setupT);
+          TICK.stop(setupT);
           return;
         }
         api('/api/live/status').then(function (s) {
           if (s.configured) {
-            clearInterval(setupT);
+            TICK.stop(setupT);
             boot();
           }
         });
-      }, 2500);
+      });
     });
   }
   function facets() {
@@ -1393,14 +1393,14 @@ var LIVE = (function () {
     layer('lv-menu', false);
     setStats(false);
     full = {};
-    clearInterval(brT);
+    TICK.stop(brT);
     brT = 0;
     brStop(); /* before release(): the picture is unmuted if the break code muted it */
     release();
     clearTimeout(osdT);
     clearTimeout(numT);
     clearTimeout(toastT);
-    clearInterval(setupT);
+    TICK.stop(setupT);
     layer('lv-osd', false);
     layer('lv-numin', false);
     layer('lv-msg', false);

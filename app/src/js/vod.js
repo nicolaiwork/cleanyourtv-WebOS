@@ -1564,7 +1564,7 @@ var VOD = (function () {
     P.startT = setTimeout(function () {
       if (P && P.video === v && !P.started) fail();
     }, START_MS);
-    P.saveT = setInterval(save, SAVE_MS);
+    P.saveT = TICK.every(SAVE_MS, save);
     showBar(4000);
   }
   function fail() {
@@ -1589,11 +1589,11 @@ var VOD = (function () {
   function release(keepP) {
     if (!P) return;
     clearTimeout(P.startT);
-    clearInterval(P.saveT);
+    TICK.stop(P.saveT);
     clearTimeout(P.barT);
     clearTimeout(P.seekT);
     clearTimeout(P.subT);
-    clearInterval(P.nextT);
+    TICK.stop(P.nextT);
     var v = P.video;
     P.video = null;
     if (v) {
@@ -1693,11 +1693,11 @@ var VOD = (function () {
       P.nextN = NEXT_S;
       drawNext();
       player('vd-next', true);
-      P.nextT = setInterval(function () {
+      P.nextT = TICK.every(1000, function () {
         if (!P || !P.next) return;
         if (--P.nextN <= 0) return playNext();
         drawNext();
-      }, 1000);
+      });
     });
   }
   function drawNext() {
@@ -1905,7 +1905,7 @@ var VOD = (function () {
     if (P.menu) return menuKey(k);
     if (P.next) {
       if (k === 13) {
-        clearInterval(P.nextT);
+        TICK.stop(P.nextT);
         playNext();
       } else if (isBack(k)) stop();
       return;

@@ -2230,6 +2230,83 @@ function svg(name) {
     '</svg>'
   );
 }
+/* ---------- repeating timers that keep time (fork) ---------- */
+/* The launcher page that the TV starts while it boots is treated by the browser as hidden, even while it is on screen, and five
+   minutes later its repeating timers run only once a minute (Chromium's throttling of hidden pages). A page loaded later is not
+   slowed. A Web Worker's timers are not slowed either: one worker sends a tick every second and TICK.every(ms, fn) runs fn on
+   the first tick at least ms after the last run. Where a worker cannot be made, or stops with an error, setInterval is used. */
+var TICK = (function () {
+  var subs = {},
+    nextId = 1,
+    worker = null,
+    failed = false;
+
+  function fallback(s) {
+    if (!s.iv) s.iv = setInterval(s.fn, s.ms);
+  }
+  function onTick() {
+    var now = Date.now();
+    for (var id in subs) {
+      var s = subs[id];
+      if (!s || s.iv || now - s.at < s.ms - 100) continue; /* 100 ms early still counts: ticks are a second apart */
+      s.at = now;
+      try {
+        s.fn();
+      } catch (e) {
+        setTimeout(function () {
+          throw e; /* reported as a page error, as from a timer; the other ticks still run */
+        }, 0);
+      }
+    }
+  }
+  function fail() {
+    failed = true;
+    if (worker) {
+      try {
+        worker.terminate();
+      } catch (e) {}
+    }
+    worker = null;
+    for (var id in subs) fallback(subs[id]);
+  }
+  function start() {
+    if (worker || failed) return !!worker;
+    try {
+      var url = URL.createObjectURL(new Blob(['setInterval(function(){postMessage(0)},1000)'], { type: 'text/javascript' }));
+      worker = new Worker(url);
+      worker.onmessage = onTick;
+      worker.onerror = fail;
+    } catch (e) {
+      fail();
+    }
+    return !!worker;
+  }
+  function stopWorker() {
+    for (var id in subs) return; /* still in use */
+    if (!worker) return;
+    try {
+      worker.terminate();
+    } catch (e) {}
+    worker = null;
+  }
+
+  /* run fn every ms milliseconds (a second or more); returns an id for stop() */
+  function every(ms, fn) {
+    var id = nextId++,
+      s = { ms: ms, fn: fn, at: Date.now(), iv: 0 };
+    subs[id] = s;
+    if (!start()) fallback(s);
+    return id;
+  }
+  function stop(id) {
+    var s = id && subs[id];
+    if (!s) return;
+    if (s.iv) clearInterval(s.iv);
+    delete subs[id];
+    stopWorker();
+  }
+  return { every: every, stop: stop };
+})();
 /* ---------- language and clock: the TV's, or the language chosen in Settings (cfg.language, read from the launcher's cache so the
    first drawing is already in it; layout.js reloads the page when the service has another) ---------- */
 var TV_LOC = (window.webOSSystem && webOSSystem.locale) || navigator.language || 'en-GB';
@@ -4181,7 +4258,7 @@ function homeTick() {
   var hc = HL.heroMode(H.picks, H.chans) === 'channel' && heroChannel();
   if (ended || (hc && HL.stale(hc, nowS))) homeData();
 }
-setInterval(homeTick, 15000);
+TICK.every(15000, homeTick);
 
 /* ---------- the strip, from the apps and settings ---------- */
 function rebuild() {
@@ -4503,7 +4580,7 @@ function tick() {
     $('time').textContent = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
   }
 }
-setInterval(tick, 15000);
+TICK.every(15000, tick);
 tick();
 /* ---------- Live TV: audio languages and subtitles of the playing stream ---------- */
 /* The TV's player reports languages as two-letter codes (da, sv); playlists and probes often use three (dan, swe). Both are
@@ -5633,17 +5710,17 @@ var LIVE = (function () {
         cb && cb();
       });
   }
-  setInterval(function () {
+  TICK.every(30000, function () {
     if (o.on && byNum[cur]) loadEpg([byNum[cur].id]);
-  }, 30000);
+  });
 
   /* ---------- ad breaks (fork; needs the iptv-curator, docs/live-tv.md) ---------- */
   /* Once a second the service is asked whether the channel is in a break (/api/breaks/now). A break dims and mutes the picture
      with the banner up, or shows the partner channel until the break ends. The viewer's own channel change ends both at once. */
   function brSched() {
-    clearInterval(brT);
+    TICK.stop(brT);
     brT = 0;
-    if (o.on && BR.mode !== 'off') brT = setInterval(brPoll, 1000);
+    if (o.on && BR.mode !== 'off') brT = TICK.every(1000, brPoll);
   }
   /* the channel whose break is followed: the one in the break while the partner channel is shown, else the one playing */
   function brWatch() {
@@ -6272,13 +6349,13 @@ var LIVE = (function () {
   }
   function setStats(on) {
     stats = on;
-    clearInterval(statsT);
+    TICK.stop(statsT);
     layer('lv-stats', on);
     if (on) {
       $('lv-stats').textContent = statsText();
-      statsT = setInterval(function () {
+      statsT = TICK.every(1000, function () {
         $('lv-stats').textContent = statsText();
-      }, 1000);
+      });
     }
   }
 
@@ -6313,19 +6390,19 @@ var LIVE = (function () {
           t('Then paste your M3U playlist address. This page closes by itself.') +
           '</div>'
       );
-      clearInterval(setupT);
-      setupT = setInterval(function () {
+      TICK.stop(setupT);
+      setupT = TICK.every(2500, function () {
         if (!o.on) {
-          clearInterval(setupT);
+          TICK.stop(setupT);
           return;
         }
         api('/api/live/status').then(function (s) {
           if (s.configured) {
-            clearInterval(setupT);
+            TICK.stop(setupT);
             boot();
           }
         });
-      }, 2500);
+      });
     });
   }
   function facets() {
@@ -6471,14 +6548,14 @@ var LIVE = (function () {
     layer('lv-menu', false);
     setStats(false);
     full = {};
-    clearInterval(brT);
+    TICK.stop(brT);
     brT = 0;
     brStop(); /* before release(): the picture is unmuted if the break code muted it */
     release();
     clearTimeout(osdT);
     clearTimeout(numT);
     clearTimeout(toastT);
-    clearInterval(setupT);
+    TICK.stop(setupT);
     layer('lv-osd', false);
     layer('lv-numin', false);
     layer('lv-msg', false);
@@ -8164,7 +8241,7 @@ var VOD = (function () {
     P.startT = setTimeout(function () {
       if (P && P.video === v && !P.started) fail();
     }, START_MS);
-    P.saveT = setInterval(save, SAVE_MS);
+    P.saveT = TICK.every(SAVE_MS, save);
     showBar(4000);
   }
   function fail() {
@@ -8189,11 +8266,11 @@ var VOD = (function () {
   function release(keepP) {
     if (!P) return;
     clearTimeout(P.startT);
-    clearInterval(P.saveT);
+    TICK.stop(P.saveT);
     clearTimeout(P.barT);
     clearTimeout(P.seekT);
     clearTimeout(P.subT);
-    clearInterval(P.nextT);
+    TICK.stop(P.nextT);
     var v = P.video;
     P.video = null;
     if (v) {
@@ -8293,11 +8370,11 @@ var VOD = (function () {
       P.nextN = NEXT_S;
       drawNext();
       player('vd-next', true);
-      P.nextT = setInterval(function () {
+      P.nextT = TICK.every(1000, function () {
         if (!P || !P.next) return;
         if (--P.nextN <= 0) return playNext();
         drawNext();
-      }, 1000);
+      });
     });
   }
   function drawNext() {
@@ -8505,7 +8582,7 @@ var VOD = (function () {
     if (P.menu) return menuKey(k);
     if (P.next) {
       if (k === 13) {
-        clearInterval(P.nextT);
+        TICK.stop(P.nextT);
         playNext();
       } else if (isBack(k)) stop();
       return;

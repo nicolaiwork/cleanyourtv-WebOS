@@ -87,6 +87,10 @@ webOS 5 and 6 ship Node.js 8, and webOS 6 has Chromium 79.
   radius, because Chromium before 94 draws an `outline` as a rectangle.
 - The service accepts the `file://<appId>-webos` origin that webOS 6 apps send, for our own apps and the Home slot only.
 - `scripts/reload-home.sh` restarts `webapp-mgr` on webOS 6, where a relaunch alone keeps the old page.
+- Repeating timers on the launcher page use `TICK.every(ms, fn)` (`app/src/js/tick.js`), not `setInterval`. The page the TV starts
+  while it boots is treated by the browser as hidden even on screen, and five minutes later its own repeating timers run only once a
+  minute (seen on webOS 26; a Home press does not change it, a page loaded later is not slowed). `TICK` runs them on a Web Worker's
+  ticks, which are not slowed, and on `setInterval` where there is no worker.
 
 !!! note "Checked by reports, not by the maintainer"
     The maintainer's TV runs webOS 25. webOS 5, 6 and 23 are known from reports ([Tested TVs](../tested-tvs.md)). Every change is

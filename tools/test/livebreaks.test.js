@@ -156,7 +156,7 @@ function livePage(opts) {
   };
   ctx.clearInterval = ctx.clearTimeout;
   vm.createContext(ctx);
-  vm.runInContext(js('livetracks.js') + js('livebreaks.js') + js('live.js') + '\nthis.LIVE = LIVE;', ctx);
+  vm.runInContext(js('tick.js') + js('livetracks.js') + js('livebreaks.js') + js('live.js') + '\nthis.LIVE = LIVE;', ctx);
   const page = {
     LIVE: ctx.LIVE,
     $: $,
