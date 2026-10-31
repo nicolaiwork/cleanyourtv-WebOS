@@ -5,6 +5,11 @@
 // switching the option off, gives LG its own policy back. A copy already started before the service got there, or one left in the
 // background, is closed; one in front (opened on purpose) is left alone. Checked again every five minutes, since a restart of the
 // preload manager forgets the change.
+// LG's service for LG Channels' stream addresses (lgchannelurl, started by an LG activity once the TV is online) is kept from running
+// the way the debloat does it: a do-nothing program is mounted over it (in RAM) and the running one is stopped; switching off unmounts.
+const fs = require('fs');
+const P = require('./paths'),
+  exec = require('./exec');
 const PM = 'luna://com.webos.service.preloadmanager/',
   AM = 'luna://com.webos.applicationManager/';
 const APP = 'com.webos.app.lgchannels',
@@ -14,6 +19,7 @@ const APP = 'com.webos.app.lgchannels',
 
 function create(ctx) {
   const { config, luna } = ctx;
+  const sh = ctx.sh || exec.sh; // tests: a stand-in
   let state = { state: 'off' },
     dirty = false, // switched off after it was on: the policy goes back to LG's
     failures = 0,
@@ -23,9 +29,34 @@ function create(ctx) {
     state = detail ? { state: s, detail } : { state: s };
     console.log('lgchannels: ' + s + (detail ? ' (' + detail + ')' : ''));
   }
+  const mounted = () => {
+    try {
+      return fs.readFileSync(P.PROC + '/mounts', 'utf8').indexOf(' ' + P.LGCHANNELURL + ' ') >= 0;
+    } catch (_) {
+      return false;
+    }
+  };
+  async function urlService(on) {
+    if (on === mounted() || !fs.existsSync(P.LGCHANNELURL)) return;
+    const q = s => "'" + s + "'",
+      stub = q(P.D + '/stub-noop'), // the debloat's too (scripts/debloat-stop.sh)
+      bin = q(P.LGCHANNELURL);
+    const script = on
+      ? [
+          '{ [ -x ' + stub + ' ] || { printf ' + q('#!/bin/sh\\nexit 0\\n') + ' > ' + stub + ' && chmod +x ' + stub + '; }; }',
+          'mount --bind ' + stub + ' ' + bin,
+          '{ pkill -9 -f ' + q('^' + P.LGCHANNELURL) + '; true; }', // the running one; the stub keeps it from starting again
+        ].join(' && ')
+      : 'umount ' + bin;
+    const r = await sh(script, 15000);
+    console.log(
+      'lgchannels: ' + P.LGCHANNELURL + (on ? ' stopped' : ' back') + (r.ok ? '' : ' (failed: ' + (r.err || r.error).trim() + ')')
+    );
+  }
   async function check() {
     const on = !!config.options().stopLgChannels;
     if (!on && !dirty) return set('off');
+    await urlService(on);
     const p = await luna(PM + 'getPreloadPolicy', {});
     if (p.returnValue !== true) {
       failures++;
