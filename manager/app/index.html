@@ -317,6 +317,7 @@ var TX = {
     'Network notifications': 'Notifikationer fra netværket',
     'Debloat LG’s ads and telemetry': 'Fjern LG’s reklamer og sporing',
     'Hide the Magic Remote pointer': 'Skjul Magic Remote-markøren',
+    'Stop LG Channels in the background': 'Stop LG Channels i baggrunden',
     'not possible on this TV': 'ikke muligt på dette tv',
     'Share log': 'Del log',
     'QR code for your phone': 'QR-kode til din telefon',
@@ -649,6 +650,8 @@ var TX = {
       'Til: Hjem-knappen åbner denne startskærm. Fra: LG’s egen startskærm. Skiftet genstarter tv’et (cirka et minut); tjenesten kører videre i begge tilfælde.',
     'Stops LG’s ad, recommendation and telemetry services and blocks a few ad servers. Nothing is uninstalled, and it only applies while this launcher is Home.':
       'Stopper LG’s tjenester til reklamer, anbefalinger og sporing og blokerer nogle reklameservere. Intet afinstalleres, og det gælder kun, mens denne startskærm er i brug.',
+    'LG starts its LG Channels app hidden after every start of the TV, where it takes up memory. On, it is kept from starting there, and closed when it is left in the background. You can still open LG Channels yourself. Nothing is stored on the TV: switching off lets LG start it again.':
+      'LG starter sin LG Channels-app skjult efter hver start af tv’et, hvor den optager hukommelse. Til: den holdes fra at starte der og lukkes, når den ligger i baggrunden. Du kan stadig selv åbne LG Channels. Intet gemmes på tv’et: slås det fra, må LG starte den igen.',
     'The pointer never appears, not on the Home button and not when the remote moves. The buttons work as before; apps that need the pointer, such as the web browser, cannot be used while this is on. Nothing is stored on the TV: switching off brings the pointer back at once.':
       'Markøren vises aldrig, hverken på Hjem-knappen eller når fjernbetjeningen bevæges. Knapperne virker som før; apps, der kræver markøren, som webbrowseren, kan ikke bruges, mens dette er slået til. Intet gemmes på tv’et: slås det fra, er markøren tilbage med det samme.',
     'Choose how the home screen looks: colours, the size of tiles and text, the number of columns, the clock, the ambient glow, animation speed and a wallpaper. Themes are small data files bundled with the package; the accent colour can be changed on top of any of them.':
@@ -1791,6 +1794,16 @@ function build() {
       opt({ hidePointer: !st.options.hidePointer });
     },
   });
+  var lgch = st.lgChannels || {};
+  rows.push({
+    label: t('Stop LG Channels in the background'),
+    sub:
+      onoff(st.options.stopLgChannels) +
+      (st.options.stopLgChannels && (lgch.state === 'absent' || lgch.state === 'error') ? ' · ' + t('not possible on this TV') : ''),
+    fn: function () {
+      opt({ stopLgChannels: !st.options.stopLgChannels });
+    },
+  });
   rows.push({ sep: true });
   rows.push({ label: t('Share log'), sub: t('QR code for your phone'), fn: openShare });
   rows.push({
@@ -1819,6 +1832,9 @@ var INFO = {
   ),
   'Debloat LG\u2019s ads and telemetry': t(
     'Stops LG\u2019s ad, recommendation and telemetry services and blocks a few ad servers. Nothing is uninstalled, and it only applies while this launcher is Home.'
+  ),
+  'Stop LG Channels in the background': t(
+    'LG starts its LG Channels app hidden after every start of the TV, where it takes up memory. On, it is kept from starting there, and closed when it is left in the background. You can still open LG Channels yourself. Nothing is stored on the TV: switching off lets LG start it again.'
   ),
   'Hide the Magic Remote pointer': t(
     'The pointer never appears, not on the Home button and not when the remote moves. The buttons work as before; apps that need the pointer, such as the web browser, cannot be used while this is on. Nothing is stored on the TV: switching off brings the pointer back at once.'

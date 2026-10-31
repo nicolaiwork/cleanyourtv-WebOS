@@ -41,7 +41,8 @@
     "options": {
      "debloat": false,
      "inputKey": false,
-     "liveTv": true
+     "liveTv": true,
+     "stopLgChannels": false
     },
     "sort": "usage",
     "theme": {
@@ -259,7 +260,8 @@
     "options": {
      "debloat": false,
      "inputKey": false,
-     "liveTv": true
+     "liveTv": true,
+     "stopLgChannels": false
     },
     "sort": "alpha",
     "theme": {
@@ -406,6 +408,10 @@
     "voice": ""
    },
    "language": "auto",
+   "lgChannels": {
+    "enabled": false,
+    "state": "off"
+   },
    "notifyApi": {
     "enabled": false,
     "port": 8767
@@ -414,7 +420,8 @@
     "debloat": false,
     "hidePointer": false,
     "inputKey": false,
-    "liveTv": true
+    "liveTv": true,
+    "stopLgChannels": false
    },
    "picker": {
     "mode": "overlay",
@@ -488,6 +495,10 @@
     "voice": ""
    },
    "language": "auto",
+   "lgChannels": {
+    "enabled": false,
+    "state": "off"
+   },
    "notifyApi": {
     "enabled": false,
     "port": 8767
@@ -496,7 +507,8 @@
     "debloat": false,
     "hidePointer": false,
     "inputKey": false,
-    "liveTv": true
+    "liveTv": true,
+    "stopLgChannels": false
    },
    "picker": {
     "mode": "overlay",
@@ -588,6 +600,10 @@
     "voice": ""
    },
    "language": "auto",
+   "lgChannels": {
+    "enabled": false,
+    "state": "off"
+   },
    "notifyApi": {
     "enabled": false,
     "port": 8767
@@ -596,7 +612,8 @@
     "debloat": false,
     "hidePointer": false,
     "inputKey": false,
-    "liveTv": false
+    "liveTv": false,
+    "stopLgChannels": false
    },
    "picker": {
     "mode": "overlay",
@@ -843,7 +860,8 @@
    "debloat": false,
    "hidePointer": false,
    "inputKey": false,
-   "liveTv": false
+   "liveTv": false,
+   "stopLgChannels": false
   },
   "sort": "alpha",
   "theme": {

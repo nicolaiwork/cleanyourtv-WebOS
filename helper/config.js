@@ -1,6 +1,6 @@
 // The settings in config.json, for every part of the service. Read and change them only through this module:
 //   config.get()                 a copy of everything
-//   config.options()             {debloat, inputKey, liveTv, hidePointer} with their defaults
+//   config.options()             {debloat, inputKey, liveTv, hidePointer, stopLgChannels} with their defaults
 //   config.keys()                the learned remote buttons with their defaults
 //   config.buttons()             the remote's other learned buttons and what each does (buttons.js)
 //   language(config.get())       the language chosen in the launcher ('da', 'en'), or '' for the TV's
@@ -12,7 +12,7 @@ const fs = require('fs');
 const P = require('./paths'),
   buttons = require('./buttons');
 
-const OPTIONS = { debloat: true, inputKey: true, liveTv: true, hidePointer: false };
+const OPTIONS = { debloat: true, inputKey: true, liveTv: true, hidePointer: false, stopLgChannels: true };
 const KEYS = { input: '', home: '', voice: '', guide: '', learned: false };
 // what the launcher saves with POST /api/config; everything else belongs to the service and the manager
 const LAUNCHER_KEYS = ['dock', 'hidden', 'sort', 'clock', 'topbar', 'language'];

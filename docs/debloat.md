@@ -17,6 +17,22 @@ About a minute after every boot, the debloat:
 Nothing is uninstalled. It applies only while the launcher is Home, because LG's own Home needs some of those services to start;
 switching back to LG's Home lifts the debloat first.
 
+## LG Channels
+
+LG's preload manager starts the **LG Channels** app hidden about a minute after every boot and keeps it in memory, whether or not it is
+ever opened. The manager app's switch **Stop LG Channels in the background** (on by default, separate from the debloat, and applied
+whether or not the launcher is Home) keeps it from starting there:
+
+- it switches LG Channels off in the preload manager's policy (`setPreloadPolicy` with `isEnabled: false` and `permanent: false`: only
+  the preload manager's memory changes, never LG's preferences file);
+- it closes a copy that is already running in the background (preloaded before the service got there, or left there); LG Channels
+  in front, opened on purpose, is left alone;
+- it checks again every five minutes, since a restart of the preload manager forgets the change.
+
+LG Channels stays installed and can still be opened. Switching it off gives the preload manager LG's own policy back at once (the app
+is not started again until LG's preload manager next decides to); a reboot without the service does the same. On a TV whose preload
+manager does not list LG Channels, the manager app shows "not possible on this TV".
+
 ## Turning it off
 
 Switch **Debloat** off in the manager app. It starts the stopped services again, unmounts the stubs and removes the marked
